@@ -1,24 +1,6 @@
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 require('dotenv').config();
 
-// const commands = [
-//     new SlashCommandBuilder()
-//         .setName('timer')
-//         .setDescription('Start a work + break timer')
-//         .addIntegerOption(option =>
-//             option.setName('work')
-//                 .setDescription('Work time in minutes (min: 20)')
-//                 .setRequired(true)
-//                 .setMinValue(20) // ✅ Enforces min value at Discord level
-//         )
-//         .addIntegerOption(option =>
-//             option.setName('break')
-//                 .setDescription('Break time in minutes (min: 5, optional)')
-//                 .setRequired(false)
-//                 .setMinValue(5) // ✅ Enforces min value if user enters this
-//         )
-//         .toJSON()
-// ];
 const commands = [
     new SlashCommandBuilder()
         .setName('timer')
