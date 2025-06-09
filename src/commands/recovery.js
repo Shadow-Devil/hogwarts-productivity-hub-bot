@@ -1,5 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const sessionRecovery = require('../utils/sessionRecovery');
+const { createHeader, formatDataTable, createStatsCard } = require('../utils/visualHelpers');
+const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -17,7 +19,12 @@ module.exports = {
         
     async execute(interaction) {
         try {
-            await interaction.deferReply();
+            // Immediately defer to prevent timeout
+            const deferred = await safeDeferReply(interaction);
+            if (!deferred) {
+                console.warn('Failed to defer recovery interaction');
+                return;
+            }
             
             const subcommand = interaction.options.getSubcommand();
             
@@ -25,35 +32,67 @@ module.exports = {
                 const stats = sessionRecovery.getRecoveryStats();
                 
                 const embed = new EmbedBuilder()
-                    .setTitle('🛡️ Session Recovery System Status')
+                    .setTitle(createHeader('Session Recovery System', stats.isInitialized ? 'Operational' : 'Inactive', '🛡️', 'large'))
                     .setColor(stats.isInitialized ? 0x57F287 : 0xED4245)
-                    .addFields([
-                        {
-                            name: '🔧 System Status',
-                            value: `**Initialized:** ${stats.isInitialized ? '✅ Yes' : '❌ No'}\n**Shutting Down:** ${stats.isShuttingDown ? '🛑 Yes' : '✅ No'}\n**Periodic Saving:** ${stats.isPeriodicSavingActive ? '✅ Active' : '❌ Inactive'}`,
-                            inline: true
-                        },
-                        {
-                            name: '📊 Session Data',
-                            value: `**Active Sessions:** ${stats.activeSessions}\n**Save Interval:** ${stats.saveInterval}s`,
-                            inline: true
-                        },
-                        {
-                            name: '💡 How It Works',
-                            value: '• Sessions saved every 2 minutes\n• Graceful shutdown handling\n• Crash recovery on startup\n• Automatic heartbeat tracking',
-                            inline: false
-                        }
-                    ])
-                    .setFooter({ text: 'Session data is protected against crashes and server restarts' })
                     .setTimestamp();
-                
+
+                // Recovery system overview with big numbers
+                const systemStats = createStatsCard('Recovery Status', {
+                    'System': stats.isInitialized ? '✅ Operational' : '❌ Inactive',
+                    'Active Sessions': `${stats.activeSessions}`,
+                    'Auto-Save': stats.isPeriodicSavingActive ? '✅ Active' : '❌ Inactive',
+                    'Save Interval': `${stats.saveInterval}s`
+                }, {
+                    showBigNumbers: true,
+                    emphasizeFirst: true
+                });
+
                 if (stats.isInitialized && stats.activeSessions > 0) {
-                    embed.setDescription(`✅ **System is operational** - Currently protecting ${stats.activeSessions} active voice session${stats.activeSessions !== 1 ? 's' : ''}`);
+                    embed.setDescription(`✅ **System is operational** - Currently protecting ${stats.activeSessions} active voice session${stats.activeSessions !== 1 ? 's' : ''}\n\n${systemStats}`);
                 } else if (stats.isInitialized) {
-                    embed.setDescription('✅ **System is operational** - No active sessions to protect');
+                    embed.setDescription(`✅ **System is operational** - No active sessions to protect\n\n${systemStats}`);
                 } else {
-                    embed.setDescription('❌ **System not initialized** - Session recovery unavailable');
+                    embed.setDescription(`❌ **System not initialized** - Session recovery unavailable\n\n${systemStats}`);
                 }
+
+                // System status in table format
+                const statusData = [
+                    ['System Initialized', stats.isInitialized ? '✅ Yes' : '❌ No'],
+                    ['Shutting Down', stats.isShuttingDown ? '🛑 Yes' : '✅ No'],
+                    ['Periodic Saving', stats.isPeriodicSavingActive ? '✅ Active' : '❌ Inactive'],
+                    ['Active Sessions', `${stats.activeSessions}`],
+                    ['Save Interval', `${stats.saveInterval} seconds`]
+                ];
+
+                const statusTable = formatDataTable(statusData, [18, 20]);
+
+                embed.addFields([
+                    {
+                        name: createHeader('System Status', null, '🔧', 'emphasis'),
+                        value: statusTable,
+                        inline: false
+                    }
+                ]);
+
+                // How it works section
+                const featuresData = [
+                    ['Auto-Save', 'Sessions saved every 2 minutes'],
+                    ['Graceful Shutdown', 'Proper shutdown handling'],
+                    ['Crash Recovery', 'Recovery on startup'],
+                    ['Heartbeat Tracking', 'Automatic session monitoring']
+                ];
+
+                const featuresTable = formatDataTable(featuresData, [18, 30]);
+
+                embed.addFields([
+                    {
+                        name: createHeader('Recovery Features', null, '💡', 'emphasis'),
+                        value: featuresTable,
+                        inline: false
+                    }
+                ]);
+
+                embed.setFooter({ text: 'Session data is protected against crashes and server restarts' });
                 
                 return interaction.editReply({ embeds: [embed] });
                 

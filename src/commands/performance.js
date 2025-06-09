@@ -2,6 +2,8 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js'
 const { performanceMonitor } = require('../utils/performanceMonitor');
 const queryCache = require('../utils/queryCache');
 const databaseOptimizer = require('../utils/databaseOptimizer');
+const { createHeader, formatDataTable, createStatsCard, createProgressSection } = require('../utils/visualHelpers');
+const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,8 +11,12 @@ module.exports = {
         .setDescription('Check bot health and performance status'),
     async execute(interaction) {
         try {
-            // Defer immediately to prevent timeout
-            await interaction.deferReply();
+            // Immediately defer to prevent timeout
+            const deferred = await safeDeferReply(interaction);
+            if (!deferred) {
+                console.warn('Failed to defer performance interaction');
+                return;
+            }
             
             const startTime = Date.now();
             const summary = performanceMonitor.getPerformanceSummary();
@@ -41,11 +47,7 @@ module.exports = {
             const errorMessage = '❌ Unable to check performance right now. Please try again later.';
             
             try {
-                if (interaction.deferred) {
-                    await interaction.editReply({ content: errorMessage });
-                } else if (!interaction.replied) {
-                    await interaction.reply({ content: errorMessage, flags: [MessageFlags.Ephemeral] });
-                }
+                await interaction.editReply({ content: errorMessage });
             } catch (err) {
                 console.error('🔥 Error sending performance error reply:', err.message);
             }
@@ -88,52 +90,49 @@ function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, 
     const latencyText = formatLatencyInfo(wsLatency, apiLatency);
 
     const embed = new EmbedBuilder()
-        .setTitle('🏥 Bot Health Report')
-        .setDescription(healthMessage)
+        .setTitle(createHeader('Bot Performance Report', healthStatus, '🏥', 'large'))
         .setColor(healthColor)
-        .addFields([
-            {
-                name: '📋 Overall Status',
-                value: healthStatus,
-                inline: true
-            },
-            {
-                name: '⏰ Uptime',
-                value: `${uptimeHours}h ${uptimeMinutes}m`,
-                inline: true
-            },
-            {
-                name: '📡 Latency',
-                value: latencyText,
-                inline: true
-            },
-            {
-                name: '🧠 Memory Usage',
-                value: getMemoryReport(memUsage, memoryPercentage),
-                inline: true
-            },
-            {
-                name: '⚡ Response Speed',
-                value: getAverageResponseTime(summary),
-                inline: true
-            },
-            {
-                name: '🗃️ Database Health',
-                value: getDatabaseHealth(summary),
-                inline: true
-            },
-            {
-                name: '📊 Activity Level',
-                value: `${summary.commands.total} commands processed`,
-                inline: false
-            },
-            {
-                name: '💾 Query Cache',
-                value: `${cacheStats.hitRate} hit rate (${cacheStats.size} entries, ${cacheStats.memoryUsage})`,
-                inline: false
-            }
-        ])
         .setTimestamp();
+
+    // Performance overview with big numbers
+    const performanceStats = createStatsCard('Performance Overview', {
+        'Status': healthStatus,
+        'Uptime': `${uptimeHours}h ${uptimeMinutes}m`,
+        'Commands': `${summary.commands.total}`,
+        'Memory': `${memUsage.heapUsed}MB`
+    }, {
+        showBigNumbers: true,
+        emphasizeFirst: true
+    });
+
+    embed.setDescription(`${healthMessage}\n\n${performanceStats}`);
+
+    // Performance metrics in table format
+    const performanceData = [
+        ['System Status', healthStatus],
+        ['Uptime', `${uptimeHours}h ${uptimeMinutes}m`],
+        ['Commands Processed', `${summary.commands.total}`],
+        ['Memory Usage', `${memUsage.heapUsed}MB / ${memUsage.heapTotal}MB`],
+        ['Discord Latency', `${wsLatency}ms`],
+        ['API Response', `${apiLatency}ms`],
+        ['Cache Hit Rate', cacheStats.hitRate || 'N/A'],
+        ['Active Connections', `${summary.database.activeConnections}`]
+    ];
+
+    const performanceTable = formatDataTable(performanceData, [18, 25]);
+
+    embed.addFields([
+        {
+            name: createHeader('System Metrics', null, '📊', 'emphasis'),
+            value: performanceTable,
+            inline: false
+        },
+        {
+            name: createHeader('Cache Performance', null, '💾', 'emphasis'),
+            value: `${cacheStats.hitRate} hit rate (${cacheStats.size} entries, ${cacheStats.memoryUsage})`,
+            inline: false
+        }
+    ]);
 
     // Add issues summary if any exist
     if (bottlenecks.length > 0) {

@@ -1,4 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { createHeader, formatDataTable, createStatsCard, createProgressSection } = require('../utils/visualHelpers');
+const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -6,6 +8,13 @@ module.exports = {
         .setDescription('Show detailed memory usage information'),
     async execute(interaction) {
         try {
+            // Immediately defer to prevent timeout
+            const deferred = await safeDeferReply(interaction);
+            if (!deferred) {
+                console.warn('Failed to defer memory interaction');
+                return;
+            }
+
             const memUsage = process.memoryUsage();
             
             // Get Node.js memory limits
@@ -36,45 +45,69 @@ module.exports = {
             }
             
             const embed = new EmbedBuilder()
-                .setTitle('🧠 Memory Usage Report')
+                .setTitle(createHeader('Memory Usage Report', `${statusIcon} ${statusText}`, '🧠', 'large'))
                 .setColor(statusIcon === '🟢' ? '#00ff00' : statusIcon === '🟡' ? '#ffff00' : '#ff0000')
-                .setDescription(`${statusIcon} **Status:** ${statusText}`)
-                .addFields(
-                    { 
-                        name: '📊 Current Heap Usage', 
-                        value: `${heapUsedMB}MB / ${heapTotalMB}MB (${heapUsagePercent}%)`, 
-                        inline: true 
-                    },
-                    { 
-                        name: '🚀 Total Capacity', 
-                        value: `${heapUsedMB}MB / ${maxHeapMB}MB (${capacityPercent}%)`, 
-                        inline: true 
-                    },
-                    { 
-                        name: '💾 Available Memory', 
-                        value: `${availableHeapMB}MB remaining`, 
-                        inline: true 
-                    },
-                    { 
-                        name: '🔧 RSS Memory', 
-                        value: `${rssMB}MB (total process memory)`, 
-                        inline: true 
-                    },
-                    { 
-                        name: '🌐 External Memory', 
-                        value: `${externalMB}MB (C++ objects, buffers)`, 
-                        inline: true 
-                    },
-                    { 
-                        name: '📈 Memory Efficiency', 
-                        value: `Using ${capacityPercent}% of Node.js limit`, 
-                        inline: true 
-                    }
-                )
-                .setFooter({ text: `Node.js Memory Limit: ${maxHeapMB}MB • Memory stats updated in real-time` })
                 .setTimestamp();
+
+            // Create memory usage stats card with big numbers
+            const memoryStats = createStatsCard('Memory Overview', {
+                'Current Usage': `${heapUsedMB}MB`,
+                'Available': `${availableHeapMB}MB`,
+                'Capacity Used': `${capacityPercent}%`,
+                'Status': `${statusIcon} ${statusText}`
+            }, {
+                showBigNumbers: true,
+                emphasizeFirst: true
+            });
+
+            embed.setDescription(memoryStats);
+
+            // Memory breakdown in table format
+            const memoryData = [
+                ['Heap Used', `${heapUsedMB}MB`, `${heapUsagePercent}%`],
+                ['Heap Total', `${heapTotalMB}MB`, '—'],
+                ['RSS Memory', `${rssMB}MB`, 'Process Total'],
+                ['External', `${externalMB}MB`, 'C++ Objects'],
+                ['Available', `${availableHeapMB}MB`, 'Remaining'],
+                ['Node.js Limit', `${maxHeapMB}MB`, 'Maximum']
+            ];
+
+            const memoryTable = formatDataTable(memoryData, [15, 12, 15]);
+
+            embed.addFields([
+                {
+                    name: createHeader('Memory Breakdown', null, '📊', 'emphasis'),
+                    value: memoryTable,
+                    inline: false
+                }
+            ]);
+
+            // Memory usage progress bars
+            const heapProgress = createProgressSection('Heap Usage', heapUsedMB, heapTotalMB, {
+                showPercentage: true,
+                showNumbers: true,
+                barLength: 20
+            });
+
+            const capacityProgress = createProgressSection('Node.js Capacity', heapUsedMB, maxHeapMB, {
+                showPercentage: true,
+                showNumbers: true,
+                barLength: 20,
+                warningThreshold: 60,
+                dangerThreshold: 80
+            });
+
+            embed.addFields([
+                {
+                    name: createHeader('Usage Progress', null, '📈', 'emphasis'),
+                    value: `${heapProgress}\n\n${capacityProgress}`,
+                    inline: false
+                }
+            ]);
+
+            embed.setFooter({ text: `Node.js Memory Limit: ${maxHeapMB}MB • Memory stats updated in real-time` });
             
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('💥 Error in /memory command:', {
                 error: error.message,
@@ -85,11 +118,7 @@ module.exports = {
             
             const errorMessage = '❌ An error occurred while fetching memory information.';
             try {
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({ content: errorMessage, flags: [MessageFlags.Ephemeral] });
-                } else if (interaction.deferred) {
-                    await interaction.editReply({ content: errorMessage });
-                }
+                await interaction.editReply({ content: errorMessage });
             } catch (replyError) {
                 console.error('🔥 Error sending memory error reply:', replyError.message);
             }

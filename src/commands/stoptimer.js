@@ -1,5 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
+const { createTimerTemplate, createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
+const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -7,57 +10,65 @@ module.exports = {
         .setDescription('Stop the active Pomodoro timer in your voice channel'),
     async execute(interaction, { activeVoiceTimers }) {
         try {
+            // Immediately defer to prevent timeout
+            const deferred = await safeDeferReply(interaction);
+            if (!deferred) {
+                console.warn('Failed to defer stoptimer interaction');
+                return;
+            }
+
             // Use the reliable voice channel detection utility
             const voiceChannel = await getUserVoiceChannel(interaction);
             
             if (!voiceChannel) {
-                return interaction.reply({
-                    content: `┌─────────────────────────────┐
-│ 🚫 **VOICE CHANNEL REQUIRED** │
-└─────────────────────────────┘
-
-You must be in a voice channel to stop a timer!
-
-💡 *Join the voice channel with an active timer*`,
-                });
+                const embed = createErrorTemplate(
+                    `${StatusEmojis.ERROR} Voice Channel Required`,
+                    'You must be in a voice channel to stop a timer and manage your productivity sessions.',
+                    { 
+                        helpText: 'Join the voice channel with an active timer',
+                        additionalInfo: 'Timer controls are tied to your current voice channel location.'
+                    }
+                );
+                return interaction.editReply({ embeds: [embed] });
             }
             
             const voiceChannelId = voiceChannel.id;
             if (!activeVoiceTimers.has(voiceChannelId)) {
-                return interaction.reply({
-                    content: `┌─────────────────────────────┐
-│ ❌ **NO ACTIVE TIMER FOUND** │
-└─────────────────────────────┘
-
-No timer is currently running in <#${voiceChannelId}>
-
-💡 *Use \`/timer\` to start a new Pomodoro session*`,
-                });
+                const embed = createErrorTemplate(
+                    `${StatusEmojis.WARNING} No Active Timer Found`,
+                    `No Pomodoro timer is currently running in <#${voiceChannelId}>. There's nothing to stop!`,
+                    { 
+                        helpText: 'Use `/timer <work_minutes>` to start a new Pomodoro session',
+                        additionalInfo: 'Check `/time` to see if there are any active timers in your current voice channel.'
+                    }
+                );
+                return interaction.reply({ embeds: [embed] });
             }
             const timer = activeVoiceTimers.get(voiceChannelId);
             if (timer.workTimeout) clearTimeout(timer.workTimeout);
             if (timer.breakTimeout) clearTimeout(timer.breakTimeout);
             activeVoiceTimers.delete(voiceChannelId);
-            return interaction.reply({ 
-                content: `┌─────────────────────────────┐
-│ 🛑 **TIMER STOPPED**        │
-└─────────────────────────────┘
-
-Timer in <#${voiceChannelId}> has been stopped successfully.
-
-💡 *Use \`/timer\` when you're ready for another session*` 
-            });
+            
+            const embed = createSuccessTemplate(
+                `🛑 Timer Stopped Successfully`,
+                `Your Pomodoro timer in <#${voiceChannelId}> has been stopped. No worries - every session counts towards building your productivity habits!`,
+                {
+                    helpText: 'Use `/timer <work_minutes>` when you\'re ready for another session',
+                    additionalInfo: 'Remember: Consistency is key to building productive habits.'
+                }
+            );
+            
+            return interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error in /stoptimer:', error);
-            if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({
-                        content: '❌ An error occurred. Please try again later.',
-                    });
-                } catch (err) {
-                    console.error('Error sending fallback error reply:', err);
-                }
-            }
+            
+            const embed = createErrorTemplate(
+                'Timer Stop Failed',
+                'An error occurred while stopping your timer. Please try again in a moment.',
+                { helpText: 'If this problem persists, contact support' }
+            );
+            
+            await safeErrorReply(interaction, embed);
         }
     }
 };

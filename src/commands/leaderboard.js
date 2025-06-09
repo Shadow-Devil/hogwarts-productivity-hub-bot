@@ -1,5 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const voiceService = require('../services/voiceService');
+const { createLeaderboardTemplate, createErrorTemplate } = require('../utils/embedTemplates');
+const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -16,15 +19,26 @@ module.exports = {
                 )),
     async execute(interaction) {
         try {
-            await interaction.deferReply();
+            // Immediately defer to prevent timeout
+            const deferred = await safeDeferReply(interaction);
+            if (!deferred) {
+                console.warn('Failed to defer leaderboard interaction');
+                return;
+            }
 
             const leaderboardType = interaction.options.getString('type');
             const leaderboard = await voiceService.getLeaderboard(leaderboardType);
 
             if (!leaderboard || leaderboard.length === 0) {
-                await interaction.editReply({
-                    content: '📊 No data available for the leaderboard yet. Users need to spend time in voice channels first!',
-                });
+                const embed = createErrorTemplate(
+                    `${StatusEmojis.INFO} No Leaderboard Data`,
+                    'No data is available for the leaderboard yet. Be the first to start tracking your voice time!',
+                    { 
+                        helpText: 'Join a voice channel to start accumulating hours',
+                        additionalInfo: 'Your time in voice channels automatically contributes to both monthly and all-time rankings.'
+                    }
+                );
+                await interaction.editReply({ embeds: [embed] });
                 return;
             }
 
@@ -32,93 +46,30 @@ module.exports = {
             const currentUserId = interaction.user.id;
             const userPosition = leaderboard.findIndex(entry => entry.discord_id === currentUserId) + 1;
 
-            // Format leaderboard display
-            const isMonthly = leaderboardType === 'monthly';
-            const title = isMonthly ? '📅 Monthly Voice Leaderboard' : '🌟 All-Time Voice Leaderboard';
-            const description = isMonthly 
-                ? 'Top users by hours spent in voice channels this month'
-                : 'Top users by hours spent in voice channels all-time';
-
-            // Create embed
-            const embed = new EmbedBuilder()
-                .setTitle(title)
-                .setDescription(description)
-                .setColor(0x5865F2)
-                .setTimestamp()
-                .setFooter({ 
-                    text: isMonthly ? 'Monthly leaderboard resets on the 1st of each month' : 'All-time rankings'
-                });
-
-            // Add leaderboard entries (top 10)
-            const topEntries = leaderboard.slice(0, 10);
-            let leaderboardText = '';
-
-            topEntries.forEach((entry, index) => {
-                const position = index + 1;
-                const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `**${position}.**`;
-                const hours = entry.hours.toFixed(1);
-                const points = entry.points;
-                
-                // Highlight current user
-                const isCurrentUser = entry.discord_id === currentUserId;
-                const userDisplay = isCurrentUser ? `**${entry.username}** ⭐` : entry.username;
-                
-                leaderboardText += `${medal} ${userDisplay}\n`;
-                leaderboardText += `    🕒 ${hours}h • 💰 ${points} points\n\n`;
+            // Create enhanced leaderboard using our template with new features
+            const embed = createLeaderboardTemplate(leaderboardType, leaderboard, {
+                id: currentUserId,
+                username: interaction.user.username
+            }, {
+                maxEntries: 10,
+                showUserPosition: true,
+                includeMedals: true,
+                includeStats: true,
+                useEnhancedLayout: true,
+                useTableFormat: true
             });
-
-            embed.addFields([{
-                name: '🏆 Top 10 Rankings',
-                value: leaderboardText || 'No rankings available',
-                inline: false
-            }]);
-
-            // Add user's position if they're not in top 10
-            if (userPosition > 10 && userPosition <= leaderboard.length) {
-                const userEntry = leaderboard[userPosition - 1];
-                embed.addFields([{
-                    name: '📍 Your Position',
-                    value: `**#${userPosition}** • 🕒 ${userEntry.hours.toFixed(1)}h • 💰 ${userEntry.points} points`,
-                    inline: false
-                }]);
-            } else if (userPosition > 0 && userPosition <= 10) {
-                embed.addFields([{
-                    name: '📍 Your Position',
-                    value: `🎉 You're in the **Top 10** at position **#${userPosition}**!`,
-                    inline: false
-                }]);
-            } else if (userPosition === 0) {
-                embed.addFields([{
-                    name: '📍 Your Position',
-                    value: `Join a voice channel to appear on the leaderboard! 🚀`,
-                    inline: false
-                }]);
-            }
-
-            // Add statistics
-            const totalUsers = leaderboard.length;
-            const totalHours = leaderboard.reduce((sum, entry) => sum + entry.hours, 0);
-            const avgHours = totalUsers > 0 ? (totalHours / totalUsers).toFixed(1) : '0.0';
-
-            embed.addFields([{
-                name: '📊 Statistics',
-                value: `👥 **${totalUsers}** users • 🕒 **${totalHours.toFixed(1)}h** total • 📈 **${avgHours}h** average`,
-                inline: false
-            }]);
 
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error in /leaderboard:', error);
-            const errorMessage = '❌ An error occurred while fetching the leaderboard.';
-            try {
-                if (interaction.deferred) {
-                    await interaction.editReply({ content: errorMessage });
-                } else if (!interaction.replied) {
-                    await interaction.reply({ content: errorMessage, flags: [MessageFlags.Ephemeral] });
-                }
-            } catch (replyError) {
-                console.error('Error sending leaderboard error reply:', replyError);
-            }
+            
+            const embed = createErrorTemplate(
+                'Leaderboard Load Failed',
+                'An error occurred while fetching the leaderboard data. Please try again in a moment.',
+                { helpText: 'If this problem persists, contact support' }
+            );
+            
+            await safeErrorReply(interaction, embed);
         }
     }
 };

@@ -1,4 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { createHeader, formatDataTable, createStatsCard, createInfoSection } = require('../utils/visualHelpers');
+const { createHealthTemplate } = require('../utils/embedTemplates');
+const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,7 +18,12 @@ module.exports = {
                 )),
     async execute(interaction) {
         try {
-            await interaction.deferReply();
+            // Immediately defer to prevent timeout
+            const deferred = await safeDeferReply(interaction);
+            if (!deferred) {
+                console.warn('Failed to defer health interaction');
+                return;
+            }
 
             const healthType = interaction.options.getString('type') || 'overview';
             const { getDbResilience } = require('../models/db');
@@ -24,9 +32,42 @@ module.exports = {
             const healthMonitor = interaction.client.healthMonitor;
             
             if (!healthMonitor) {
-                return interaction.editReply({
-                    content: '❌ Health monitoring system is not available.',
-                });
+                const { createHealthTemplate } = require('../utils/embedTemplates');
+                const embed = createHealthTemplate(
+                    'Health System Status', 
+                    {
+                        status: 'unavailable',
+                        statusEmoji: '⚠️',
+                        systemHealth: false,
+                        message: 'Health monitoring system is not initialized yet. Please wait for bot startup to complete.',
+                        troubleshooting: [
+                            'The bot may still be starting up',
+                            'Database connections may be initializing',
+                            'Wait a few moments and try again'
+                        ]
+                    },
+                    { useEnhancedLayout: true }
+                );
+                return interaction.editReply({ embeds: [embed] });
+            }
+
+            // Check if health monitor is fully initialized
+            const healthStatus = healthMonitor.getHealthStatus();
+            if (healthStatus.status === 'initializing') {
+                const { createHealthTemplate } = require('../utils/embedTemplates');
+                const embed = createHealthTemplate(
+                    'Health System Status', 
+                    {
+                        status: 'initializing',
+                        statusEmoji: '🔄',
+                        systemHealth: false,
+                        message: 'Health monitoring system is starting up. Please wait a moment...',
+                        initializationNote: 'Running initial system checks',
+                        estimatedWait: '10-30 seconds'
+                    },
+                    { useEnhancedLayout: true }
+                );
+                return interaction.editReply({ embeds: [embed] });
             }
 
             let embed;
@@ -70,58 +111,87 @@ async function createOverviewEmbed(healthMonitor) {
     const sessionRecovery = require('../utils/sessionRecovery');
     const recoveryStats = sessionRecovery.getRecoveryStats();
     
-    const embed = new EmbedBuilder()
-        .setTitle('🩺 Bot Health Overview')
-        .setColor(getStatusColor(healthReport.current.status))
-        .setDescription(`**System Status:** ${statusEmoji} ${healthReport.current.status.toUpperCase()}`)
-        .setTimestamp();
+    // Enhanced header with bigger font
+    const headerText = createHeader('Bot Health Overview', `${statusEmoji} ${healthReport.current.status.toUpperCase()}`, '🩺', 'large');
+    
+    const embed = createHealthTemplate(
+        'Bot Health Overview',
+        {
+            status: healthReport.current.status,
+            statusEmoji: statusEmoji,
+            systemHealth: healthReport.current.status === 'healthy',
+            uptime: healthReport.uptime.percent,
+            healthChecks: `${healthReport.uptime.healthy}/${healthReport.uptime.total}`,
+            lastUpdate: Math.floor(new Date(healthReport.lastUpdate).getTime() / 1000),
+            recoveryStatus: recoveryStats.isInitialized,
+            activeSessions: recoveryStats.activeSessions,
+            autoSave: recoveryStats.isPeriodicSavingActive,
+            issues: healthReport.current.issues || []
+        },
+        {
+            useEnhancedLayout: true,
+            useTableFormat: true,
+            showBigNumbers: true
+        }
+    );
 
     if (healthReport.current.status === 'healthy') {
+        // Create table format for system health data
+        const healthData = [
+            ['System Status', `${statusEmoji} All Operational`],
+            ['Uptime Score', `${healthReport.uptime.percent}%`],
+            ['Health Checks', `${healthReport.uptime.healthy}/${healthReport.uptime.total}`],
+            ['Recovery Status', recoveryStats.isInitialized ? '✅ Active' : '❌ Inactive'],
+            ['Active Sessions', `${recoveryStats.activeSessions}`],
+            ['Auto-Save', recoveryStats.isPeriodicSavingActive ? '✅ Enabled' : '❌ Disabled']
+        ];
+        
+        const tableText = formatDataTable(healthData, [20, 25]);
+        
         embed.addFields([
             {
-                name: '✅ System Health',
-                value: `All systems operational\nUptime: ${healthReport.uptime.percent}%`,
-                inline: true
-            },
-            {
-                name: '📊 Quick Stats',
-                value: `Health Checks: ${healthReport.uptime.healthy}/${healthReport.uptime.total}\nLast Update: <t:${Math.floor(new Date(healthReport.lastUpdate).getTime() / 1000)}:R>`,
-                inline: true
-            },
-            {
-                name: '🛡️ Session Recovery',
-                value: `Status: ${recoveryStats.isInitialized ? '✅ Active' : '❌ Inactive'}\nActive Sessions: ${recoveryStats.activeSessions}\nAuto-Save: ${recoveryStats.isPeriodicSavingActive ? '✅' : '❌'}`,
-                inline: true
+                name: createHeader('System Status', null, '📊', 'emphasis'),
+                value: tableText,
+                inline: false
             }
         ]);
     } else {
         const issues = healthReport.current.issues || [];
-        embed.addFields([
+                embed.addFields([
             {
-                name: '⚠️ Issues Detected',
+                name: createHeader('Issues Detected', null, '⚠️', 'emphasis'),
                 value: issues.length > 0 ? 
-                    issues.slice(0, 3).map(issue => `• ${issue.name}: ${issue.error}`).join('\n') :
+                    issues.slice(0, 3).map(issue => `• **${issue.name}**: ${issue.error}`).join('\n') :
                     'Unknown issues detected',
                 inline: false
-            },
-            {
-                name: '📈 Uptime',
-                value: `${healthReport.uptime.percent}% (${healthReport.uptime.healthy}/${healthReport.uptime.total})`,
-                inline: true
             }
         ]);
+        
+        // Add uptime info in table format
+        const uptimeData = [
+            ['Uptime Score', `${healthReport.uptime.percent}%`],
+            ['Health Checks', `${healthReport.uptime.healthy}/${healthReport.uptime.total}`],
+            ['Status', 'Needs Attention']
+        ];
+        
+        const uptimeTable = formatDataTable(uptimeData, [15, 20]);
+        embed.addFields([{
+            name: createHeader('System Metrics', null, '📈', 'emphasis'),
+            value: uptimeTable,
+            inline: false
+        }]);
     }
 
     // Add trends if available
     if (healthReport.trends && Object.keys(healthReport.trends).length > 0) {
-        const trendsText = Object.entries(healthReport.trends)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join('\n');
+        const trendsData = Object.entries(healthReport.trends)
+            .map(([key, value]) => [key, `${getTrendEmoji(value)} ${value}`]);
         
+        const trendsTable = formatDataTable(trendsData, [15, 20]);
         embed.addFields([{
-            name: '📈 Trends',
-            value: trendsText,
-            inline: true
+            name: createHeader('Performance Trends', null, '📈', 'emphasis'),
+            value: trendsTable,
+            inline: false
         }]);
     }
 

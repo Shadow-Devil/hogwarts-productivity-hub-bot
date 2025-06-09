@@ -1,5 +1,8 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
+const { createTimerTemplate, createErrorTemplate } = require('../utils/embedTemplates');
+const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,22 +18,27 @@ module.exports = {
                 .setRequired(false)),
     async execute(interaction, { activeVoiceTimers }) {
         try {
+            // Immediately defer to prevent timeout
+            const deferred = await safeDeferReply(interaction);
+            if (!deferred) {
+                console.warn('Failed to defer timer interaction');
+                return;
+            }
+
             // Use the reliable voice channel detection utility
             const voiceChannel = await getUserVoiceChannel(interaction);
             
             if (!voiceChannel) {
-                if (!interaction.replied && !interaction.deferred) {
-                    return interaction.reply({
-                        content: `┌─────────────────────────────┐
-│ 🚫 **VOICE CHANNEL REQUIRED** │
-└─────────────────────────────┘
-
-You must be in a voice channel to start a timer!
-
-💡 *Join any voice channel first, then try again*`,
-                    });
-                }
-                return;
+                const embed = createErrorTemplate(
+                    `${StatusEmojis.ERROR} Voice Channel Required`,
+                    'You must be in a voice channel to start a Pomodoro timer and track your productivity.',
+                    { 
+                        helpText: 'Join any voice channel first, then try again',
+                        additionalInfo: 'Timers help you maintain focus during productive voice sessions.'
+                    }
+                );
+                
+                return interaction.editReply({ embeds: [embed] });
             }
             const voiceChannelId = voiceChannel.id;
             // Enforce: only one timer per voice channel
@@ -52,19 +60,17 @@ You must be in a voice channel to start a timer!
                         activeVoiceTimers.delete(voiceChannelId);
                     } else {
                         // Timer is valid and active, reject the new timer request
+                        const embed = createErrorTemplate(
+                            `${StatusEmojis.WARNING} Timer Already Running`,
+                            `A Pomodoro timer is already active in <#${voiceChannelId}>! Only one timer per voice channel is allowed.`,
+                            { 
+                                helpText: 'Use `/stoptimer` to stop the current timer first',
+                                additionalInfo: `**Current Phase:** ${existingTimer.phase.toUpperCase()}\n**Time Remaining:** ${timeRemaining} minutes`
+                            }
+                        );
+                        
                         if (!interaction.replied && !interaction.deferred) {
-                            return interaction.reply({
-                                content: `┌─────────────────────────────────┐
-│ ⏳ **TIMER ALREADY RUNNING**    │
-└─────────────────────────────────┘
-
-A timer is already active in <#${voiceChannelId}>!
-
-🕒 **Current Phase:** ${existingTimer.phase.toUpperCase()}
-⌛ **Time Remaining:** ${timeRemaining} minutes
-
-🛑 *Use \`/stoptimer\` to stop the current timer first*`,
-                            });
+                            return interaction.editReply({ embeds: [embed] });
                         }
                         return;
                     }
@@ -73,42 +79,41 @@ A timer is already active in <#${voiceChannelId}>!
             const work = interaction.options.getInteger('work');
             const breakTime = interaction.options.getInteger('break') || 0;
             if (work < 20 || (breakTime > 0 && breakTime < 5)) {
-                if (!interaction.replied && !interaction.deferred) {
-                    return interaction.reply({
-                        content: `┌──────────────────────────────┐
-│ ⚠️ **INVALID TIMER VALUES**  │
-└──────────────────────────────┘
-
-**Minimum Requirements:**
-🕒 Work Time: **20 minutes**
-☕ Break Time: **5 minutes** (if specified)
-
-💡 *Try again with valid values*`,
-                    });
-                }
-                return;
+                const embed = createErrorTemplate(
+                    `${StatusEmojis.WARNING} Invalid Timer Values`,
+                    'Please ensure your timer values meet the minimum requirements for effective productivity sessions.',
+                    { 
+                        helpText: 'Try again with valid values',
+                        additionalInfo: '**Minimum Requirements:**\n🕒 Work Time: **20 minutes**\n☕ Break Time: **5 minutes** (if specified)'
+                    }
+                );
+                
+                return interaction.editReply({ embeds: [embed] });
             }
-            await interaction.reply({
-                content: `┌─────────────────────────────────┐
-│ ⏱️ **POMODORO TIMER STARTED**   │
-└─────────────────────────────────┘
-
-🕒 **Work Time:** ${work} minutes${breakTime > 0 ? `\n☕ **Break Time:** ${breakTime} minutes` : ''}
-📍 **Location:** <#${voiceChannelId}>
-
-🎯 *Focus time! Good luck with your session!*
-💡 *Use \`/stoptimer\` if you need to stop early*`
+            const embed = createTimerTemplate('start', {
+                workTime: work,
+                breakTime: breakTime,
+                voiceChannel: voiceChannel,
+                phase: 'work'
+            }, {
+                showProgress: true,
+                includeMotivation: true,
+                style: 'pomodoro'
             });
+            
+            await interaction.reply({ embeds: [embed] });
             const workTimeout = setTimeout(async () => {
                 try {
+                    const workCompleteEmbed = createTimerTemplate('work_complete', {
+                        workTime: work,
+                        breakTime: breakTime,
+                        voiceChannel: voiceChannel,
+                        phase: 'work_complete'
+                    });
+                    
                     await interaction.followUp({ 
-                        content: `┌─────────────────────────────┐
-│ 🔔 **WORK SESSION COMPLETE** │
-└─────────────────────────────┘
-
-<@${interaction.user.id}> Great work! 🎉
-
-${breakTime > 0 ? `☕ **Break time!** Take a well-deserved ${breakTime}-minute break.\n🔔 *I'll notify you when it's time to get back to work.*` : '🎯 **Session finished!** Great job staying focused!'}`
+                        content: `<@${interaction.user.id}>`,
+                        embeds: [workCompleteEmbed]
                     });
                 } catch (err) {
                     console.error('Error sending work over message:', err);
@@ -116,15 +121,16 @@ ${breakTime > 0 ? `☕ **Break time!** Take a well-deserved ${breakTime}-minute 
                 if (breakTime > 0) {
                     const breakTimeout = setTimeout(async () => {
                         try {
+                            const breakCompleteEmbed = createTimerTemplate('break_complete', {
+                                workTime: work,
+                                breakTime: breakTime,
+                                voiceChannel: voiceChannel,
+                                phase: 'break_complete'
+                            });
+                            
                             await interaction.followUp({ 
-                                content: `┌─────────────────────────────┐
-│ 🕒 **BREAK TIME IS OVER**    │
-└─────────────────────────────┘
-
-<@${interaction.user.id}> Break's over! 💪
-
-🎯 **Time to get back to work!**
-✨ *You've got this! Stay focused and productive!*`
+                                content: `<@${interaction.user.id}>`,
+                                embeds: [breakCompleteEmbed]
                             });
                         } catch (err) {
                             console.error('Error sending break over message:', err);
@@ -148,14 +154,13 @@ ${breakTime > 0 ? `☕ **Break time!** Take a well-deserved ${breakTime}-minute 
         } catch (error) {
             console.error('Error in /timer:', error);
             
-            const errorMessage = '❌ An error occurred. Please try again later.';
-            try {
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({ content: errorMessage, flags: [MessageFlags.Ephemeral] });
-                }
-            } catch (err) {
-                console.error('Error sending timer error reply:', err);
-            }
+            const embed = createErrorTemplate(
+                'Timer Creation Failed',
+                'An unexpected error occurred while starting your Pomodoro timer. Please try again in a moment.',
+                { helpText: 'If this problem persists, contact support' }
+            );
+            
+            await safeErrorReply(interaction, embed);
         }
     }
 };

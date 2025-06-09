@@ -1,5 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const queryCache = require('../utils/queryCache');
+const { createHeader, formatDataTable, createStatsCard, createProgressSection } = require('../utils/visualHelpers');
+const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -27,6 +29,13 @@ module.exports = {
                         ))),
     async execute(interaction) {
         try {
+            // Immediately defer to prevent timeout
+            const deferred = await safeDeferReply(interaction);
+            if (!deferred) {
+                console.warn('Failed to defer cache interaction');
+                return;
+            }
+
             const subcommand = interaction.options.getSubcommand();
 
             if (subcommand === 'stats') {
@@ -38,15 +47,11 @@ module.exports = {
         } catch (error) {
             console.error('Error in /cache command:', error);
             
-            if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({
-                        content: '❌ An error occurred while managing cache.',
-                    });
-                } catch (err) {
-                    console.error('Error sending cache error reply:', err);
-                }
-            }
+            await safeErrorReply(interaction, {
+                title: 'Cache Management Error',
+                description: 'An error occurred while managing cache.',
+                color: 0xED4245
+            });
         }
     }
 };
@@ -59,32 +64,77 @@ async function showCacheStats(interaction) {
         `${((stats.hits / stats.total) * 100).toFixed(1)}% efficient` : 'No data';
     
     const embed = new EmbedBuilder()
-        .setTitle('💾 Query Cache Statistics')
+        .setTitle(createHeader('Query Cache Statistics', null, '💾', 'large'))
         .setColor(0x3498db)
-        .setDescription('Cache performance metrics and memory usage')
-        .addFields([
+        .setTimestamp();
+
+    // Cache overview with big numbers
+    const cacheStats = createStatsCard('Cache Performance', {
+        'Hit Rate': stats.hitRate,
+        'Total Queries': `${stats.total}`,
+        'Cache Entries': `${stats.size}`,
+        'Memory Usage': stats.memoryUsage
+    }, {
+        showBigNumbers: true,
+        emphasizeFirst: true
+    });
+
+    embed.setDescription(`Cache performance metrics and memory usage\n\n${cacheStats}`);
+
+    // Cache metrics in table format
+    const cacheData = [
+        ['Hit Rate', stats.hitRate],
+        ['Total Queries', `${stats.total}`],
+        ['Cache Hits', `${stats.hits}`],
+        ['Cache Misses', `${stats.misses}`],
+        ['Entries Stored', `${stats.size}`],
+        ['Memory Usage', stats.memoryUsage],
+        ['Efficiency', efficiency]
+    ];
+
+    const cacheTable = formatDataTable(cacheData, [15, 20]);
+
+    embed.addFields([
+        {
+            name: createHeader('Cache Metrics', null, '📊', 'emphasis'),
+            value: cacheTable,
+            inline: false
+        }
+    ]);
+
+    // Performance impact section
+    if (stats.hits > 0) {
+        const savedQueries = stats.hits;
+        const estimatedTimeSaved = (stats.hits * 50).toFixed(0);
+        
+        const impactData = [
+            ['Queries Prevented', `${savedQueries}`],
+            ['Estimated Time Saved', `${estimatedTimeSaved}ms`],
+            ['Database Load Reduced', `${((stats.hits / stats.total) * 100).toFixed(1)}%`]
+        ];
+
+        const impactTable = formatDataTable(impactData, [20, 15]);
+
+        embed.addFields([
             {
-                name: '📊 Cache Performance',
-                value: `**Hit Rate:** ${stats.hitRate}\n**Total Queries:** ${stats.total}\n**Cache Hits:** ${stats.hits}\n**Cache Misses:** ${stats.misses}`,
-                inline: true
-            },
-            {
-                name: '💾 Memory Usage',
-                value: `**Entries:** ${stats.size}\n**Memory:** ${stats.memoryUsage}\n**Efficiency:** ${efficiency}`,
-                inline: true
-            },
-            {
-                name: '⚡ Performance Impact',
-                value: stats.hits > 0 ? 
-                    `Prevented **${stats.hits}** database queries\nEstimated **${(stats.hits * 50).toFixed(0)}ms** saved` :
-                    'No performance gains yet',
+                name: createHeader('Performance Impact', null, '⚡', 'emphasis'),
+                value: impactTable,
                 inline: false
             }
-        ])
-        .setTimestamp()
-        .setFooter({ text: 'Cache automatically cleans expired entries every minute' });
+        ]);
+    } else {
+        embed.addFields([
+            {
+                name: createHeader('Performance Impact', null, '⚡', 'emphasis'),
+                value: 'No performance gains yet - cache is building up',
+                inline: false
+            }
+        ]);
+    }
 
-    await interaction.reply({ embeds: [embed] });
+    embed.setFooter({ text: 'Cache automatically cleans expired entries every minute' });
+
+    await interaction.editReply({ embeds: [embed] });
 }
 
 async function clearCache(interaction, cacheType) {
@@ -107,7 +157,7 @@ async function clearCache(interaction, cacheType) {
                 ])
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } else {
             // Clear specific cache type
             queryCache.clearType(cacheType);
@@ -118,11 +168,11 @@ async function clearCache(interaction, cacheType) {
                 .setDescription(`Successfully cleared **${cacheType}** cache`)
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         }
     } catch (error) {
         console.error('Error clearing cache:', error);
-        await interaction.reply({
+        await interaction.editReply({
             content: '❌ Failed to clear cache. Please try again.',
         });
     }

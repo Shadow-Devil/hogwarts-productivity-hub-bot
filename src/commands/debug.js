@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
+const { createHeader, formatDataTable, createStatsCard } = require('../utils/visualHelpers');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -19,50 +20,113 @@ module.exports = {
                 console.log(`Voice channel found via cached member: ${voiceChannel.name} (${voiceChannel.id})`);
                 
                 // Check if there's an active timer in this voice channel
-                let timerInfo = '';
+                let timerStatus = 'No active timer';
+                let timerPhase = 'N/A';
+                let timeRemaining = 0;
+                
                 if (activeVoiceTimers.has(voiceChannel.id)) {
                     const timer = activeVoiceTimers.get(voiceChannel.id);
-                    const timeRemaining = Math.ceil((timer.endTime - new Date()) / 60000);
-                    timerInfo = `
-
-⏳ **ACTIVE TIMER DETECTED**
-🎯 Phase: **${timer.phase.toUpperCase()}**
-⏱️ Time Remaining: **${timeRemaining} minutes**`;
-                } else {
-                    timerInfo = `
-
-✅ **NO ACTIVE TIMER**
-💡 Ready for new timer session!`;
+                    timeRemaining = Math.ceil((timer.endTime - new Date()) / 60000);
+                    timerStatus = 'Active timer detected';
+                    timerPhase = timer.phase.toUpperCase();
                 }
-                
-                await interaction.editReply({
-                    content: `┌─────────────────────────────────┐
-│ 🔍 **VOICE CHANNEL DEBUG INFO** │
-└─────────────────────────────────┘
 
-📍 **Channel:** ${voiceChannel.name}
-🆔 **Channel ID:** ${voiceChannel.id}
-🔧 **Type:** ${voiceChannel.type}
-👥 **Members:** ${voiceChannel.members.size}${timerInfo}
+                const embed = new EmbedBuilder()
+                    .setTitle(createHeader('Voice Channel Debug', 'Detection Working', '🔍', 'large'))
+                    .setColor(0x00ff00)
+                    .setTimestamp();
 
-🔧 **Status:** Detection working correctly!`
+                // Debug overview with big numbers
+                const debugStats = createStatsCard('Debug Status', {
+                    'Detection': '✅ Working',
+                    'Channel Members': `${voiceChannel.members.size}`,
+                    'Timer Status': timerStatus,
+                    'Phase': timerPhase
+                }, {
+                    showBigNumbers: true,
+                    emphasizeFirst: true
                 });
+
+                embed.setDescription(`Voice channel detection is working correctly!\n\n${debugStats}`);
+
+                // Channel info in table format
+                const channelData = [
+                    ['Channel Name', voiceChannel.name],
+                    ['Channel ID', voiceChannel.id],
+                    ['Channel Type', `${voiceChannel.type}`],
+                    ['Members Count', `${voiceChannel.members.size}`],
+                    ['Timer Status', timerStatus],
+                    ['Time Remaining', timeRemaining > 0 ? `${timeRemaining} minutes` : 'N/A']
+                ];
+
+                const channelTable = formatDataTable(channelData, [18, 25]);
+
+                embed.addFields([
+                    {
+                        name: createHeader('Channel Information', null, '📍', 'emphasis'),
+                        value: channelTable,
+                        inline: false
+                    }
+                ]);
+
+                if (activeVoiceTimers.has(voiceChannel.id)) {
+                    embed.addFields([
+                        {
+                            name: createHeader('Active Timer', null, '⏳', 'emphasis'),
+                            value: `**Phase:** ${timerPhase}\n**Time Remaining:** ${timeRemaining} minutes`,
+                            inline: false
+                        }
+                    ]);
+                } else {
+                    embed.addFields([
+                        {
+                            name: createHeader('Timer Status', null, '✅', 'emphasis'),
+                            value: 'No active timer - Ready for new session!',
+                            inline: false
+                        }
+                    ]);
+                }
+
+                await interaction.editReply({ embeds: [embed] });
             } else {
                 console.log(`User ${interaction.user.tag} is not in any voice channel`);
                 
-                await interaction.editReply({
-                    content: `┌─────────────────────────────────┐
-│ 🔍 **VOICE CHANNEL DEBUG INFO** │
-└─────────────────────────────────┘
+                const embed = new EmbedBuilder()
+                    .setTitle(createHeader('Voice Channel Debug', 'No Channel Detected', '🔍', 'large'))
+                    .setColor(0xff0000)
+                    .setTimestamp();
 
-❌ **No Voice Channel Detected**
-💡 Please join a voice channel first to use voice-related commands.
-
-🔧 **Troubleshooting:**
-• Make sure you're connected to a voice channel
-• Try leaving and rejoining the voice channel
-• Check your Discord permissions`
+                const debugStats = createStatsCard('Debug Status', {
+                    'Detection': '❌ No Channel',
+                    'User Status': 'Not in Voice',
+                    'Recommendation': 'Join Voice Channel',
+                    'Commands Available': 'Limited'
+                }, {
+                    showBigNumbers: true,
+                    emphasizeFirst: true
                 });
+
+                embed.setDescription(`No voice channel detected for your user.\n\n${debugStats}`);
+
+                // Troubleshooting steps in table format
+                const troubleshootingData = [
+                    ['Step 1', 'Join a voice channel'],
+                    ['Step 2', 'Check Discord permissions'],
+                    ['Step 3', 'Try leaving and rejoining'],
+                    ['Step 4', 'Restart Discord if needed']
+                ];
+
+                const troubleshootingTable = formatDataTable(troubleshootingData, [10, 30]);
+
+                embed.addFields([
+                    {
+                        name: createHeader('Troubleshooting Steps', null, '🔧', 'emphasis'),
+                        value: troubleshootingTable,
+                        inline: false
+                    }
+                ]);
+
+                await interaction.editReply({ embeds: [embed] });
             }
         } catch (error) {
             console.error('Error in /debug:', error);

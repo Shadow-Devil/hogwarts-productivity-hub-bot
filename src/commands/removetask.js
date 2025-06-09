@@ -1,5 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
+const { createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
+const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -13,7 +16,12 @@ module.exports = {
                 .setMinValue(1)),
     async execute(interaction) {
         try {
-            await interaction.deferReply();
+            // Immediately defer to prevent timeout
+            const deferred = await safeDeferReply(interaction);
+            if (!deferred) {
+                console.warn('Failed to defer removetask interaction');
+                return;
+            }
 
             const discordId = interaction.user.id;
             const taskNumber = interaction.options.getInteger('number');
@@ -21,48 +29,33 @@ module.exports = {
             const result = await taskService.removeTask(discordId, taskNumber);
 
             if (result.success) {
-                return interaction.editReply({
-                    content: `┌─────────────────────────────────┐
-│ 🗑️ **TASK REMOVED SUCCESSFULLY** │
-└─────────────────────────────────┘
-
-✅ ${result.message}
-
-💡 *Use \`/viewtasks\` to see your updated task list*`
-                });
+                const embed = createSuccessTemplate(
+                    `🗑️ Task Removed Successfully`,
+                    `**${result.message}**\n\nThe task has been permanently removed from your to-do list.`,
+                    {
+                        helpText: 'Use `/viewtasks` to see your updated task list',
+                        additionalInfo: 'Consider completing tasks instead of removing them to earn points!'
+                    }
+                );
+                return interaction.editReply({ embeds: [embed] });
             } else {
-                return interaction.editReply({
-                    content: `┌──────────────────────────┐
-│ ❌ **REMOVAL FAILED**    │
-└──────────────────────────┘
-
-${result.message}
-
-💡 *Use \`/viewtasks\` to check your task numbers*`
-                });
+                const embed = createErrorTemplate(
+                    `${StatusEmojis.FAILED} Task Removal Failed`,
+                    result.message,
+                    { helpText: 'Use `/viewtasks` to check your task numbers' }
+                );
+                return interaction.editReply({ embeds: [embed] });
             }
         } catch (error) {
             console.error('Error in /removetask:', error);
             
-            const errorMessage = '❌ An error occurred while removing the task. Please try again.';
+            const embed = createErrorTemplate(
+                'Task Removal Error',
+                'An unexpected error occurred while removing your task. Please try again in a moment.',
+                { helpText: 'If this problem persists, contact support' }
+            );
             
-            if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({
-                        content: errorMessage,
-                    });
-                } catch (err) {
-                    console.error('Error sending error reply:', err);
-                }
-            } else {
-                try {
-                    await interaction.editReply({
-                        content: errorMessage,
-                    });
-                } catch (err) {
-                    console.error('Error editing reply:', err);
-                }
-            }
+            await safeErrorReply(interaction, embed);
         }
     }
 };

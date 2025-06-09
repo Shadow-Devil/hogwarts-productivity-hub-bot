@@ -1,5 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const voiceService = require('../services/voiceService');
+const { createHouseTemplate, createChampionTemplate, createErrorTemplate } = require('../utils/embedTemplates');
+const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { safeDeferReply, safeReply, safeErrorReply, fastMemberFetch } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -17,7 +20,12 @@ module.exports = {
                 )),
     async execute(interaction) {
         try {
-            await interaction.deferReply();
+            // Immediately defer to prevent timeout
+            const deferred = await safeDeferReply(interaction);
+            if (!deferred) {
+                console.warn('Failed to defer housepoints interaction');
+                return;
+            }
 
             const leaderboardType = interaction.options.getString('type');
             
@@ -29,17 +37,14 @@ module.exports = {
 
         } catch (error) {
             console.error('Error in housepoints command:', error);
-            const errorMessage = '❌ An error occurred while fetching house leaderboard data. Please try again later.';
             
-            try {
-                if (interaction.deferred) {
-                    await interaction.editReply({ content: errorMessage });
-                } else if (!interaction.replied) {
-                    await interaction.reply({ content: errorMessage });
-                }
-            } catch (replyError) {
-                console.error('Error sending error reply:', replyError);
-            }
+            const embed = createErrorTemplate(
+                'House Points Load Failed',
+                'An error occurred while fetching house leaderboard data. Please try again in a moment.',
+                { helpText: 'If this problem persists, contact support' }
+            );
+            
+            await safeErrorReply(interaction, embed);
         }
     }
 };
@@ -48,82 +53,32 @@ async function showHouseLeaderboard(interaction, type) {
     const houseLeaderboard = await voiceService.getHouseLeaderboard(type);
 
     if (!houseLeaderboard || houseLeaderboard.length === 0) {
-        return interaction.editReply({
-            content: '🏠 No house data available yet. Houses need to earn points first!',
-        });
+        const embed = createErrorTemplate(
+            `${StatusEmojis.INFO} No House Data`,
+            'No house data is available yet. Houses need to earn points first!',
+            { 
+                helpText: 'Join a voice channel and complete tasks to start earning house points',
+                additionalInfo: 'House points are awarded for voice time and task completion.'
+            }
+        );
+        return interaction.editReply({ embeds: [embed] });
     }
 
-    // House emojis for visual appeal
-    const houseEmojis = {
-        'Gryffindor': '🦁',
-        'Hufflepuff': '🦡',
-        'Ravenclaw': '🦅',
-        'Slytherin': '🐍'
-    };
-
-    // House colors
-    const houseColors = {
-        'Gryffindor': 0x7C0A02,   // Dark red
-        'Hufflepuff': 0xFFDB00,   // Yellow
-        'Ravenclaw': 0x0E1A40,    // Dark blue
-        'Slytherin': 0x1A472A     // Dark green
-    };
-
-    const isMonthly = type === 'monthly';
-    const title = isMonthly ? '🏆 Monthly House Points' : '⭐ All-Time House Points';
-    const description = isMonthly 
-        ? 'House rankings for this month'
-        : 'All-time house rankings';
-
-    // Create main embed with top house color
-    const topHouse = houseLeaderboard[0];
-    const embedColor = houseColors[topHouse.name] || 0x5865F2;
-
-    const embed = new EmbedBuilder()
-        .setTitle(title)
-        .setDescription(description)
-        .setColor(embedColor)
-        .setTimestamp()
-        .setFooter({ 
-            text: isMonthly ? 'House points reset on the 1st of each month' : 'All-time house standings'
-        });
-
-    // Format house rankings
-    let leaderboardText = '';
-    const medals = ['🥇', '🥈', '🥉', '4️⃣'];
+    // Get current user's house for personalization (optimized)
+    const currentUserId = interaction.user.id;
+    const userMember = await fastMemberFetch(interaction.guild, currentUserId, true);
+    let userHouse = null;
     
-    houseLeaderboard.forEach((house, index) => {
-        const position = index + 1;
-        const medal = medals[index] || `${position}️⃣`;
-        const emoji = houseEmojis[house.name] || '🏠';
-        const points = house.points || 0;
-        
-        leaderboardText += `${medal} ${emoji} **${house.name}**\n`;
-        leaderboardText += `   ${points.toLocaleString()} points\n\n`;
+    if (userMember) {
+        const { getUserHouse } = require('../models/db');
+        userHouse = await getUserHouse(userMember);
+    }
+
+    const embed = createHouseTemplate(houseLeaderboard, type, {
+        includeStats: true,
+        useEnhancedLayout: true,
+        useTableFormat: true
     });
-
-    embed.addFields([
-        { 
-            name: '🏠 House Rankings', 
-            value: leaderboardText || 'No houses have earned points yet.', 
-            inline: false 
-        }
-    ]);
-
-    // Add statistics
-    const totalPoints = houseLeaderboard.reduce((sum, house) => sum + (house.points || 0), 0);
-    const topHousePoints = topHouse.points || 0;
-    const averagePoints = Math.round(totalPoints / houseLeaderboard.length);
-
-    embed.addFields([
-        { 
-            name: '📊 Statistics', 
-            value: `**Total Points Awarded:** ${totalPoints.toLocaleString()}\n` +
-                   `**Leading House:** ${houseEmojis[topHouse.name]} ${topHouse.name} (${topHousePoints.toLocaleString()} pts)\n` +
-                   `**Average House Points:** ${averagePoints.toLocaleString()}`,
-            inline: false 
-        }
-    ]);
 
     await interaction.editReply({ embeds: [embed] });
 }
@@ -134,82 +89,34 @@ async function showHouseChampions(interaction) {
 
     if ((!monthlyChampions || monthlyChampions.length === 0) && 
         (!allTimeChampions || allTimeChampions.length === 0)) {
-        return interaction.editReply({
-            content: '👑 No house champions data available yet. Users need to earn points first!',
-        });
-    }
-
-    // House emojis and colors
-    const houseEmojis = {
-        'Gryffindor': '🦁',
-        'Hufflepuff': '🦡',
-        'Ravenclaw': '🦅',
-        'Slytherin': '🐍'
-    };
-
-    const embed = new EmbedBuilder()
-        .setTitle('👑 House Champions')
-        .setDescription('Top contributing members from each house')
-        .setColor(0xFFD700) // Gold color for champions
-        .setTimestamp()
-        .setFooter({ 
-            text: 'House champions are the highest point earners in each house'
-        });
-
-    // Monthly champions
-    if (monthlyChampions && monthlyChampions.length > 0) {
-        let monthlyText = '';
-        monthlyChampions.forEach(champion => {
-            const emoji = houseEmojis[champion.house] || '🏠';
-            monthlyText += `${emoji} **${champion.house}**: ${champion.username}\n`;
-            monthlyText += `   ${champion.points.toLocaleString()} points\n\n`;
-        });
-
-        embed.addFields([
+        const embed = createErrorTemplate(
+            `${StatusEmojis.INFO} No Champions Data`,
+            'No house champions data available yet. Users need to earn points first!',
             { 
-                name: '🗓️ Monthly Champions', 
-                value: monthlyText || 'No monthly champions yet.', 
-                inline: true 
+                helpText: 'Join a voice channel and complete tasks to start earning house points',
+                additionalInfo: 'House champions are the highest point earners in each house.'
             }
-        ]);
+        );
+        return interaction.editReply({ embeds: [embed] });
     }
 
-    // All-time champions
-    if (allTimeChampions && allTimeChampions.length > 0) {
-        let allTimeText = '';
-        allTimeChampions.forEach(champion => {
-            const emoji = houseEmojis[champion.house] || '🏠';
-            allTimeText += `${emoji} **${champion.house}**: ${champion.username}\n`;
-            allTimeText += `   ${champion.points.toLocaleString()} points\n\n`;
-        });
-
-        embed.addFields([
-            { 
-                name: '⭐ All-Time Champions', 
-                value: allTimeText || 'No all-time champions yet.', 
-                inline: true 
-            }
-        ]);
-    }
-
-    // Get current user's house and position
+    // Get current user's house for personalization (optimized)
     const currentUserId = interaction.user.id;
-    const userMember = await interaction.guild.members.fetch(currentUserId).catch(() => null);
+    const userMember = await fastMemberFetch(interaction.guild, currentUserId, true);
+    let userHouse = null;
     
     if (userMember) {
         const { getUserHouse } = require('../models/db');
-        const userHouse = await getUserHouse(userMember);
-        
-        if (userHouse) {
-            embed.addFields([
-                { 
-                    name: '🏠 Your House', 
-                    value: `${houseEmojis[userHouse]} **${userHouse}**`, 
-                    inline: false 
-                }
-            ]);
-        }
+        userHouse = await getUserHouse(userMember);
     }
+
+    const embed = createChampionTemplate(monthlyChampions, allTimeChampions, {
+        house: userHouse
+    }, {
+        useEnhancedLayout: true,
+        useTableFormat: true,
+        showUserInfo: true
+    });
 
     await interaction.editReply({ embeds: [embed] });
 }

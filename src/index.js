@@ -115,6 +115,7 @@ client.on('ready', async (c) => {
         console.log('🩺 Setting up health monitoring...');
         const dbResilience = getDbResilience();
         healthMonitor = new BotHealthMonitor(client, dbResilience);
+        client.healthMonitor = healthMonitor; // Attach to client for command access
         console.log('✅ Health monitoring system active');
         
         // Initialize session recovery system
@@ -175,33 +176,53 @@ client.on('interactionCreate', async (interaction) => {
     
     console.log(`🎯 Command executed: /${interaction.commandName} by ${interaction.user.tag} in #${interaction.channel?.name || 'DM'}`);
     
-    // Wrap command execution with performance monitoring
+    // Wrap command execution with performance monitoring and timeout protection
     const wrappedExecute = measureCommand(interaction.commandName, command.execute);
     
     try {
-        await wrappedExecute(interaction, { activeVoiceTimers });
+        // Set a timeout to prevent Discord interaction expiration (3 second limit)
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Command execution timeout')), 2500); // 2.5 seconds safety margin
+        });
+        
+        await Promise.race([
+            wrappedExecute(interaction, { activeVoiceTimers }),
+            timeoutPromise
+        ]);
     } catch (error) {
         console.error(`💥 Command execution failed: /${interaction.commandName}`, {
             user: interaction.user.tag,
             channel: interaction.channel?.name || 'DM',
             error: error.message,
-            stack: error.stack
+            isTimeout: error.message === 'Command execution timeout'
         });
         
-        // Safe error response handling
+        // Improved error response handling with interaction state checks
         try {
+            const errorMessage = error.message === 'Command execution timeout' 
+                ? '⏱️ Command timed out. Please try again - the bot may be under heavy load.'
+                : '❌ An error occurred. Please try again later.';
+                
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
-                    content: '❌ An error occurred. Please try again later.',
+                    content: errorMessage,
                     flags: [MessageFlags.Ephemeral]
                 });
-            } else if (interaction.deferred) {
+            } else if (interaction.deferred && !interaction.replied) {
                 await interaction.editReply({
-                    content: '❌ An error occurred. Please try again later.'
+                    content: errorMessage
                 });
             }
-        } catch (err) {
-            console.error('💥 Error sending fallback error reply:', err.message);
+            // If interaction is already replied, we can't send another response
+        } catch (replyError) {
+            // Check if it's an "Unknown interaction" error (expired token)
+            if (replyError.code === 10062) {
+                console.warn(`⚠️  Interaction expired for /${interaction.commandName} - command took too long`);
+            } else if (replyError.code === 40060) {
+                console.warn(`⚠️  Interaction already acknowledged for /${interaction.commandName}`);
+            } else {
+                console.error(`💥 Failed to send error response for /${interaction.commandName}:`, replyError);
+            }
         }
     }
 });
