@@ -131,6 +131,30 @@ function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency) 
         }]);
     }
 
+    // Add performance tips if API latency is suboptimal
+    if (apiLatency > 200) {
+        const performanceTips = [];
+        if (apiLatency > 500) {
+            performanceTips.push('• Consider database query optimization');
+            performanceTips.push('• Check connection pool settings');
+        }
+        if (apiLatency > 300) {
+            performanceTips.push('• Review slow database operations');
+            performanceTips.push('• Consider implementing query caching');
+        }
+        if (apiLatency > 200) {
+            performanceTips.push('• Monitor database performance');
+        }
+
+        if (performanceTips.length > 0) {
+            embed.addFields([{
+                name: '💡 Performance Tips',
+                value: performanceTips.join('\n'),
+                inline: false
+            }]);
+        }
+    }
+
     embed.setFooter({ text: 'This report helps ensure your bot runs smoothly for all users' });
 
     return embed;
@@ -162,14 +186,14 @@ function getDatabaseHealth(summary) {
 function formatLatencyInfo(wsLatency, apiLatency) {
     // Format WebSocket latency (ping to Discord)
     let wsStatus = '🟢';
-    if (wsLatency > 200) wsStatus = '🟡';
-    if (wsLatency > 500) wsStatus = '🔴';
+    if (wsLatency > 100) wsStatus = '🟡';
+    if (wsLatency > 300) wsStatus = '🔴';
     if (wsLatency < 0) wsLatency = 'N/A'; // Sometimes ping can be -1 if not available yet
     
-    // Format API response latency
+    // Format API response latency - Updated thresholds for better optimization
     let apiStatus = '🟢';
-    if (apiLatency > 1000) apiStatus = '🟡';
-    if (apiLatency > 3000) apiStatus = '🔴';
+    if (apiLatency > 200) apiStatus = '🟡';
+    if (apiLatency > 500) apiStatus = '🔴';
     
     const wsText = wsLatency === 'N/A' ? 'N/A' : `${wsLatency}ms`;
     const apiText = `${apiLatency}ms`;
