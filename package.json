@@ -1,0 +1,23 @@
+{
+  "name": "botd",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "register": "node src/register-commands.js"
+  },
+  "keywords": ["discord", "bot", "productivity", "pomodoro", "timer"],
+  "author": "",
+  "license": "ISC",
+  "description": "Discord Productivity Bot with task management, Pomodoro timers, and gamified points system",
+  "dependencies": {
+    "dayjs": "^1.11.13",
+    "discord.js": "^14.19.3",
+    "dotenv": "^16.5.0",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

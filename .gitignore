@@ -1,0 +1,15 @@
+# Node.js
+node_modules/
+.env
+package-lock.json
+npm-debug.log
+dist/
+build/
+.DS_Store
+*.log
+
+# VSCode
+.vscode/
+
+# OS
+Thumbs.db
