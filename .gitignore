@@ -8,6 +8,16 @@ build/
 .DS_Store
 *.log
 
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*~
+utils-backup/
+
+# Test outputs
+test-output/
+
 # VSCode
 .vscode/
 

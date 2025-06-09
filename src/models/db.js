@@ -2,6 +2,7 @@ const { Pool } = require('pg');
 const dayjs = require('dayjs');
 require('dotenv').config();
 const { performanceMonitor } = require('../utils/performanceMonitor');
+const databaseOptimizer = require('../utils/databaseOptimizer');
 
 // Simple in-memory cache for frequently accessed users
 const userCache = new Map();
@@ -76,6 +77,9 @@ pool.on('release', (client) => {
 pool.on('error', (err) => {
     console.error('❌ Database connection error:', err);
 });
+
+// Initialize database optimizer with pool (avoid circular dependency)
+databaseOptimizer.setPool(pool);
 
 // Database migrations for schema updates
 async function runMigrations(client) {
@@ -748,5 +752,20 @@ module.exports = {
     getHouseChampions,
     withTransaction,
     withAdvisoryLock,
-    generateLockId
+    generateLockId,
+
+    // Enhanced query execution with optimization tracking
+    async executeCachedQuery(operation, query, params = [], cacheType = 'default') {
+        return await databaseOptimizer.executeTrackedQuery(operation, query, params, true, cacheType);
+    },
+
+    // Batch operations using optimizer
+    async executeBatchQueries(operation, queries, batchSize = 50) {
+        return await databaseOptimizer.executeBatchOperation(operation, queries, batchSize);
+    },
+
+    // Get performance insights
+    getOptimizationReport() {
+        return databaseOptimizer.getPerformanceReport();
+    },
 };

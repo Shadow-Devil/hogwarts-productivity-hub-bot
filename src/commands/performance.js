@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const { performanceMonitor } = require('../utils/performanceMonitor');
 const queryCache = require('../utils/queryCache');
+const databaseOptimizer = require('../utils/databaseOptimizer');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -21,7 +22,10 @@ module.exports = {
             // Get cache statistics
             const cacheStats = queryCache.getStats();
             
-            const embed = createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, cacheStats);
+            // Get optimization insights
+            const optimizationReport = databaseOptimizer.getPerformanceReport();
+            
+            const embed = createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, cacheStats, optimizationReport);
 
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {
@@ -37,7 +41,7 @@ module.exports = {
     }
 };
 
-function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, cacheStats) {
+function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, cacheStats, optimizationReport) {
     const uptimeHours = Math.floor(summary.uptime / 3600);
     const uptimeMinutes = Math.floor((summary.uptime % 3600) / 60);
     
@@ -164,6 +168,16 @@ function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, 
         }
     }
 
+    // Add optimization report if available
+    if (optimizationReport && Object.keys(optimizationReport).length > 0) {
+        const optimizationText = getOptimizationSummary(optimizationReport);
+        embed.addFields([{
+            name: '⚙️ Database Optimization',
+            value: optimizationText,
+            inline: false
+        }]);
+    }
+
     embed.setFooter({ text: 'This report helps ensure your bot runs smoothly for all users' });
 
     return embed;
@@ -236,4 +250,66 @@ function getIssuesSummary(bottlenecks) {
     }
     
     return summary.join('\n');
+}
+
+function getOptimizationSummary(optimizationReport) {
+    const summary = [];
+    
+    // Query analysis insights
+    if (optimizationReport.queryAnalysis) {
+        const analysis = optimizationReport.queryAnalysis;
+        summary.push(`🔍 Queries: ${analysis.totalQueries} total, ${analysis.slowQueryRate}% slow`);
+        
+        if (analysis.topSlowOperations && analysis.topSlowOperations.length > 0) {
+            const slowest = analysis.topSlowOperations[0];
+            summary.push(`⏱️ Slowest: ${slowest.operation} (${slowest.avgTime.toFixed(0)}ms avg)`);
+        }
+    }
+    
+    // Connection pool insights
+    if (optimizationReport.connectionPool) {
+        const poolData = optimizationReport.connectionPool;
+        if (poolData.stats) {
+            const pool = poolData.stats;
+            const utilization = ((pool.totalConnections / pool.maxConnections) * 100).toFixed(1);
+            summary.push(`🏊 Pool: ${pool.totalConnections}/${pool.maxConnections} (${utilization}%)`);
+            
+            if (pool.waitingClients > 0) {
+                summary.push(`⚠️ ${pool.waitingClients} clients waiting for connections`);
+            }
+        }
+    }
+    
+    // Cache performance
+    if (optimizationReport.cacheStats) {
+        const cache = optimizationReport.cacheStats;
+        const hitRate = parseFloat(cache.hitRate) || 0;
+        if (hitRate > 0) {
+            summary.push(`💾 Cache: ${cache.hitRate} hit rate (${cache.size} entries)`);
+        } else {
+            summary.push(`💾 Cache: No cache hits yet (${cache.size} entries)`);
+        }
+    }
+    
+    // Optimization recommendations
+    if (optimizationReport.recommendations && optimizationReport.recommendations.length > 0) {
+        const highPriority = optimizationReport.recommendations.filter(r => r.priority === 'high').length;
+        const mediumPriority = optimizationReport.recommendations.filter(r => r.priority === 'medium').length;
+        
+        if (highPriority > 0) {
+            summary.push(`🔧 ${highPriority} high-priority optimization${highPriority > 1 ? 's' : ''} recommended`);
+        } else if (mediumPriority > 0) {
+            summary.push(`💡 ${mediumPriority} optimization suggestion${mediumPriority > 1 ? 's' : ''} available`);
+        }
+    }
+    
+    // Monitoring stats
+    if (optimizationReport.monitoringStats) {
+        const stats = optimizationReport.monitoringStats;
+        if (stats.totalQueries > 0) {
+            summary.push(`📊 Monitoring: ${stats.totalQueries} queries tracked, ${stats.slowQueries} slow`);
+        }
+    }
+    
+    return summary.length > 0 ? summary.join('\n') : '✅ All database optimizations active, no issues detected';
 }

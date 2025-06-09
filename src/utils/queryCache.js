@@ -223,6 +223,122 @@ class QueryCache {
         
         return result;
     }
+
+    /**
+     * Enhanced cache patterns for Discord bot operations
+     */
+    getCachePatterns() {
+        return {
+            userStats: {
+                generateKey: (discordId) => `user_stats:${discordId}`,
+                ttl: this.ttlSettings.userStats,
+                type: 'userStats'
+            },
+            activeVoiceSessions: {
+                generateKey: (discordId) => `active_sessions:${discordId}`,
+                ttl: 30 * 1000, // 30 seconds for active sessions
+                type: 'default'
+            },
+            leaderboardMonthly: {
+                generateKey: () => 'leaderboard:monthly',
+                ttl: this.ttlSettings.leaderboard,
+                type: 'leaderboard'
+            },
+            leaderboardAllTime: {
+                generateKey: () => 'leaderboard:alltime',
+                ttl: this.ttlSettings.leaderboard * 2, // Longer for all-time
+                type: 'leaderboard'
+            },
+            houseLeaderboard: {
+                generateKey: (type) => `house_leaderboard:${type}`,
+                ttl: this.ttlSettings.houseLeaderboard,
+                type: 'houseLeaderboard'
+            },
+            userTasks: {
+                generateKey: (discordId, completed = null) => 
+                    `user_tasks:${discordId}:${completed !== null ? completed : 'all'}`,
+                ttl: this.ttlSettings.userTasks,
+                type: 'userTasks'
+            }
+        };
+    }
+
+    /**
+     * Optimized cache methods for specific bot operations
+     */
+    async cacheUserStats(discordId, statsData) {
+        const pattern = this.getCachePatterns().userStats;
+        const key = pattern.generateKey(discordId);
+        this.set(key, statsData, pattern.type);
+        return statsData;
+    }
+
+    async getUserStatsFromCache(discordId) {
+        const pattern = this.getCachePatterns().userStats;
+        const key = pattern.generateKey(discordId);
+        return this.get(key);
+    }
+
+    async cacheLeaderboard(type, data) {
+        const patterns = this.getCachePatterns();
+        const pattern = type === 'monthly' ? patterns.leaderboardMonthly : patterns.leaderboardAllTime;
+        const key = pattern.generateKey();
+        this.set(key, data, pattern.type);
+        return data;
+    }
+
+    async getLeaderboardFromCache(type) {
+        const patterns = this.getCachePatterns();
+        const pattern = type === 'monthly' ? patterns.leaderboardMonthly : patterns.leaderboardAllTime;
+        const key = pattern.generateKey();
+        return this.get(key);
+    }
+
+    /**
+     * Intelligent cache invalidation for related data
+     */
+    invalidateUserRelatedCache(discordId) {
+        const patterns = [
+            `user_stats:${discordId}`,
+            `active_sessions:${discordId}`,
+            `user_tasks:${discordId}:*`,
+            'leaderboard:*',
+            'house_leaderboard:*'
+        ];
+
+        let invalidatedCount = 0;
+        patterns.forEach(pattern => {
+            invalidatedCount += this.deletePattern(pattern);
+        });
+
+        console.log(`🧹 Invalidated ${invalidatedCount} cache entries for user ${discordId}`);
+        return invalidatedCount;
+    }
+
+    /**
+     * Batch cache operations for better performance
+     */
+    async batchSet(entries) {
+        const timestamp = Date.now();
+        entries.forEach(({ key, data, cacheType = 'default' }) => {
+            this.cache.set(key, {
+                data: data,
+                timestamp: timestamp,
+                type: cacheType
+            });
+        });
+    }
+
+    async batchGet(keys) {
+        const results = {};
+        keys.forEach(key => {
+            const cached = this.get(key);
+            if (cached !== null) {
+                results[key] = cached;
+            }
+        });
+        return results;
+    }
 }
 
 module.exports = new QueryCache();

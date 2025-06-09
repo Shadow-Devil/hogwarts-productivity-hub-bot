@@ -258,7 +258,7 @@ class VoiceService {
         })();
     }
 
-    // Update user streak
+    // Update user streak (only increment once per day)
     async updateStreak(discordId, sessionDate) {
         const client = await pool.connect();
         try {
@@ -274,29 +274,43 @@ class VoiceService {
             const lastVcDate = userData.last_vc_date ? dayjs(userData.last_vc_date) : null;
 
             let newStreak = userData.current_streak;
+            let shouldUpdateLastVcDate = false;
 
             if (!lastVcDate) {
                 // First time joining VC
                 newStreak = 1;
-            } else if (today.diff(lastVcDate, 'day') === 1) {
-                // Consecutive day
-                newStreak = userData.current_streak + 1;
-            } else if (today.diff(lastVcDate, 'day') > 1) {
-                // Missed days, reset streak
-                newStreak = 1;
+                shouldUpdateLastVcDate = true;
+            } else {
+                const daysDiff = today.diff(lastVcDate, 'day');
+                
+                if (daysDiff === 1) {
+                    // Consecutive day - increment streak
+                    newStreak = userData.current_streak + 1;
+                    shouldUpdateLastVcDate = true;
+                } else if (daysDiff > 1) {
+                    // Missed days - reset streak to 1
+                    newStreak = 1;
+                    shouldUpdateLastVcDate = true;
+                } else if (daysDiff === 0) {
+                    // Same day - don't change streak or date
+                    console.log(`🔥 Streak maintained for ${discordId}: ${newStreak} days (same day session)`);
+                    return; // No database update needed
+                }
             }
-            // If same day, keep current streak
 
             const newLongestStreak = Math.max(userData.longest_streak, newStreak);
 
-            await client.query(
-                `UPDATE users 
-                 SET current_streak = $1, longest_streak = $2, last_vc_date = $3, updated_at = CURRENT_TIMESTAMP
-                 WHERE discord_id = $4`,
-                [newStreak, newLongestStreak, sessionDate, discordId]
-            );
+            // Only update if streak changed or it's a new day
+            if (shouldUpdateLastVcDate) {
+                await client.query(
+                    `UPDATE users 
+                     SET current_streak = $1, longest_streak = $2, last_vc_date = $3, updated_at = CURRENT_TIMESTAMP
+                     WHERE discord_id = $4`,
+                    [newStreak, newLongestStreak, sessionDate, discordId]
+                );
 
-            console.log(`🔥 Streak updated for ${discordId}: ${newStreak} days`);
+                console.log(`🔥 Streak updated for ${discordId}: ${newStreak} days`);
+            }
         } catch (error) {
             console.error('Error updating streak:', error);
             throw error;

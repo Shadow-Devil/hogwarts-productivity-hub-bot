@@ -1,305 +1,510 @@
 /**
- * Database query optimizer and analyzer for identifying slow queries and bottlenecks
+ * Production-ready database optimization utilities
+ * Focused on query performance, connection management, and monitoring
  */
 
-const { pool } = require('../models/db');
+const { performanceMonitor } = require('./performanceMonitor');
+const queryCache = require('./queryCache');
 
 class DatabaseOptimizer {
     constructor() {
-        this.queryStats = new Map(); // Track query performance
-        this.slowQueries = [];
-        this.indexSuggestions = [];
+        this.pool = null; // Will be set via setPool method
+        this.queryTracker = new Map();
+        this.slowQueryThreshold = 1000; // 1 second
+        this.connectionMonitor = {
+            peakConnections: 0,
+            totalQueries: 0,
+            slowQueries: 0,
+            queryTimeouts: 0
+        };
+        this.monitoringIntervals = []; // Store interval IDs for cleanup
+        
+        // Start monitoring
+        this.startMonitoring();
     }
 
-    // Analyze database performance and suggest optimizations
-    async analyzePerformance() {
-        const client = await pool.connect();
+    /**
+     * Set the database pool (to avoid circular dependencies)
+     */
+    setPool(pool) {
+        this.pool = pool;
+    }
+
+    /**
+     * Enhanced query execution with performance tracking
+     */
+    async executeTrackedQuery(operation, query, params = [], useCache = false, cacheType = 'default') {
+        const startTime = Date.now();
+        const queryId = this.generateQueryId(query, params);
+        
+        try {
+            // Try cache first if enabled
+            if (useCache) {
+                const cached = queryCache.getByQuery(cacheType, query, params);
+                if (cached !== null) {
+                    this.trackQueryPerformance(operation, startTime, Date.now(), true);
+                    return cached;
+                }
+            }
+
+            // Execute query with connection pool
+            if (!this.pool) {
+                throw new Error('Database pool not initialized. Call setPool() first.');
+            }
+            const client = await this.pool.connect();
+            let result;
+            
+            try {
+                // Set statement timeout for long-running queries
+                await client.query('SET statement_timeout = 30000'); // 30 seconds
+                result = await client.query(query, params);
+                
+                // Cache result if caching is enabled
+                if (useCache && result) {
+                    queryCache.setByQuery(cacheType, query, params, result);
+                }
+                
+            } finally {
+                client.release();
+            }
+
+            this.trackQueryPerformance(operation, startTime, Date.now(), false);
+            return result;
+
+        } catch (error) {
+            const endTime = Date.now();
+            this.trackQueryPerformance(operation, startTime, endTime, false, error);
+            
+            // Log slow or failed queries
+            if (endTime - startTime > this.slowQueryThreshold) {
+                console.warn(`🐌 Slow query detected: ${operation} (${endTime - startTime}ms)`);
+            }
+            
+            throw error;
+        }
+    }
+
+    /**
+     * Optimized batch operations for bulk inserts/updates
+     */
+    async executeBatchOperation(operation, queries, batchSize = 50) {
+        const startTime = Date.now();
+        if (!this.pool) {
+            throw new Error('Database pool not initialized. Call setPool() first.');
+        }
+        const client = await this.pool.connect();
+        const results = [];
+
+        try {
+            await client.query('BEGIN');
+            
+            // Process in batches to avoid memory issues
+            for (let i = 0; i < queries.length; i += batchSize) {
+                const batch = queries.slice(i, i + batchSize);
+                
+                for (const { query, params } of batch) {
+                    const result = await client.query(query, params);
+                    results.push(result);
+                }
+                
+                // Periodic commit for large batches
+                if (i + batchSize < queries.length && batch.length === batchSize) {
+                    await client.query('COMMIT');
+                    await client.query('BEGIN');
+                }
+            }
+            
+            await client.query('COMMIT');
+            this.trackQueryPerformance(operation, startTime, Date.now(), false);
+            
+            return results;
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            this.trackQueryPerformance(operation, startTime, Date.now(), false, error);
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    /**
+     * Connection pool optimization
+     */
+    async optimizeConnectionPool() {
+        const stats = this.getConnectionPoolStats();
+        const recommendations = [];
+
+        // Check for connection pool bottlenecks
+        if (stats.waitingClients > 0) {
+            recommendations.push({
+                type: 'connection_pool',
+                priority: 'high',
+                message: `${stats.waitingClients} clients waiting for connections. Consider increasing max connections.`,
+                action: 'increase_max_connections'
+            });
+        }
+
+        // Check for idle connections
+        if (stats.idleConnections > stats.maxConnections * 0.7) {
+            recommendations.push({
+                type: 'connection_pool',
+                priority: 'medium',
+                message: 'High number of idle connections. Consider reducing min connections.',
+                action: 'reduce_min_connections'
+            });
+        }
+
+        // Check connection utilization
+        const utilization = (stats.totalConnections / stats.maxConnections) * 100;
+        if (utilization > 80) {
+            recommendations.push({
+                type: 'connection_pool',
+                priority: 'high',
+                message: `Connection pool utilization at ${utilization.toFixed(1)}%. Monitor for bottlenecks.`,
+                action: 'monitor_connections'
+            });
+        }
+
+        return {
+            stats,
+            recommendations,
+            optimizationSuggestions: this.generateOptimizationSuggestions(stats)
+        };
+    }
+
+    /**
+     * Query performance analysis
+     */
+    analyzeQueryPerformance() {
         const analysis = {
-            connectionPool: await this.analyzeConnectionPool(),
-            tableStats: await this.analyzeTableStats(client),
-            indexUsage: await this.analyzeIndexUsage(client),
-            slowQueries: await this.identifySlowQueries(client),
-            suggestions: []
+            totalQueries: this.connectionMonitor.totalQueries,
+            slowQueries: this.connectionMonitor.slowQueries,
+            slowQueryRate: (this.connectionMonitor.slowQueries / this.connectionMonitor.totalQueries * 100).toFixed(2),
+            topSlowOperations: [],
+            cacheEfficiency: queryCache.getStats(),
+            recommendations: []
         };
 
-        // Generate optimization suggestions
-        analysis.suggestions = this.generateOptimizationSuggestions(analysis);
-        
-        client.release();
+        // Find slowest operations
+        const sortedOperations = Array.from(this.queryTracker.entries())
+            .map(([operation, stats]) => ({
+                operation,
+                avgTime: stats.totalTime / stats.count,
+                totalTime: stats.totalTime,
+                count: stats.count,
+                errors: stats.errors
+            }))
+            .sort((a, b) => b.avgTime - a.avgTime)
+            .slice(0, 10);
+
+        analysis.topSlowOperations = sortedOperations;
+
+        // Generate recommendations
+        if (parseFloat(analysis.slowQueryRate) > 5) {
+            analysis.recommendations.push({
+                type: 'query_optimization',
+                priority: 'high',
+                message: `${analysis.slowQueryRate}% of queries are slow. Consider query optimization.`
+            });
+        }
+
+        if (parseFloat(analysis.cacheEfficiency.hitRate) < 60) {
+            analysis.recommendations.push({
+                type: 'cache_optimization',
+                priority: 'medium',
+                message: `Cache hit rate is ${analysis.cacheEfficiency.hitRate}. Consider adjusting cache TTL.`
+            });
+        }
+
         return analysis;
     }
 
-    // Analyze connection pool performance
-    async analyzeConnectionPool() {
-        return {
-            totalConnections: pool.totalCount,
-            idleConnections: pool.idleCount,
-            waitingClients: pool.waitingCount,
-            maxConnections: pool.options.max,
-            connectionPoolUtilization: ((pool.totalCount - pool.idleCount) / pool.options.max * 100).toFixed(1)
-        };
-    }
+    /**
+     * Apply targeted database optimizations
+     */
+    async applyOptimizations(options = {}) {
+        if (!this.pool) {
+            throw new Error('Database pool not initialized. Call setPool() first.');
+        }
+        const client = await this.pool.connect();
+        const results = [];
 
-    // Analyze table statistics
-    async analyzeTableStats(client) {
         try {
-            const tableStatsQuery = `
-                SELECT 
-                    schemaname,
-                    tablename,
-                    n_tup_ins as inserts,
-                    n_tup_upd as updates,
-                    n_tup_del as deletes,
-                    n_live_tup as live_tuples,
-                    n_dead_tup as dead_tuples,
-                    CASE 
-                        WHEN n_live_tup > 0 
-                        THEN ROUND((n_dead_tup::numeric / n_live_tup::numeric) * 100, 2)
-                        ELSE 0 
-                    END as dead_tuple_ratio
-                FROM pg_stat_user_tables 
-                WHERE schemaname = 'public'
-                ORDER BY n_live_tup DESC;
-            `;
+            console.log('🔧 Applying database optimizations...');
 
-            const result = await client.query(tableStatsQuery);
-            return result.rows;
+            // Enable query plan caching for repeated queries
+            if (options.enablePlanCache !== false) {
+                await client.query("SET plan_cache_mode = 'force_generic_plan'");
+                results.push('✅ Enabled query plan caching');
+            }
+
+            // Optimize work memory for complex queries
+            if (options.optimizeWorkMem !== false) {
+                await client.query("SET work_mem = '16MB'");
+                results.push('✅ Optimized work memory for complex queries');
+            }
+
+            // Enable parallel queries for aggregations
+            if (options.enableParallel !== false) {
+                await client.query("SET max_parallel_workers_per_gather = 2");
+                results.push('✅ Enabled parallel query execution');
+            }
+
+            // Create missing indexes based on query patterns
+            if (options.createIndexes !== false) {
+                const indexResults = await this.createOptimalIndexes(client);
+                results.push(...indexResults);
+            }
+
+            // Analyze tables for updated statistics
+            if (options.analyzeStats !== false) {
+                await client.query('ANALYZE users, vc_sessions, daily_voice_stats, tasks, houses');
+                results.push('✅ Updated table statistics for query optimization');
+            }
+
+            console.log('🎯 Database optimizations completed');
+            return results;
+
         } catch (error) {
-            console.error('Error analyzing table stats:', error);
-            return [];
+            console.error('❌ Error applying optimizations:', error);
+            throw error;
+        } finally {
+            client.release();
         }
     }
 
-    // Analyze index usage
-    async analyzeIndexUsage(client) {
-        try {
-            const indexUsageQuery = `
-                SELECT 
-                    schemaname,
-                    tablename,
-                    indexname,
-                    idx_tup_read,
-                    idx_tup_fetch,
-                    CASE 
-                        WHEN idx_tup_read > 0 
-                        THEN ROUND((idx_tup_fetch::numeric / idx_tup_read::numeric) * 100, 2)
-                        ELSE 0 
-                    END as index_hit_ratio
-                FROM pg_stat_user_indexes 
-                WHERE schemaname = 'public'
-                ORDER BY idx_tup_read DESC;
-            `;
+    /**
+     * Create performance-optimized indexes
+     */
+    async createOptimalIndexes(client) {
+        const results = [];
+        const indexes = [
+            // Covering index for user lookups with stats
+            {
+                name: 'idx_users_discord_id_stats',
+                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_discord_id_stats 
+                       ON users(discord_id) INCLUDE (monthly_points, monthly_hours, current_streak)`,
+                description: 'Covering index for user stats lookups'
+            },
+            
+            // Composite index for active voice sessions
+            {
+                name: 'idx_vc_sessions_active_user',
+                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_vc_sessions_active_user 
+                       ON vc_sessions(discord_id, joined_at) WHERE left_at IS NULL`,
+                description: 'Partial index for active voice sessions'
+            },
+            
+            // BRIN index for time-series data
+            {
+                name: 'idx_vc_sessions_date_brin',
+                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_vc_sessions_date_brin 
+                       ON vc_sessions USING BRIN(date)`,
+                description: 'BRIN index for efficient date range queries'
+            },
+            
+            // Composite index for daily stats queries
+            {
+                name: 'idx_daily_stats_user_date_points',
+                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_daily_stats_user_date_points 
+                       ON daily_voice_stats(discord_id, date DESC) INCLUDE (points_earned)`,
+                description: 'Optimized index for daily statistics queries'
+            },
+            
+            // Task completion performance index
+            {
+                name: 'idx_tasks_user_completion',
+                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tasks_user_completion 
+                       ON tasks(discord_id, is_complete, created_at DESC)`,
+                description: 'Index for task completion queries'
+            }
+        ];
 
-            const result = await client.query(indexUsageQuery);
-            return result.rows;
+        for (const index of indexes) {
+            try {
+                await client.query(index.query);
+                results.push(`✅ Created index: ${index.description}`);
+            } catch (error) {
+                if (error.code === '42P07') { // Index already exists
+                    results.push(`ℹ️  Index already exists: ${index.name}`);
+                } else {
+                    results.push(`❌ Failed to create index ${index.name}: ${error.message}`);
+                }
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Monitor query performance and track metrics
+     */
+    trackQueryPerformance(operation, startTime, endTime, fromCache = false, error = null) {
+        const executionTime = endTime - startTime;
+        
+        // Update connection monitor
+        this.connectionMonitor.totalQueries++;
+        if (executionTime > this.slowQueryThreshold) {
+            this.connectionMonitor.slowQueries++;
+        }
+        if (error && error.code === '57014') { // Query timeout
+            this.connectionMonitor.queryTimeouts++;
+        }
+
+        // Track per-operation stats
+        if (!this.queryTracker.has(operation)) {
+            this.queryTracker.set(operation, {
+                count: 0,
+                totalTime: 0,
+                errors: 0,
+                cacheHits: 0
+            });
+        }
+
+        const stats = this.queryTracker.get(operation);
+        stats.count++;
+        stats.totalTime += executionTime;
+        if (error) stats.errors++;
+        if (fromCache) stats.cacheHits++;
+
+        // Report to performance monitor
+        performanceMonitor.trackDatabase(operation, startTime, endTime, error);
+    }
+
+    /**
+     * Get connection pool statistics
+     */
+    getConnectionPoolStats() {
+        try {
+            if (!this.pool) {
+                throw new Error('Database pool not initialized');
+            }
+            return {
+                totalConnections: this.pool.totalCount || 0,
+                idleConnections: this.pool.idleCount || 0,
+                waitingClients: this.pool.waitingCount || 0,
+                maxConnections: this.pool.options.max || 50,
+                minConnections: this.pool.options.min || 5,
+                peakConnections: this.connectionMonitor.peakConnections
+            };
         } catch (error) {
-            console.error('Error analyzing index usage:', error);
-            return [];
+            console.warn('Could not get pool stats:', error.message);
+            return {
+                totalConnections: 0,
+                idleConnections: 0,
+                waitingClients: 0,
+                maxConnections: 50,
+                minConnections: 5,
+                peakConnections: 0
+            };
         }
     }
 
-    // Identify potentially slow queries based on table scans
-    async identifySlowQueries(client) {
-        try {
-            // Check for tables that might benefit from indexes
-            const potentialSlowQueriesQuery = `
-                SELECT 
-                    schemaname,
-                    tablename,
-                    seq_scan,
-                    seq_tup_read,
-                    idx_scan,
-                    idx_tup_fetch,
-                    CASE 
-                        WHEN seq_scan > 0 AND idx_scan > 0 
-                        THEN ROUND((seq_scan::numeric / (seq_scan + idx_scan)::numeric) * 100, 2)
-                        WHEN seq_scan > 0 AND idx_scan = 0 
-                        THEN 100
-                        ELSE 0 
-                    END as sequential_scan_ratio,
-                    CASE 
-                        WHEN seq_scan > 0 
-                        THEN ROUND(seq_tup_read::numeric / seq_scan::numeric, 2)
-                        ELSE 0 
-                    END as avg_tuples_per_seq_scan
-                FROM pg_stat_user_tables 
-                WHERE schemaname = 'public'
-                AND seq_scan > 0
-                ORDER BY seq_scan DESC;
-            `;
-
-            const result = await client.query(potentialSlowQueriesQuery);
-            return result.rows;
-        } catch (error) {
-            console.error('Error identifying slow queries:', error);
-            return [];
-        }
-    }
-
-    // Generate optimization suggestions based on analysis
-    generateOptimizationSuggestions(analysis) {
+    /**
+     * Generate optimization suggestions based on metrics
+     */
+    generateOptimizationSuggestions(stats) {
         const suggestions = [];
 
-        // Connection pool suggestions
-        const poolStats = analysis.connectionPool;
-        if (parseFloat(poolStats.connectionPoolUtilization) > 80) {
+        if (stats.waitingClients > 0) {
             suggestions.push({
-                type: 'connection_pool',
-                priority: 'high',
-                issue: 'High connection pool utilization',
-                suggestion: `Consider increasing max connections from ${poolStats.maxConnections} to ${poolStats.maxConnections + 5}`,
-                impact: 'Prevents connection exhaustion under high load'
+                type: 'immediate',
+                action: 'Increase max_connections in pool config',
+                impact: 'Reduce client wait times',
+                priority: 'high'
             });
         }
 
-        if (poolStats.waitingClients > 0) {
+        if (this.connectionMonitor.slowQueries > this.connectionMonitor.totalQueries * 0.1) {
             suggestions.push({
-                type: 'connection_pool',
-                priority: 'critical',
-                issue: 'Clients waiting for connections',
-                suggestion: 'Immediately increase connection pool size or optimize query performance',
-                impact: 'Eliminates connection bottlenecks'
+                type: 'short_term',
+                action: 'Optimize slow queries and add missing indexes',
+                impact: 'Improve overall response times',
+                priority: 'high'
             });
         }
 
-        // Table optimization suggestions
-        analysis.tableStats.forEach(table => {
-            if (table.dead_tuple_ratio > 20) {
-                suggestions.push({
-                    type: 'maintenance',
-                    priority: 'medium',
-                    issue: `High dead tuple ratio in ${table.tablename}`,
-                    suggestion: `Run VACUUM ANALYZE on ${table.tablename} table`,
-                    impact: 'Improves query performance and reduces storage bloat'
-                });
-            }
-
-            if (table.live_tuples > 10000 && table.tablename !== 'vc_sessions') {
-                suggestions.push({
-                    type: 'archiving',
-                    priority: 'low',
-                    issue: `Large table ${table.tablename} with ${table.live_tuples} rows`,
-                    suggestion: 'Consider implementing data archiving strategy',
-                    impact: 'Reduces table size and improves query performance'
-                });
-            }
-        });
-
-        // Index suggestions
-        analysis.slowQueries.forEach(query => {
-            if (query.sequential_scan_ratio > 50 && query.avg_tuples_per_seq_scan > 100) {
-                suggestions.push({
-                    type: 'indexing',
-                    priority: 'high',
-                    issue: `High sequential scan ratio on ${query.tablename}`,
-                    suggestion: this.suggestIndexForTable(query.tablename),
-                    impact: 'Significantly improves query performance'
-                });
-            }
-        });
-
-        // Bot-specific suggestions
-        this.addBotSpecificSuggestions(suggestions, analysis);
-
-        return suggestions.sort((a, b) => {
-            const priorityOrder = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
-            return priorityOrder[a.priority] - priorityOrder[b.priority];
-        });
-    }
-
-    // Suggest specific indexes for bot tables
-    suggestIndexForTable(tableName) {
-        const indexSuggestions = {
-            'users': 'CREATE INDEX CONCURRENTLY idx_users_last_vc_date ON users(last_vc_date) WHERE last_vc_date IS NOT NULL;',
-            'vc_sessions': 'CREATE INDEX CONCURRENTLY idx_vc_sessions_user_date ON vc_sessions(discord_id, date);',
-            'daily_voice_stats': 'CREATE INDEX CONCURRENTLY idx_daily_stats_date_user ON daily_voice_stats(date, discord_id);'
-        };
-
-        return indexSuggestions[tableName] || `Consider adding appropriate indexes for frequently queried columns in ${tableName}`;
-    }
-
-    // Add Discord bot specific optimization suggestions
-    addBotSpecificSuggestions(suggestions, analysis) {
-        // Check if we have voice tracking data
-        const vcSessionsTable = analysis.tableStats.find(t => t.tablename === 'vc_sessions');
-        if (vcSessionsTable && vcSessionsTable.live_tuples > 50000) {
+        const hitRate = parseFloat(queryCache.getStats().hitRate);
+        if (hitRate < 70) {
             suggestions.push({
-                type: 'data_retention',
-                priority: 'medium',
-                issue: 'Large vc_sessions table may impact performance',
-                suggestion: 'Implement data retention policy - archive sessions older than 1 year',
-                impact: 'Reduces query times and database size'
+                type: 'medium_term',
+                action: 'Tune cache TTL settings and increase cache coverage',
+                impact: 'Reduce database load',
+                priority: 'medium'
             });
         }
 
-        // Suggest batch operations for stats updates
-        suggestions.push({
-            type: 'optimization',
-            priority: 'low',
-            issue: 'Individual daily stats updates',
-            suggestion: 'Consider batching daily stats updates for better performance',
-            impact: 'Reduces database load during high voice activity'
-        });
-
-        // Connection pooling optimization
-        suggestions.push({
-            type: 'configuration',
-            priority: 'low',
-            issue: 'Default connection pool settings',
-            suggestion: 'Fine-tune pool settings based on bot usage patterns',
-            impact: 'Optimizes resource usage and response times'
-        });
+        return suggestions;
     }
 
-    // Create optimized queries for common operations
-    getOptimizedQueries() {
+    /**
+     * Start continuous monitoring
+     */
+    startMonitoring() {
+        // Monitor connection pool peaks
+        const poolMonitorInterval = setInterval(() => {
+            if (this.pool && this.pool.totalCount !== undefined) {
+                const current = this.pool.totalCount;
+                if (current > this.connectionMonitor.peakConnections) {
+                    this.connectionMonitor.peakConnections = current;
+                }
+            }
+        }, 1000);
+
+        // Log performance summary every 5 minutes
+        const summaryInterval = setInterval(() => {
+            this.logPerformanceSummary();
+        }, 5 * 60 * 1000);
+
+        // Store interval IDs for cleanup
+        this.monitoringIntervals.push(poolMonitorInterval, summaryInterval);
+    }
+
+    /**
+     * Stop monitoring and cleanup intervals
+     */
+    stopMonitoring() {
+        this.monitoringIntervals.forEach(interval => clearInterval(interval));
+        this.monitoringIntervals = [];
+    }
+
+    /**
+     * Log performance summary
+     */
+    logPerformanceSummary() {
+        const analysis = this.analyzeQueryPerformance();
+        const poolStats = this.getConnectionPoolStats();
+        
+        console.log('📊 Database Performance Summary:');
+        console.log(`   Queries: ${analysis.totalQueries} total, ${analysis.slowQueries} slow (${analysis.slowQueryRate}%)`);
+        console.log(`   Cache: ${analysis.cacheEfficiency.hitRate} hit rate, ${analysis.cacheEfficiency.size} entries`);
+        console.log(`   Pool: ${poolStats.totalConnections}/${poolStats.maxConnections} connections, ${poolStats.waitingClients} waiting`);
+        
+        if (analysis.recommendations.length > 0) {
+            console.log('   Recommendations:', analysis.recommendations.map(r => r.message).join('; '));
+        }
+    }
+
+    /**
+     * Generate unique query ID for tracking
+     */
+    generateQueryId(query, params) {
+        const normalizedQuery = query.replace(/\s+/g, ' ').trim();
+        const paramString = params.length > 0 ? JSON.stringify(params) : '';
+        return `${normalizedQuery}:${paramString}`;
+    }
+
+    /**
+     * Get comprehensive performance report
+     */
+    getPerformanceReport() {
         return {
-            // Optimized user stats query with proper indexing
-            getUserStatsOptimized: `
-                WITH user_info AS (
-                    SELECT id, discord_id, current_streak, longest_streak, last_vc_date
-                    FROM users 
-                    WHERE discord_id = $1
-                ),
-                today_stats AS (
-                    SELECT total_minutes, session_count
-                    FROM daily_voice_stats 
-                    WHERE discord_id = $1 AND date = CURRENT_DATE
-                ),
-                monthly_stats AS (
-                    SELECT SUM(total_minutes) as total_minutes, SUM(session_count) as session_count
-                    FROM daily_voice_stats 
-                    WHERE discord_id = $1 
-                    AND date >= date_trunc('month', CURRENT_DATE)
-                ),
-                alltime_stats AS (
-                    SELECT SUM(total_minutes) as total_minutes, SUM(session_count) as session_count
-                    FROM daily_voice_stats 
-                    WHERE discord_id = $1
-                )
-                SELECT 
-                    ui.*,
-                    COALESCE(ts.total_minutes, 0) as today_minutes,
-                    COALESCE(ts.session_count, 0) as today_sessions,
-                    COALESCE(ms.total_minutes, 0) as monthly_minutes,
-                    COALESCE(ms.session_count, 0) as monthly_sessions,
-                    COALESCE(ats.total_minutes, 0) as alltime_minutes,
-                    COALESCE(ats.session_count, 0) as alltime_sessions
-                FROM user_info ui
-                LEFT JOIN today_stats ts ON TRUE
-                LEFT JOIN monthly_stats ms ON TRUE  
-                LEFT JOIN alltime_stats ats ON TRUE;
-            `,
-
-            // Optimized active session cleanup
-            cleanupAbandonedSessions: `
-                UPDATE vc_sessions 
-                SET left_at = CURRENT_TIMESTAMP,
-                    duration_minutes = EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - joined_at)) / 60
-                WHERE left_at IS NULL 
-                AND joined_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'
-                RETURNING discord_id, voice_channel_name, duration_minutes;
-            `
+            queryAnalysis: this.analyzeQueryPerformance(),
+            connectionPool: this.optimizeConnectionPool(),
+            recommendations: this.generateOptimizationSuggestions(this.getConnectionPoolStats()),
+            monitoringStats: this.connectionMonitor,
+            cacheStats: queryCache.getStats()
         };
     }
 }
