@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const taskService = require('../services/taskService');
+const { getUserVoiceChannel } = require('../utils/voiceUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -14,6 +15,21 @@ module.exports = {
     async execute(interaction) {
         try {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+            // Check if user is in a voice channel using the same method as timer commands
+            const voiceChannel = await getUserVoiceChannel(interaction);
+            
+            if (!voiceChannel) {
+                return interaction.editReply({
+                    content: `┌─────────────────────────────┐
+│ 🚫 **VOICE CHANNEL REQUIRED** │
+└─────────────────────────────┘
+
+You must be in a voice channel to complete tasks!
+
+💡 *Join any voice channel first, then try again*`
+                });
+            }
 
             const discordId = interaction.user.id;
             const taskNumber = interaction.options.getInteger('number');

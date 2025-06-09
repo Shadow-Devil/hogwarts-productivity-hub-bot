@@ -122,12 +122,6 @@ class TaskService {
         return measureDatabase('completeTask', async () => {
             const client = await pool.connect();
             try {
-                // First, check if user is in a voice channel
-                const voiceValidation = await this.validateVoiceChannelRequirements(discordId);
-                if (!voiceValidation.valid) {
-                    return { success: false, message: voiceValidation.message };
-                }
-                
                 // Get all incomplete tasks for the user, ordered by creation date
                 const tasksResult = await client.query(
                     `SELECT id, title, created_at FROM tasks 
