@@ -97,6 +97,18 @@ const commands = [
                 .setRequired(true)
                 .setMinValue(1)),
 
+    new SlashCommandBuilder()
+        .setName('cache')
+        .setDescription('Manage bot cache system (Admin only)')
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('stats')
+                .setDescription('View cache statistics and performance metrics'))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('clear')
+                .setDescription('Clear all cached data')),
+
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

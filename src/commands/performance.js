@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const { performanceMonitor } = require('../utils/performanceMonitor');
+const queryCache = require('../utils/queryCache');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -17,7 +18,10 @@ module.exports = {
             // Get WebSocket latency (ping to Discord)
             const wsLatency = interaction.client.ws.ping;
             
-            const embed = createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency);
+            // Get cache statistics
+            const cacheStats = queryCache.getStats();
+            
+            const embed = createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, cacheStats);
 
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {
@@ -33,7 +37,7 @@ module.exports = {
     }
 };
 
-function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency) {
+function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, cacheStats) {
     const uptimeHours = Math.floor(summary.uptime / 3600);
     const uptimeMinutes = Math.floor((summary.uptime % 3600) / 60);
     
@@ -105,6 +109,11 @@ function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency) 
             {
                 name: '📊 Activity Level',
                 value: `${summary.commands.total} commands processed`,
+                inline: false
+            },
+            {
+                name: '💾 Query Cache',
+                value: `${cacheStats.hitRate} hit rate (${cacheStats.size} entries, ${cacheStats.memoryUsage})`,
                 inline: false
             }
         ])

@@ -1,6 +1,7 @@
 const { pool, getCachedUser, setCachedUser, clearUserCache, calculatePointsForHours, checkAndPerformMonthlyReset, getUserHouse, updateHousePoints } = require('../models/db');
 const dayjs = require('dayjs');
 const { measureDatabase } = require('../utils/performanceMonitor');
+const queryCache = require('../utils/queryCache');
 
 class VoiceService {
     // Get or create user in database with caching
@@ -212,6 +213,11 @@ class VoiceService {
                 // Clear user cache to force fresh data
                 clearUserCache(discordId);
                 
+                // Clear query caches that depend on this user's data
+                queryCache.delete(`user_stats:${discordId}`);
+                queryCache.deletePattern('leaderboard:*');
+                queryCache.deletePattern('house_*');
+                
                 if (additionalPoints > 0) {
                     console.log(`💰 Points awarded to ${discordId}: ${voiceTimePoints} voice points + ${additionalPoints} task points = ${totalPointsEarned} total points${userHouse ? ` (House: ${userHouse})` : ''}`);
                 } else {
@@ -302,6 +308,13 @@ class VoiceService {
     // Get user voice stats
     async getUserStats(discordId) {
         return measureDatabase('getUserStats', async () => {
+            // Try cache first
+            const cacheKey = `user_stats:${discordId}`;
+            const cached = queryCache.get(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const client = await pool.connect();
             try {
                 // Check and perform monthly reset if needed
@@ -347,7 +360,7 @@ class VoiceService {
                 const allTimeHours = parseFloat(user.all_time_hours) + parseFloat(user.monthly_hours);
                 const allTimePoints = user.all_time_points + user.monthly_points;
 
-                return {
+                const result = {
                     user,
                     today: {
                         minutes: todayStats.rows[0]?.total_minutes || 0,
@@ -368,6 +381,10 @@ class VoiceService {
                         hours: allTimeHours
                     }
                 };
+
+                // Cache the result for 1 minute (stats change frequently)
+                queryCache.set(cacheKey, result, 'userStats');
+                return result;
             } catch (error) {
                 console.error('Error getting user stats:', error);
                 throw error;
@@ -417,6 +434,13 @@ class VoiceService {
     // Get leaderboard data for monthly or all-time rankings
     async getLeaderboard(type = 'monthly') {
         return measureDatabase('getLeaderboard', async () => {
+            // Try cache first
+            const cacheKey = `leaderboard:${type}`;
+            const cached = queryCache.get(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const client = await pool.connect();
             try {
                 let leaderboardData = [];
@@ -452,12 +476,16 @@ class VoiceService {
                 }
 
                 // Convert hours to proper decimal format and ensure all numbers are valid
-                return leaderboardData.map(entry => ({
+                const result = leaderboardData.map(entry => ({
                     discord_id: entry.discord_id,
                     username: entry.username || 'Unknown User',
                     hours: parseFloat(entry.hours) || 0,
                     points: parseInt(entry.points) || 0
                 })).filter(entry => entry.hours > 0); // Only include users with actual voice time
+
+                // Cache leaderboards for 2 minutes (they don't change that often)
+                queryCache.set(cacheKey, result, 'leaderboard');
+                return result;
 
             } catch (error) {
                 console.error('Error getting leaderboard:', error);
@@ -471,16 +499,38 @@ class VoiceService {
     // Get house leaderboard data
     async getHouseLeaderboard(type = 'monthly') {
         return measureDatabase('getHouseLeaderboard', async () => {
+            // Try cache first
+            const cacheKey = `house_leaderboard:${type}`;
+            const cached = queryCache.get(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const { getHouseLeaderboard } = require('../models/db');
-            return await getHouseLeaderboard(type);
+            const result = await getHouseLeaderboard(type);
+            
+            // Cache house leaderboards for 3 minutes (house stats change less frequently)
+            queryCache.set(cacheKey, result, 'houseLeaderboard');
+            return result;
         })();
     }
 
     // Get house champions (top contributor per house)
     async getHouseChampions(type = 'monthly') {
         return measureDatabase('getHouseChampions', async () => {
+            // Try cache first
+            const cacheKey = `house_champions:${type}`;
+            const cached = queryCache.get(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const { getHouseChampions } = require('../models/db');
-            return await getHouseChampions(type);
+            const result = await getHouseChampions(type);
+            
+            // Cache house champions for 3 minutes
+            queryCache.set(cacheKey, result, 'houseChampions');
+            return result;
         })();
     }
 }

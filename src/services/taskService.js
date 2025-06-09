@@ -1,5 +1,6 @@
 const { pool } = require('../models/db');
 const { measureDatabase } = require('../utils/performanceMonitor');
+const queryCache = require('../utils/queryCache');
 const voiceService = require('./voiceService');
 
 class TaskService {
@@ -17,6 +18,10 @@ class TaskService {
                      RETURNING id, title, created_at`,
                     [discordId, title]
                 );
+                
+                // Clear caches related to this user's tasks
+                queryCache.delete(`user_tasks:${discordId}`);
+                queryCache.delete(`task_stats:${discordId}`);
                 
                 return result.rows[0];
             } catch (error) {
@@ -60,6 +65,10 @@ class TaskService {
                     [taskToRemove.id]
                 );
                 
+                // Clear caches related to this user's tasks
+                queryCache.delete(`user_tasks:${discordId}`);
+                queryCache.delete(`task_stats:${discordId}`);
+                
                 return { 
                     success: true, 
                     task: taskToRemove,
@@ -77,6 +86,13 @@ class TaskService {
     // Get all tasks for a user
     async getUserTasks(discordId) {
         return measureDatabase('getUserTasks', async () => {
+            // Try cache first
+            const cacheKey = `user_tasks:${discordId}`;
+            const cached = queryCache.get(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const client = await pool.connect();
             try {
                 const result = await client.query(
@@ -87,7 +103,11 @@ class TaskService {
                     [discordId]
                 );
                 
-                return result.rows;
+                const tasks = result.rows;
+                
+                // Cache user tasks for 30 seconds (tasks can change frequently)
+                queryCache.set(cacheKey, tasks, 'userTasks');
+                return tasks;
             } catch (error) {
                 console.error('Error getting user tasks:', error);
                 throw error;
@@ -149,6 +169,11 @@ class TaskService {
                 
                 // Award points to user using voice service
                 await voiceService.calculateAndAwardPoints(discordId, 0, member, pointsAwarded);
+                
+                // Clear caches related to this user's tasks and stats
+                queryCache.delete(`user_tasks:${discordId}`);
+                queryCache.delete(`task_stats:${discordId}`);
+                queryCache.delete(`user_stats:${discordId}`);
                 
                 return { 
                     success: true, 
@@ -250,6 +275,13 @@ class TaskService {
     // Get task statistics for a user
     async getTaskStats(discordId) {
         return measureDatabase('getTaskStats', async () => {
+            // Try cache first
+            const cacheKey = `task_stats:${discordId}`;
+            const cached = queryCache.get(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const client = await pool.connect();
             try {
                 const result = await client.query(
@@ -263,7 +295,11 @@ class TaskService {
                     [discordId]
                 );
                 
-                return result.rows[0];
+                const stats = result.rows[0];
+                
+                // Cache task stats for 2 minutes
+                queryCache.set(cacheKey, stats, 'taskStats');
+                return stats;
             } catch (error) {
                 console.error('Error getting task stats:', error);
                 throw error;
