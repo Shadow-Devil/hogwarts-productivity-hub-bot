@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
 const { createTimerTemplate, createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
 const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
-const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
+const { safeDeferReply, safeErrorReply, safeReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -29,7 +29,7 @@ module.exports = {
                         additionalInfo: 'Timer controls are tied to your current voice channel location.'
                     }
                 );
-                return interaction.editReply({ embeds: [embed] });
+                return safeReply(interaction, { embeds: [embed] });
             }
             
             const voiceChannelId = voiceChannel.id;

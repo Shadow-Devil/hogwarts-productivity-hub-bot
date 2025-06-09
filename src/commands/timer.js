@@ -2,7 +2,7 @@ const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
 const { createTimerTemplate, createErrorTemplate } = require('../utils/embedTemplates');
 const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
-const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
+const { safeDeferReply, safeErrorReply, safeReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -38,7 +38,7 @@ module.exports = {
                     }
                 );
                 
-                return interaction.editReply({ embeds: [embed] });
+                return safeReply(interaction, { embeds: [embed] });
             }
             const voiceChannelId = voiceChannel.id;
             // Enforce: only one timer per voice channel
@@ -70,7 +70,7 @@ module.exports = {
                         );
                         
                         if (!interaction.replied && !interaction.deferred) {
-                            return interaction.editReply({ embeds: [embed] });
+                            return safeReply(interaction, { embeds: [embed] });
                         }
                         return;
                     }
@@ -88,7 +88,7 @@ module.exports = {
                     }
                 );
                 
-                return interaction.editReply({ embeds: [embed] });
+                return safeReply(interaction, { embeds: [embed] });
             }
             const embed = createTimerTemplate('start', {
                 workTime: work,
@@ -101,7 +101,7 @@ module.exports = {
                 style: 'pomodoro'
             });
             
-            await interaction.reply({ embeds: [embed] });
+            await safeReply(interaction, { embeds: [embed] });
             const workTimeout = setTimeout(async () => {
                 try {
                     const workCompleteEmbed = createTimerTemplate('work_complete', {
