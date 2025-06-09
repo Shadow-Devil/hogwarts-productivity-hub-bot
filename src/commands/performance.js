@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const { performanceMonitor } = require('../utils/performanceMonitor');
 const queryCache = require('../utils/queryCache');
 const databaseOptimizer = require('../utils/databaseOptimizer');
@@ -9,15 +9,16 @@ module.exports = {
         .setDescription('Check bot health and performance status'),
     async execute(interaction) {
         try {
-            const startTime = Date.now();
+            // Defer immediately to prevent timeout
             await interaction.deferReply();
-            const apiLatency = Date.now() - startTime;
-
+            
+            const startTime = Date.now();
             const summary = performanceMonitor.getPerformanceSummary();
             const bottlenecks = performanceMonitor.identifyBottlenecks();
             
             // Get WebSocket latency (ping to Discord)
             const wsLatency = interaction.client.ws.ping;
+            const apiLatency = Date.now() - startTime;
             
             // Get cache statistics
             const cacheStats = queryCache.getStats();
@@ -27,15 +28,26 @@ module.exports = {
             
             const embed = createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, cacheStats, optimizationReport);
 
-            return interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
-            console.error('Error in /performance:', error);
+            console.error('💥 Error in /performance command:', {
+                error: error.message,
+                stack: error.stack,
+                user: interaction.user.tag,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Safe error handling
+            const errorMessage = '❌ Unable to check performance right now. Please try again later.';
+            
             try {
-                await interaction.editReply({
-                    content: '❌ Unable to check performance right now. Please try again later.',
-                });
+                if (interaction.deferred) {
+                    await interaction.editReply({ content: errorMessage });
+                } else if (!interaction.replied) {
+                    await interaction.reply({ content: errorMessage, flags: [MessageFlags.Ephemeral] });
+                }
             } catch (err) {
-                console.error('Error editing reply:', err);
+                console.error('🔥 Error sending performance error reply:', err.message);
             }
         }
     }
@@ -97,7 +109,7 @@ function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, 
             },
             {
                 name: '🧠 Memory Usage',
-                value: `${memoryPercentage.toFixed(1)}% (${memUsage.heapUsed}MB used)`,
+                value: getMemoryReport(memUsage, memoryPercentage),
                 inline: true
             },
             {
@@ -312,4 +324,24 @@ function getOptimizationSummary(optimizationReport) {
     }
     
     return summary.length > 0 ? summary.join('\n') : '✅ All database optimizations active, no issues detected';
+}
+
+function getMemoryReport(memUsage, memoryPercentage) {
+    // Get Node.js memory limits
+    const v8 = require('v8');
+    const heapStats = v8.getHeapStatistics();
+    const maxHeapMB = Math.round(heapStats.heap_size_limit / 1024 / 1024);
+    const availableHeapMB = Math.round((heapStats.heap_size_limit - memUsage.heapUsed) / 1024 / 1024);
+    
+    // Calculate capacity percentage (heap used vs Node.js limit)
+    const capacityPercentage = (memUsage.heapUsed / heapStats.heap_size_limit) * 100;
+    
+    // Format memory report
+    const parts = [
+        `${memoryPercentage.toFixed(1)}% heap (${memUsage.heapUsed}MB/${memUsage.heapTotal}MB)`,
+        `${capacityPercentage.toFixed(1)}% capacity (${availableHeapMB}MB/${maxHeapMB}MB available)`,
+        `RSS: ${memUsage.rss}MB`
+    ];
+    
+    return parts.join('\n');
 }

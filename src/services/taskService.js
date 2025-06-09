@@ -1,4 +1,4 @@
-const { pool } = require('../models/db');
+const { pool, executeWithResilience } = require('../models/db');
 const { measureDatabase } = require('../utils/performanceMonitor');
 const queryCache = require('../utils/queryCache');
 const voiceService = require('./voiceService');
@@ -7,8 +7,7 @@ class TaskService {
     // Add a new task for a user
     async addTask(discordId, title) {
         return measureDatabase('addTask', async () => {
-            const client = await pool.connect();
-            try {
+            return executeWithResilience(async (client) => {
                 // First ensure user exists in database
                 await this.ensureUserExists(discordId, client);
                 
@@ -24,20 +23,14 @@ class TaskService {
                 queryCache.delete(`task_stats:${discordId}`);
                 
                 return result.rows[0];
-            } catch (error) {
-                console.error('Error adding task:', error);
-                throw error;
-            } finally {
-                client.release();
-            }
+            });
         })();
     }
 
     // Remove a task by its number (position in user's task list)
     async removeTask(discordId, taskNumber) {
         return measureDatabase('removeTask', async () => {
-            const client = await pool.connect();
-            try {
+            return executeWithResilience(async (client) => {
                 // Get all incomplete tasks for the user, ordered by creation date
                 const tasksResult = await client.query(
                     `SELECT id, title FROM tasks 
@@ -74,12 +67,7 @@ class TaskService {
                     task: taskToRemove,
                     message: `Removed task: "${taskToRemove.title}"` 
                 };
-            } catch (error) {
-                console.error('Error removing task:', error);
-                throw error;
-            } finally {
-                client.release();
-            }
+            });
         })();
     }
 
@@ -93,8 +81,7 @@ class TaskService {
                 return cached;
             }
 
-            const client = await pool.connect();
-            try {
+            return executeWithResilience(async (client) => {
                 const result = await client.query(
                     `SELECT id, title, is_complete, created_at, completed_at, points_awarded
                      FROM tasks 
@@ -108,20 +95,14 @@ class TaskService {
                 // Cache user tasks for 30 seconds (tasks can change frequently)
                 queryCache.set(cacheKey, tasks, 'userTasks');
                 return tasks;
-            } catch (error) {
-                console.error('Error getting user tasks:', error);
-                throw error;
-            } finally {
-                client.release();
-            }
+            });
         })();
     }
 
     // Mark a task as complete
     async completeTask(discordId, taskNumber, member = null) {
         return measureDatabase('completeTask', async () => {
-            const client = await pool.connect();
-            try {
+            return executeWithResilience(async (client) => {
                 // Get all incomplete tasks for the user, ordered by creation date
                 const tasksResult = await client.query(
                     `SELECT id, title, created_at FROM tasks 
@@ -175,19 +156,13 @@ class TaskService {
                     points: pointsAwarded,
                     message: `✅ Completed: "${taskToComplete.title}" (+${pointsAwarded} points)` 
                 };
-            } catch (error) {
-                console.error('Error completing task:', error);
-                throw error;
-            } finally {
-                client.release();
-            }
+            });
         })();
     }
 
     // Validate voice channel requirements for task completion
     async validateVoiceChannelRequirements(discordId) {
-        const client = await pool.connect();
-        try {
+        return executeWithResilience(async (client) => {
             // Check if user has an active voice session
             const activeSessionResult = await client.query(
                 `SELECT joined_at FROM vc_sessions 
@@ -204,21 +179,10 @@ class TaskService {
             }
             
             return { valid: true };
-        } catch (error) {
-            console.error('Error validating voice channel requirements:', error);
-            return { 
-                valid: false, 
-                message: '❌ An error occurred while validating voice channel requirements.' 
-            };
-        } finally {
-            client.release();
-        }
-    }
-
-    // Validate task age requirements for task completion
+        });
+    }    // Validate task age requirements for task completion
     async validateTaskAge(taskId) {
-        const client = await pool.connect();
-        try {
+        return executeWithResilience(async (client) => {
             // Check task creation time
             const taskResult = await client.query(
                 `SELECT created_at FROM tasks WHERE id = $1`,
@@ -245,15 +209,7 @@ class TaskService {
             }
             
             return { valid: true };
-        } catch (error) {
-            console.error('Error validating task age:', error);
-            return { 
-                valid: false, 
-                message: '❌ An error occurred while validating task age requirements.' 
-            };
-        } finally {
-            client.release();
-        }
+        });
     }
 
     // Ensure user exists in database
@@ -276,8 +232,7 @@ class TaskService {
                 return cached;
             }
 
-            const client = await pool.connect();
-            try {
+            return executeWithResilience(async (client) => {
                 const result = await client.query(
                     `SELECT 
                         COUNT(*) as total_tasks,
@@ -294,12 +249,7 @@ class TaskService {
                 // Cache task stats for 2 minutes
                 queryCache.set(cacheKey, stats, 'taskStats');
                 return stats;
-            } catch (error) {
-                console.error('Error getting task stats:', error);
-                throw error;
-            } finally {
-                client.release();
-            }
+            });
         })();
     }
 }

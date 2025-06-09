@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
 
 module.exports = {
@@ -147,14 +147,14 @@ ${breakTime > 0 ? `☕ **Break time!** Take a well-deserved ${breakTime}-minute 
             });
         } catch (error) {
             console.error('Error in /timer:', error);
-            if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({
-                        content: '❌ An error occurred. Please try again later.',
-                    });
-                } catch (err) {
-                    console.error('Error sending fallback error reply:', err);
+            
+            const errorMessage = '❌ An error occurred. Please try again later.';
+            try {
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({ content: errorMessage, flags: [MessageFlags.Ephemeral] });
                 }
+            } catch (err) {
+                console.error('Error sending timer error reply:', err);
             }
         }
     }

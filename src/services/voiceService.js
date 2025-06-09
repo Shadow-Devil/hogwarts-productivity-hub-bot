@@ -1,4 +1,4 @@
-const { pool, getCachedUser, setCachedUser, clearUserCache, calculatePointsForHours, checkAndPerformMonthlyReset, getUserHouse, updateHousePoints } = require('../models/db');
+const { pool, getCachedUser, setCachedUser, clearUserCache, calculatePointsForHours, checkAndPerformMonthlyReset, getUserHouse, updateHousePoints, executeWithResilience } = require('../models/db');
 const dayjs = require('dayjs');
 const { measureDatabase } = require('../utils/performanceMonitor');
 const queryCache = require('../utils/queryCache');
@@ -12,23 +12,19 @@ class VoiceService {
             if (cachedUser) {
                 // Update username if it changed (but don't query DB every time)
                 if (cachedUser.username !== username) {
-                    const client = await pool.connect();
-                    try {
+                    await executeWithResilience(async (client) => {
                         await client.query(
                             'UPDATE users SET username = $1, updated_at = CURRENT_TIMESTAMP WHERE discord_id = $2',
                             [username, discordId]
                         );
                         cachedUser.username = username;
                         setCachedUser(discordId, cachedUser);
-                    } finally {
-                        client.release();
-                    }
+                    });
                 }
                 return cachedUser;
             }
 
-            const client = await pool.connect();
-            try {
+            return executeWithResilience(async (client) => {
                 // Try to find existing user
                 const result = await client.query(
                     'SELECT * FROM users WHERE discord_id = $1',
@@ -60,20 +56,14 @@ class VoiceService {
                 // Cache the user data
                 setCachedUser(discordId, user);
                 return user;
-            } catch (error) {
-                console.error('Error in getOrCreateUser:', error);
-                throw error;
-            } finally {
-                client.release();
-            }
+            });
         })();
     }
 
     // Start a voice session when user joins VC
     async startVoiceSession(discordId, username, voiceChannelId, voiceChannelName) {
         return measureDatabase('startVoiceSession', async () => {
-            const client = await pool.connect();
-            try {
+            return executeWithResilience(async (client) => {
                 const user = await this.getOrCreateUser(discordId, username);
                 const now = new Date();
                 const today = dayjs().format('YYYY-MM-DD');
@@ -88,20 +78,14 @@ class VoiceService {
 
                 console.log(`👥 Voice session started for ${username} in ${voiceChannelName}`);
                 return session.rows[0];
-            } catch (error) {
-                console.error('Error starting voice session:', error);
-                throw error;
-            } finally {
-                client.release();
-            }
+            });
         })();
     }
 
     // End a voice session when user leaves VC
     async endVoiceSession(discordId, voiceChannelId, member = null) {
         return measureDatabase('endVoiceSession', async () => {
-            const client = await pool.connect();
-            try {
+            return executeWithResilience(async (client) => {
                 const now = new Date();
 
                 // Find the active session
@@ -143,12 +127,7 @@ class VoiceService {
 
                 console.log(`👋 Voice session ended for ${discordId}. Duration: ${durationMinutes} minutes, Points earned: ${pointsEarned}`);
                 return { ...session, duration_minutes: durationMinutes, left_at: now, points_earned: pointsEarned };
-            } catch (error) {
-                console.error('Error ending voice session:', error);
-                throw error;
-            } finally {
-                client.release();
-            }
+            });
         })();
     }
 

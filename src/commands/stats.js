@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const voiceService = require('../services/voiceService');
 const taskService = require('../services/taskService');
 const dayjs = require('dayjs');
@@ -16,9 +16,10 @@ module.exports = {
             const taskStats = await taskService.getTaskStats(discordId);
 
             if (!stats) {
-                return interaction.editReply({
+                await interaction.editReply({
                     content: '📊 You haven\'t joined any voice channels yet! Join a voice channel to start tracking your time.',
                 });
+                return;
             }
 
             const { user, today, thisMonth, allTime } = stats;
@@ -110,25 +111,19 @@ module.exports = {
                 }]);
             }
 
-            return interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error in /stats:', error);
-            if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({
-                        content: '❌ An error occurred while fetching your statistics.',
-                    });
-                } catch (err) {
-                    console.error('Error sending error reply:', err);
+            
+            const errorMessage = '❌ An error occurred while fetching your statistics.';
+            try {
+                if (interaction.deferred) {
+                    await interaction.editReply({ content: errorMessage });
+                } else if (!interaction.replied) {
+                    await interaction.reply({ content: errorMessage, flags: [MessageFlags.Ephemeral] });
                 }
-            } else {
-                try {
-                    await interaction.editReply({
-                        content: '❌ An error occurred while fetching your statistics.',
-                    });
-                } catch (err) {
-                    console.error('Error editing reply:', err);
-                }
+            } catch (err) {
+                console.error('Error sending stats error reply:', err);
             }
         }
     }

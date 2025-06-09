@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const voiceService = require('../services/voiceService');
 
 module.exports = {
@@ -22,9 +22,10 @@ module.exports = {
             const leaderboard = await voiceService.getLeaderboard(leaderboardType);
 
             if (!leaderboard || leaderboard.length === 0) {
-                return interaction.editReply({
+                await interaction.editReply({
                     content: '📊 No data available for the leaderboard yet. Users need to spend time in voice channels first!',
                 });
+                return;
             }
 
             // Get current user's position
@@ -108,18 +109,15 @@ module.exports = {
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error in /leaderboard:', error);
+            const errorMessage = '❌ An error occurred while fetching the leaderboard.';
             try {
                 if (interaction.deferred) {
-                    await interaction.editReply({
-                        content: '❌ An error occurred while fetching the leaderboard.',
-                    });
+                    await interaction.editReply({ content: errorMessage });
                 } else if (!interaction.replied) {
-                    await interaction.reply({
-                        content: '❌ An error occurred while fetching the leaderboard.',
-                    });
+                    await interaction.reply({ content: errorMessage, flags: [MessageFlags.Ephemeral] });
                 }
             } catch (replyError) {
-                console.error('Error sending error reply:', replyError);
+                console.error('Error sending leaderboard error reply:', replyError);
             }
         }
     }

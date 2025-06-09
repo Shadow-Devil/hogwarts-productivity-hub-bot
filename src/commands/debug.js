@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
 
 module.exports = {
@@ -7,12 +7,17 @@ module.exports = {
         .setDescription('Debug voice channel detection'),
     async execute(interaction, { activeVoiceTimers }) {
         try {
+            // Defer reply immediately to prevent timeout issues
+            await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+            
             console.log(`Debug command triggered by ${interaction.user.tag}`);
             
             // Test voice channel detection
             const voiceChannel = await getUserVoiceChannel(interaction);
             
             if (voiceChannel) {
+                console.log(`Voice channel found via cached member: ${voiceChannel.name} (${voiceChannel.id})`);
+                
                 // Check if there's an active timer in this voice channel
                 let timerInfo = '';
                 if (activeVoiceTimers.has(voiceChannel.id)) {
@@ -30,7 +35,7 @@ module.exports = {
 💡 Ready for new timer session!`;
                 }
                 
-                return interaction.reply({
+                await interaction.editReply({
                     content: `┌─────────────────────────────────┐
 │ 🔍 **VOICE CHANNEL DEBUG INFO** │
 └─────────────────────────────────┘
@@ -40,29 +45,37 @@ module.exports = {
 🔧 **Type:** ${voiceChannel.type}
 👥 **Members:** ${voiceChannel.members.size}${timerInfo}
 
-🎯 *Debug information collected successfully!*`,
+🔧 **Status:** Detection working correctly!`
                 });
             } else {
-                return interaction.reply({
+                console.log(`User ${interaction.user.tag} is not in any voice channel`);
+                
+                await interaction.editReply({
                     content: `┌─────────────────────────────────┐
-│ ❌ **NO VOICE CHANNEL FOUND**   │
+│ 🔍 **VOICE CHANNEL DEBUG INFO** │
 └─────────────────────────────────┘
 
-You are not currently in a voice channel.
+❌ **No Voice Channel Detected**
+💡 Please join a voice channel first to use voice-related commands.
 
-💡 *Join a voice channel and try again*`,
+🔧 **Troubleshooting:**
+• Make sure you're connected to a voice channel
+• Try leaving and rejoining the voice channel
+• Check your Discord permissions`
                 });
             }
         } catch (error) {
             console.error('Error in /debug:', error);
-            if (!interaction.replied && !interaction.deferred) {
-                try {
-                    await interaction.reply({
-                        content: '❌ An error occurred during debug.',
-                    });
-                } catch (err) {
-                    console.error('Error sending debug error reply:', err);
+            
+            const errorMessage = '❌ Debug check failed. Please try again later.';
+            try {
+                if (interaction.deferred) {
+                    await interaction.editReply({ content: errorMessage });
+                } else if (!interaction.replied) {
+                    await interaction.reply({ content: errorMessage, flags: [MessageFlags.Ephemeral] });
                 }
+            } catch (err) {
+                console.error('Error sending debug error reply:', err);
             }
         }
     }

@@ -3,6 +3,7 @@ const dayjs = require('dayjs');
 require('dotenv').config();
 const { performanceMonitor } = require('../utils/performanceMonitor');
 const databaseOptimizer = require('../utils/databaseOptimizer');
+const DatabaseResilience = require('../utils/databaseResilience');
 
 // Simple in-memory cache for frequently accessed users
 const userCache = new Map();
@@ -61,8 +62,15 @@ const pool = new Pool({
 });
 
 // Monitor connection pool
+let connectionCount = 0;
 pool.on('connect', (client) => {
-    console.log('✅ Connected to PostgreSQL database');
+    connectionCount++;
+    // Only log the first few connections to avoid spam
+    if (connectionCount <= 3) {
+        console.log(`✅ Connected to PostgreSQL database (${connectionCount}/${pool.options.max})`);
+    } else if (connectionCount === 4) {
+        console.log(`✅ PostgreSQL connection pool active (${pool.options.min}-${pool.options.max} connections)`);
+    }
     performanceMonitor.updateActiveConnections(pool.totalCount);
 });
 
@@ -80,6 +88,9 @@ pool.on('error', (err) => {
 
 // Initialize database optimizer with pool (avoid circular dependency)
 databaseOptimizer.setPool(pool);
+
+// Initialize database resilience system
+const dbResilience = new DatabaseResilience(pool);
 
 // Database migrations for schema updates
 async function runMigrations(client) {
@@ -137,6 +148,28 @@ async function runMigrations(client) {
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
                 console.log(`✅ Added column ${column.name} to houses table`);
+            } catch (error) {
+                // Column might already exist, that's okay
+                if (error.code !== '42701') { // duplicate_column error
+                    console.log(`ℹ️  Column ${column.name} already exists or other issue:`, error.message);
+                }
+            }
+        }
+        
+        // Migration 4: Add session recovery columns to vc_sessions table
+        const sessionRecoveryColumns = [
+            { name: 'last_heartbeat', type: 'TIMESTAMP' },
+            { name: 'current_duration_minutes', type: 'INTEGER DEFAULT 0' },
+            { name: 'recovery_note', type: 'TEXT' }
+        ];
+        
+        for (const column of sessionRecoveryColumns) {
+            try {
+                await client.query(`
+                    ALTER TABLE vc_sessions 
+                    ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
+                `);
+                console.log(`✅ Added column ${column.name} to vc_sessions table for session recovery`);
             } catch (error) {
                 // Column might already exist, that's okay
                 if (error.code !== '42701') { // duplicate_column error
@@ -753,6 +786,9 @@ module.exports = {
     withTransaction,
     withAdvisoryLock,
     generateLockId,
+    executeWithResilience: async (callback, options = {}) => {
+        return await dbResilience.executeWithResilience(callback, options);
+    },
 
     // Enhanced query execution with optimization tracking
     async executeCachedQuery(operation, query, params = [], cacheType = 'default') {
@@ -768,4 +804,14 @@ module.exports = {
     getOptimizationReport() {
         return databaseOptimizer.getPerformanceReport();
     },
+};
+
+// Export database resilience instance for health monitoring
+function getDbResilience() {
+    return dbResilience;
+}
+
+module.exports = { 
+    ...module.exports, 
+    getDbResilience 
 };

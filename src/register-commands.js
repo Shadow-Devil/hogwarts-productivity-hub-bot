@@ -109,23 +109,71 @@ const commands = [
                 .setName('clear')
                 .setDescription('Clear all cached data')),
 
+    new SlashCommandBuilder()
+        .setName('health')
+        .setDescription('Check bot health and system status')
+        .addStringOption(option =>
+            option.setName('type')
+                .setDescription('Type of health check to perform')
+                .addChoices(
+                    { name: 'Overview', value: 'overview' },
+                    { name: 'Detailed', value: 'detailed' },
+                    { name: 'Database', value: 'database' },
+                    { name: 'Performance', value: 'performance' }
+                )),
+
+    new SlashCommandBuilder()
+        .setName('memory')
+        .setDescription('Show detailed memory usage information'),
+
+    new SlashCommandBuilder()
+        .setName('recovery')
+        .setDescription('View session recovery system status and force operations')
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('status')
+                .setDescription('View session recovery system status'))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('save')
+                .setDescription('Force save current session states')),
+
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
     try {
-        console.log('⏳ Started refreshing application (/) commands.');
-        console.log(`Registering ${commands.length} commands...`);
-        console.log('Commands:', commands.map(cmd => cmd.name).join(', '));
+        console.log('🚀 Discord Bot Command Registration');
+        console.log('═'.repeat(50));
+        console.log('⏳ Starting command registration process...');
+        console.log(`📝 Registering ${commands.length} slash commands`);
+        console.log('🎯 Target: Guild-specific commands');
+        console.log('');
+        
+        // List all commands being registered
+        console.log('📋 Commands to register:');
+        commands.forEach((cmd, index) => {
+            console.log(`   ${(index + 1).toString().padStart(2, '0')}. /${cmd.name} - ${cmd.description}`);
+        });
+        console.log('');
 
+        console.log('🔄 Sending registration request to Discord API...');
         await rest.put(
             Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
             { body: commands },
         );
 
-        console.log('✅ Successfully registered application commands.');
+        console.log('✅ Successfully registered all slash commands!');
+        console.log('🎉 Bot commands are now available in your Discord server');
+        console.log('═'.repeat(50));
     } catch (error) {
-        console.error('❌ Error registering commands:', error);
+        console.log('❌ Command Registration Failed');
+        console.log('═'.repeat(50));
+        console.error('💥 Error details:', error.message);
+        console.error('🔍 Full error:', error);
+        console.log('🔧 Check your bot token, client ID, and guild ID in .env file');
+        console.log('═'.repeat(50));
+        process.exit(1);
     }
 })();
