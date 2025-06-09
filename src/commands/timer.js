@@ -28,7 +28,6 @@ module.exports = {
 You must be in a voice channel to start a timer!
 
 💡 *Join any voice channel first, then try again*`,
-                        flags: MessageFlags.Ephemeral,
                     });
                 }
                 return;
@@ -65,7 +64,6 @@ A timer is already active in <#${voiceChannelId}>!
 ⌛ **Time Remaining:** ${timeRemaining} minutes
 
 🛑 *Use \`/stoptimer\` to stop the current timer first*`,
-                                flags: MessageFlags.Ephemeral,
                             });
                         }
                         return;
@@ -86,7 +84,6 @@ A timer is already active in <#${voiceChannelId}>!
 ☕ Break Time: **5 minutes** (if specified)
 
 💡 *Try again with valid values*`,
-                        flags: MessageFlags.Ephemeral,
                     });
                 }
                 return;
@@ -154,7 +151,6 @@ ${breakTime > 0 ? `☕ **Break time!** Take a well-deserved ${breakTime}-minute 
                 try {
                     await interaction.reply({
                         content: '❌ An error occurred. Please try again later.',
-                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (err) {
                     console.error('Error sending fallback error reply:', err);

@@ -19,7 +19,6 @@ module.exports = {
 You must be in a voice channel to stop a timer!
 
 💡 *Join the voice channel with an active timer*`,
-                    flags: MessageFlags.Ephemeral,
                 });
             }
             
@@ -33,7 +32,6 @@ You must be in a voice channel to stop a timer!
 No timer is currently running in <#${voiceChannelId}>
 
 💡 *Use \`/timer\` to start a new Pomodoro session*`,
-                    flags: MessageFlags.Ephemeral,
                 });
             }
             const timer = activeVoiceTimers.get(voiceChannelId);
@@ -55,7 +53,6 @@ Timer in <#${voiceChannelId}> has been stopped successfully.
                 try {
                     await interaction.reply({
                         content: '❌ An error occurred. Please try again later.',
-                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (err) {
                     console.error('Error sending fallback error reply:', err);

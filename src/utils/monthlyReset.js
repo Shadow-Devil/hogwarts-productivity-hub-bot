@@ -3,6 +3,7 @@
  */
 
 const { pool, checkAndPerformMonthlyReset } = require('../models/db');
+const voiceService = require('../services/voiceService');
 const dayjs = require('dayjs');
 
 class MonthlyResetScheduler {
@@ -42,13 +43,13 @@ class MonthlyResetScheduler {
         console.log('📅 Monthly reset scheduler stopped');
     }
 
-    // Check all users for monthly reset
+    // Check all users for monthly reset and daily streak validation
     async checkAllUsersForReset() {
         const client = await pool.connect();
         try {
             const currentMonth = dayjs().startOf('month');
             
-            // Get all users who need monthly reset
+            // 1. Check for monthly resets
             const usersNeedingReset = await client.query(`
                 SELECT discord_id 
                 FROM users 
@@ -70,6 +71,17 @@ class MonthlyResetScheduler {
             if (usersNeedingReset.rows.length > 0) {
                 console.log(`✅ Completed monthly reset check for ${usersNeedingReset.rows.length} users`);
             }
+
+            // 2. Check for daily streak resets (users who missed yesterday)
+            try {
+                const streaksReset = await voiceService.checkAllStreaks();
+                if (streaksReset > 0) {
+                    console.log(`🔥 Daily streak check: Reset ${streaksReset} user streaks for missed days`);
+                }
+            } catch (error) {
+                console.error('❌ Error in daily streak check:', error);
+            }
+
         } catch (error) {
             console.error('❌ Error in monthly reset scheduler:', error);
         } finally {

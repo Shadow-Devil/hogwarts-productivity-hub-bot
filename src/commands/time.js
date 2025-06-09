@@ -19,7 +19,6 @@ module.exports = {
 You must be in a voice channel to check timer status!
 
 💡 *Join a voice channel first, then try again*`,
-                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -95,7 +94,6 @@ You must be in a voice channel to check timer status!
                 try {
                     await interaction.reply({
                         content: '❌ An error occurred while checking timer status.',
-                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (err) {
                     console.error('Error sending time error reply:', err);
