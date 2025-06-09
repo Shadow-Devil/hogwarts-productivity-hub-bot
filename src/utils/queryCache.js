@@ -12,13 +12,15 @@ class QueryCache {
             total: 0
         };
         
-        // Default TTL values for different types of data
+        // Default TTL values for different types of data (in milliseconds)
         this.ttlSettings = {
-            userStats: 2 * 60 * 1000,      // 2 minutes - user statistics
-            leaderboard: 5 * 60 * 1000,    // 5 minutes - house leaderboards
-            taskList: 30 * 1000,           // 30 seconds - user task lists
-            housePoints: 1 * 60 * 1000,    // 1 minute - house points
-            performance: 30 * 1000,        // 30 seconds - performance data
+            userStats: 1 * 60 * 1000,       // 1 minute - user statistics
+            leaderboard: 3 * 60 * 1000,     // 3 minutes - general leaderboards  
+            houseLeaderboard: 3 * 60 * 1000, // 3 minutes - house leaderboards
+            houseChampions: 3 * 60 * 1000,  // 3 minutes - house champions
+            userTasks: 30 * 1000,           // 30 seconds - user task lists
+            taskStats: 2 * 60 * 1000,       // 2 minutes - task statistics
+            default: 1 * 60 * 1000          // 1 minute - default TTL
         };
 
         // Clean cache every minute
@@ -34,9 +36,70 @@ class QueryCache {
     }
 
     /**
-     * Get cached result if available and not expired
+     * Get cached result by key (simple key-value access)
      */
-    get(cacheType, query, params = []) {
+    get(key) {
+        this.stats.total++;
+        
+        const cached = this.cache.get(key);
+        
+        if (!cached) {
+            this.stats.misses++;
+            return null;
+        }
+
+        const ttl = this.ttlSettings[cached.type] || 60000; // Default 1 minute
+        const isExpired = Date.now() - cached.timestamp > ttl;
+        
+        if (isExpired) {
+            this.cache.delete(key);
+            this.stats.misses++;
+            return null;
+        }
+
+        this.stats.hits++;
+        return cached.data;
+    }
+
+    /**
+     * Store data in cache by key (simple key-value access)
+     */
+    set(key, data, cacheType = 'default') {
+        this.cache.set(key, {
+            data: data,
+            timestamp: Date.now(),
+            type: cacheType
+        });
+    }
+
+    /**
+     * Delete specific cache entry by key
+     */
+    delete(key) {
+        return this.cache.delete(key);
+    }
+
+    /**
+     * Delete cache entries matching pattern
+     */
+    deletePattern(pattern) {
+        const regex = new RegExp(pattern.replace('*', '.*'));
+        let deletedCount = 0;
+        
+        for (const key of this.cache.keys()) {
+            if (regex.test(key)) {
+                this.cache.delete(key);
+                deletedCount++;
+            }
+        }
+        
+        return deletedCount;
+    }
+
+    /**
+     * Get cached result by query and parameters (for SQL queries)
+     */
+    getByQuery(cacheType, query, params = []) {
         this.stats.total++;
         
         const key = this.generateKey(query, params);
@@ -61,9 +124,9 @@ class QueryCache {
     }
 
     /**
-     * Store query result in cache
+     * Store query result in cache by query and parameters
      */
-    set(cacheType, query, params = [], data) {
+    setByQuery(cacheType, query, params = [], data) {
         const key = this.generateKey(query, params);
         this.cache.set(key, {
             data: data,
@@ -147,7 +210,7 @@ class QueryCache {
      */
     async cachedQuery(cacheType, queryFunction, query, params = []) {
         // Try to get from cache first
-        const cached = this.get(cacheType, query, params);
+        const cached = this.getByQuery(cacheType, query, params);
         if (cached !== null) {
             return cached;
         }
@@ -156,7 +219,7 @@ class QueryCache {
         const result = await queryFunction(query, params);
         
         // Cache the result
-        this.set(cacheType, query, params, result);
+        this.setByQuery(cacheType, query, params, result);
         
         return result;
     }
