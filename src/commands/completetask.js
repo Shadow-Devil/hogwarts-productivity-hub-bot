@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
 
@@ -14,7 +14,7 @@ module.exports = {
                 .setMinValue(1)),
     async execute(interaction) {
         try {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction.deferReply();
 
             // Check if user is in a voice channel using the same method as timer commands
             const voiceChannel = await getUserVoiceChannel(interaction);
@@ -68,7 +68,6 @@ ${result.message}
                 try {
                     await interaction.reply({
                         content: errorMessage,
-                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (err) {
                     console.error('Error sending error reply:', err);

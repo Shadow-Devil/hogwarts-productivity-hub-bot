@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
 
 module.exports = {
@@ -41,7 +41,6 @@ module.exports = {
 👥 **Members:** ${voiceChannel.members.size}${timerInfo}
 
 🎯 *Debug information collected successfully!*`,
-                    flags: MessageFlags.Ephemeral,
                 });
             } else {
                 return interaction.reply({
@@ -52,7 +51,6 @@ module.exports = {
 You are not currently in a voice channel.
 
 💡 *Join a voice channel and try again*`,
-                    flags: MessageFlags.Ephemeral,
                 });
             }
         } catch (error) {
@@ -61,7 +59,6 @@ You are not currently in a voice channel.
                 try {
                     await interaction.reply({
                         content: '❌ An error occurred during debug.',
-                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (err) {
                     console.error('Error sending debug error reply:', err);

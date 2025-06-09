@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const voiceService = require('../services/voiceService');
 const taskService = require('../services/taskService');
 const dayjs = require('dayjs');
@@ -9,7 +9,7 @@ module.exports = {
         .setDescription('View your voice channel time and streak statistics'),
     async execute(interaction) {
         try {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction.deferReply();
 
             const discordId = interaction.user.id;
             const stats = await voiceService.getUserStats(discordId);
@@ -117,7 +117,6 @@ module.exports = {
                 try {
                     await interaction.reply({
                         content: '❌ An error occurred while fetching your statistics.',
-                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (err) {
                     console.error('Error sending error reply:', err);

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const voiceService = require('../services/voiceService');
 
 module.exports = {
@@ -116,7 +116,6 @@ module.exports = {
                 } else if (!interaction.replied) {
                     await interaction.reply({
                         content: '❌ An error occurred while fetching the leaderboard.',
-                        flags: MessageFlags.Ephemeral,
                     });
                 }
             } catch (replyError) {

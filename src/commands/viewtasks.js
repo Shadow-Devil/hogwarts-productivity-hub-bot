@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
 const dayjs = require('dayjs');
 
@@ -8,7 +8,7 @@ module.exports = {
         .setDescription('View all your tasks with their numbers'),
     async execute(interaction) {
         try {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction.deferReply();
 
             const discordId = interaction.user.id;
             const tasks = await taskService.getUserTasks(discordId);
@@ -98,7 +98,6 @@ Use \`/addtask <description>\` to create your first task!
                 try {
                     await interaction.reply({
                         content: errorMessage,
-                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (err) {
                     console.error('Error sending error reply:', err);

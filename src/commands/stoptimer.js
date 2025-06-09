@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
 
 module.exports = {

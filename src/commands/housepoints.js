@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const voiceService = require('../services/voiceService');
 
 module.exports = {
@@ -35,7 +35,7 @@ module.exports = {
                 if (interaction.deferred) {
                     await interaction.editReply({ content: errorMessage });
                 } else if (!interaction.replied) {
-                    await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
+                    await interaction.reply({ content: errorMessage });
                 }
             } catch (replyError) {
                 console.error('Error sending error reply:', replyError);

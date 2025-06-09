@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
 
 module.exports = {
@@ -13,7 +13,7 @@ module.exports = {
                 .setMinValue(1)),
     async execute(interaction) {
         try {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction.deferReply();
 
             const discordId = interaction.user.id;
             const taskNumber = interaction.options.getInteger('number');
@@ -50,7 +50,6 @@ ${result.message}
                 try {
                     await interaction.reply({
                         content: errorMessage,
-                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (err) {
                     console.error('Error sending error reply:', err);

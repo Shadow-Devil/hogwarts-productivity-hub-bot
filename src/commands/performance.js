@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { performanceMonitor } = require('../utils/performanceMonitor');
 const queryCache = require('../utils/queryCache');
 const databaseOptimizer = require('../utils/databaseOptimizer');
@@ -10,7 +10,7 @@ module.exports = {
     async execute(interaction) {
         try {
             const startTime = Date.now();
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction.deferReply();
             const apiLatency = Date.now() - startTime;
 
             const summary = performanceMonitor.getPerformanceSummary();

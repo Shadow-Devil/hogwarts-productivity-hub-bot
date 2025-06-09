@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
 
 module.exports = {
@@ -13,7 +13,7 @@ module.exports = {
                 .setMaxLength(500)),
     async execute(interaction) {
         try {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction.deferReply();
 
             const discordId = interaction.user.id;
             const title = interaction.options.getString('title');
@@ -43,7 +43,6 @@ module.exports = {
                 try {
                     await interaction.reply({
                         content: '❌ An error occurred while adding your task. Please try again later.',
-                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (err) {
                     console.error('Error sending fallback error reply:', err);

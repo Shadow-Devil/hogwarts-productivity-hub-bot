@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const queryCache = require('../utils/queryCache');
 
 module.exports = {
@@ -42,7 +42,6 @@ module.exports = {
                 try {
                     await interaction.reply({
                         content: '❌ An error occurred while managing cache.',
-                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (err) {
                     console.error('Error sending cache error reply:', err);
@@ -85,7 +84,7 @@ async function showCacheStats(interaction) {
         .setTimestamp()
         .setFooter({ text: 'Cache automatically cleans expired entries every minute' });
 
-    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    await interaction.reply({ embeds: [embed] });
 }
 
 async function clearCache(interaction, cacheType) {
@@ -108,7 +107,7 @@ async function clearCache(interaction, cacheType) {
                 ])
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+            await interaction.reply({ embeds: [embed] });
         } else {
             // Clear specific cache type
             queryCache.clearType(cacheType);
@@ -119,13 +118,12 @@ async function clearCache(interaction, cacheType) {
                 .setDescription(`Successfully cleared **${cacheType}** cache`)
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+            await interaction.reply({ embeds: [embed] });
         }
     } catch (error) {
         console.error('Error clearing cache:', error);
         await interaction.reply({
             content: '❌ Failed to clear cache. Please try again.',
-            flags: MessageFlags.Ephemeral,
         });
     }
 }
