@@ -7,11 +7,17 @@ module.exports = {
         .setDescription('Check bot health and performance status'),
     async execute(interaction) {
         try {
+            const startTime = Date.now();
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            const apiLatency = Date.now() - startTime;
 
             const summary = performanceMonitor.getPerformanceSummary();
             const bottlenecks = performanceMonitor.identifyBottlenecks();
-            const embed = createComprehensiveReport(summary, bottlenecks);
+            
+            // Get WebSocket latency (ping to Discord)
+            const wsLatency = interaction.client.ws.ping;
+            
+            const embed = createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency);
 
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {
@@ -27,7 +33,7 @@ module.exports = {
     }
 };
 
-function createComprehensiveReport(summary, bottlenecks) {
+function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency) {
     const uptimeHours = Math.floor(summary.uptime / 3600);
     const uptimeMinutes = Math.floor((summary.uptime % 3600) / 60);
     
@@ -58,6 +64,9 @@ function createComprehensiveReport(summary, bottlenecks) {
         healthMessage = 'Minor issues detected. Consider monitoring more closely.';
     }
 
+    // Format latency information
+    const latencyText = formatLatencyInfo(wsLatency, apiLatency);
+
     const embed = new EmbedBuilder()
         .setTitle('🏥 Bot Health Report')
         .setDescription(healthMessage)
@@ -71,6 +80,11 @@ function createComprehensiveReport(summary, bottlenecks) {
             {
                 name: '⏰ Uptime',
                 value: `${uptimeHours}h ${uptimeMinutes}m`,
+                inline: true
+            },
+            {
+                name: '📡 Latency',
+                value: latencyText,
                 inline: true
             },
             {
@@ -91,7 +105,7 @@ function createComprehensiveReport(summary, bottlenecks) {
             {
                 name: '📊 Activity Level',
                 value: `${summary.commands.total} commands processed`,
-                inline: true
+                inline: false
             }
         ])
         .setTimestamp();
@@ -143,6 +157,24 @@ function getDatabaseHealth(summary) {
     if (errorRate > 0.1) return '🔴 Errors detected';
     if (summary.database.totalQueries > 0) return '🟢 Healthy';
     return '⚪ No activity';
+}
+
+function formatLatencyInfo(wsLatency, apiLatency) {
+    // Format WebSocket latency (ping to Discord)
+    let wsStatus = '🟢';
+    if (wsLatency > 200) wsStatus = '🟡';
+    if (wsLatency > 500) wsStatus = '🔴';
+    if (wsLatency < 0) wsLatency = 'N/A'; // Sometimes ping can be -1 if not available yet
+    
+    // Format API response latency
+    let apiStatus = '🟢';
+    if (apiLatency > 1000) apiStatus = '🟡';
+    if (apiLatency > 3000) apiStatus = '🔴';
+    
+    const wsText = wsLatency === 'N/A' ? 'N/A' : `${wsLatency}ms`;
+    const apiText = `${apiLatency}ms`;
+    
+    return `${wsStatus} WS: ${wsText}\n${apiStatus} API: ${apiText}`;
 }
 
 function getIssuesSummary(bottlenecks) {
