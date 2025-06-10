@@ -8,33 +8,33 @@ const { performanceMonitor } = require('./performanceMonitor');
 class DatabaseResilience {
     constructor(pool) {
         this.pool = pool;
-        
+
         // Circuit breakers for different operation types
         this.circuitBreakers = {
-            query: new CircuitBreaker({ 
-                name: 'database-query', 
-                failureThreshold: 5, 
-                recoveryTimeout: 30000 
+            query: new CircuitBreaker({
+                name: 'database-query',
+                failureThreshold: 5,
+                recoveryTimeout: 30000
             }),
-            transaction: new CircuitBreaker({ 
-                name: 'database-transaction', 
-                failureThreshold: 3, 
-                recoveryTimeout: 45000 
+            transaction: new CircuitBreaker({
+                name: 'database-transaction',
+                failureThreshold: 3,
+                recoveryTimeout: 45000
             }),
-            connection: new CircuitBreaker({ 
-                name: 'database-connection', 
-                failureThreshold: 3, 
-                recoveryTimeout: 60000 
+            connection: new CircuitBreaker({
+                name: 'database-connection',
+                failureThreshold: 3,
+                recoveryTimeout: 60000
             })
         };
-        
+
         // Retry handlers
         this.retryHandler = new RetryHandler({
             maxRetries: 3,
             baseDelay: 1000,
             maxDelay: 10000
         });
-        
+
         // Connection monitoring
         this.connectionMetrics = {
             activeConnections: 0,
@@ -43,10 +43,10 @@ class DatabaseResilience {
             deadlocks: 0,
             timeouts: 0
         };
-        
+
         this.setupEventListeners();
     }
-    
+
     setupEventListeners() {
         // Monitor circuit breaker events
         Object.values(this.circuitBreakers).forEach(cb => {
@@ -54,32 +54,32 @@ class DatabaseResilience {
                 console.warn(`🔴 Circuit breaker [${name}] OPENED - service degraded`);
                 performanceMonitor.recordEvent('circuit_breaker_opened', { name });
             });
-            
+
             cb.on('closed', (name) => {
                 console.log(`🟢 Circuit breaker [${name}] CLOSED - service recovered`);
                 performanceMonitor.recordEvent('circuit_breaker_closed', { name });
             });
-            
+
             cb.on('halfOpen', (name) => {
                 console.log(`🟡 Circuit breaker [${name}] HALF_OPEN - testing recovery`);
             });
         });
-        
+
         // Monitor pool events
         this.pool.on('error', (err) => {
             console.error('🔴 Database pool error:', err);
             this.connectionMetrics.failedQueries++;
         });
-        
+
         this.pool.on('connect', () => {
             this.connectionMetrics.activeConnections++;
         });
-        
+
         this.pool.on('remove', () => {
             this.connectionMetrics.activeConnections--;
         });
     }
-    
+
     /**
      * Execute a database operation with resilience (callback receives client)
      * This is the main function used throughout the codebase for database operations
@@ -87,14 +87,14 @@ class DatabaseResilience {
     async executeWithResilience(callback, options = {}) {
         const startTime = Date.now();
         const timeout = options.timeout || 30000; // 30 seconds default
-        
+
         try {
             return await this.circuitBreakers.query.execute(async () => {
                 return await this.retryHandler.execute(async () => {
                     return await TimeoutHandler.withTimeout((async () => {
                         this.connectionMetrics.activeConnections++;
                         this.connectionMetrics.totalQueries++;
-                        
+
                         const client = await this.pool.connect();
                         try {
                             const result = await callback(client);
@@ -108,21 +108,40 @@ class DatabaseResilience {
             });
         } catch (error) {
             this.connectionMetrics.failedQueries++;
-            await this.handleDatabaseError(error);
+            this.handleDatabaseError(error);
             throw error;
         } finally {
             // Record performance metrics
             performanceMonitor.trackDatabase('executeWithResilience', startTime, Date.now());
         }
     }
-    
+
+    /**
+     * Handle database errors for executeWithResilience
+     */
+    handleDatabaseError(error) {
+        if (this.isDeadlock(error)) {
+            this.connectionMetrics.deadlocks++;
+            console.warn('🔒 Database deadlock detected in operation - will retry:', error.message);
+        }
+
+        if (this.isTimeout(error)) {
+            this.connectionMetrics.timeouts++;
+            console.warn('⏰ Database operation timeout:', error.message);
+        }
+
+        if (this.isConnectionError(error)) {
+            console.error('🔌 Database connection error in operation:', error.message);
+        }
+    }
+
     /**
      * Execute a query with full fault tolerance
      */
     async executeQuery(text, params = [], options = {}) {
         const startTime = Date.now();
         const timeout = options.timeout || 30000; // 30 seconds default
-        
+
         try {
             return await this.circuitBreakers.query.execute(async () => {
                 return await this.retryHandler.execute(async () => {
@@ -142,7 +161,7 @@ class DatabaseResilience {
             performanceMonitor.trackDatabase('query', startTime, Date.now());
         }
     }
-    
+
     async _executeQueryInternal(text, params) {
         const client = await this.getConnection();
         try {
@@ -152,14 +171,14 @@ class DatabaseResilience {
             client.release();
         }
     }
-    
+
     /**
      * Execute transaction with deadlock detection and retry
      */
     async executeTransaction(callback, options = {}) {
         const startTime = Date.now();
         const timeout = options.timeout || 60000; // 60 seconds for transactions
-        
+
         try {
             return await this.circuitBreakers.transaction.execute(async () => {
                 return await this.retryHandler.execute(async () => {
@@ -178,7 +197,7 @@ class DatabaseResilience {
             performanceMonitor.trackDatabase('transaction', startTime, Date.now());
         }
     }
-    
+
     async _executeTransactionInternal(callback) {
         const client = await this.getConnection();
         try {
@@ -193,7 +212,7 @@ class DatabaseResilience {
             client.release();
         }
     }
-    
+
     /**
      * Get database connection with circuit breaker protection
      */
@@ -202,14 +221,14 @@ class DatabaseResilience {
             return await this.pool.connect();
         });
     }
-    
+
     /**
      * Determine if an error is retryable
      */
     getRetryableErrors() {
         return [
             'ECONNRESET',
-            'ENOTFOUND', 
+            'ENOTFOUND',
             'ECONNREFUSED',
             'ETIMEDOUT',
             'connection terminated',
@@ -218,7 +237,7 @@ class DatabaseResilience {
             'Client has encountered a connection error'
         ];
     }
-    
+
     getTransactionRetryableErrors() {
         return [
             ...this.getRetryableErrors(),
@@ -228,13 +247,13 @@ class DatabaseResilience {
             'lock timeout'
         ];
     }
-    
+
     /**
      * Handle query-specific errors
      */
     handleQueryError(error, query) {
         this.connectionMetrics.failedQueries++;
-        
+
         if (this.isDeadlock(error)) {
             this.connectionMetrics.deadlocks++;
             console.warn('🔒 Database deadlock detected:', {
@@ -242,7 +261,7 @@ class DatabaseResilience {
                 query: query.substring(0, 100) + '...'
             });
         }
-        
+
         if (this.isTimeout(error)) {
             this.connectionMetrics.timeouts++;
             console.warn('⏰ Database query timeout:', {
@@ -250,19 +269,19 @@ class DatabaseResilience {
                 query: query.substring(0, 100) + '...'
             });
         }
-        
+
         if (this.isConnectionError(error)) {
             console.error('🔌 Database connection error:', error.message);
         }
     }
-    
+
     handleTransactionError(error) {
         if (this.isDeadlock(error)) {
             this.connectionMetrics.deadlocks++;
             console.warn('🔒 Transaction deadlock detected - will retry:', error.message);
         }
     }
-    
+
     isDeadlock(error) {
         return error.message && (
             error.message.includes('deadlock detected') ||
@@ -271,7 +290,7 @@ class DatabaseResilience {
             error.code === '40001'    // Serialization failure
         );
     }
-    
+
     isTimeout(error) {
         return error.message && (
             error.message.includes('timeout') ||
@@ -279,7 +298,7 @@ class DatabaseResilience {
             error.code === 'ETIMEDOUT'
         );
     }
-    
+
     isConnectionError(error) {
         return error.message && (
             error.message.includes('ECONNRESET') ||
@@ -288,7 +307,7 @@ class DatabaseResilience {
             error.message.includes('connection not available')
         );
     }
-    
+
     /**
      * Get resilience metrics
      */
@@ -296,7 +315,7 @@ class DatabaseResilience {
         return {
             connections: { ...this.connectionMetrics },
             circuitBreakers: Object.fromEntries(
-                Object.entries(this.circuitBreakers).map(([name, cb]) => 
+                Object.entries(this.circuitBreakers).map(([name, cb]) =>
                     [name, cb.getState()]
                 )
             ),
@@ -307,7 +326,7 @@ class DatabaseResilience {
             }
         };
     }
-    
+
     /**
      * Health check for database
      */
@@ -316,10 +335,10 @@ class DatabaseResilience {
             const startTime = Date.now();
             await this.executeQuery('SELECT 1 as health_check', [], { timeout: 5000 });
             const responseTime = Date.now() - startTime;
-            
+
             const metrics = this.getMetrics();
             const poolUtilization = (metrics.poolStats.totalCount / (this.pool.options.max || 50)) * 100;
-            
+
             return {
                 status: 'healthy',
                 responseTime,
@@ -334,7 +353,7 @@ class DatabaseResilience {
             };
         }
     }
-    
+
     /**
      * Reset circuit breakers (for admin use)
      */
@@ -342,19 +361,19 @@ class DatabaseResilience {
         Object.values(this.circuitBreakers).forEach(cb => cb.reset());
         console.log('🔄 All circuit breakers reset');
     }
-    
+
     /**
      * Graceful shutdown
      */
     async shutdown() {
         console.log('🛑 Shutting down database resilience...');
-        
+
         // Wait for ongoing operations to complete (max 5 seconds for faster shutdown)
         const startTime = Date.now();
         while (this.connectionMetrics.activeConnections > 0 && Date.now() - startTime < 5000) {
             await new Promise(resolve => setTimeout(resolve, 100));
         }
-        
+
         // Force close the pool with timeout
         await Promise.race([
             this.pool.end(),
@@ -362,7 +381,7 @@ class DatabaseResilience {
         ]).catch(error => {
             console.warn('⚠️ Database pool forced shutdown:', error.message);
         });
-        
+
         console.log('✅ Database resilience shutdown complete');
     }
 }

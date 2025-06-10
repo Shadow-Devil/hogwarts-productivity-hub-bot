@@ -53,7 +53,7 @@ class CacheWarming {
      */
     async performWarmUp() {
         if (this.isWarming) return;
-        
+
         this.isWarming = true;
         const startTime = Date.now();
         let warmedEntries = 0;
@@ -126,10 +126,10 @@ class CacheWarming {
 
             // 4. Use batch cache operations for efficiency
             const batchEntries = [];
-            
+
             // Add any additional static data that should be cached
             // (This section can be expanded based on usage patterns)
-            
+
             if (batchEntries.length > 0) {
                 await queryCache.batchSet(batchEntries);
                 warmedEntries += batchEntries.length;
@@ -138,7 +138,7 @@ class CacheWarming {
 
             const duration = Date.now() - startTime;
             this.lastWarmTime = new Date();
-            
+
             console.log(`🔥 Cache warming completed: ${warmedEntries} entries warmed in ${duration}ms`);
 
         } catch (error) {
@@ -168,7 +168,7 @@ class CacheWarming {
             // This method can be called when a user joins to pre-warm their data
             const userStatsKey = `user_stats:${discordId}`;
             const userTasksKey = `user_tasks:${discordId}`;
-            
+
             if (!queryCache.get(userStatsKey)) {
                 // Pre-load user stats if not cached
                 const voiceService = require('../services/voiceService');

@@ -6,7 +6,7 @@ We initially identified these as "dead code" but they are actually **high-value 
 
 ### 🗄️ **Database Methods (Restored)**
 - `executeCachedQuery()` - Advanced query caching
-- `executeBatchQueries()` - Bulk operations for efficiency  
+- `executeBatchQueries()` - Bulk operations for efficiency
 - `getOptimizationReport()` - Performance insights
 
 ### 💾 **Query Cache Methods (Restored)**
@@ -21,7 +21,7 @@ We initially identified these as "dead code" but they are actually **high-value 
 
 **Current Code:**
 ```javascript
-// voiceService.js - getUserStats() 
+// voiceService.js - getUserStats()
 const userResult = await client.query(
     'SELECT * FROM users WHERE discord_id = $1',
     [discordId]
@@ -58,7 +58,7 @@ const { batchGet } = queryCache;
 
 const cacheResults = await batchGet([
     'leaderboard:monthly',
-    'leaderboard:alltime', 
+    'leaderboard:alltime',
     'house_leaderboard:monthly'
 ]);
 ```
@@ -90,7 +90,7 @@ invalidateUserRelatedCache(discordId);
 const { executeBatchQueries } = require('../models/db');
 
 const batchUpdates = users.map(user => ({
-    query: `UPDATE daily_voice_stats SET total_minutes = total_minutes + $1 
+    query: `UPDATE daily_voice_stats SET total_minutes = total_minutes + $1
             WHERE discord_id = $2 AND date = $3`,
     params: [user.minutes, user.discordId, today]
 }));
@@ -137,10 +137,10 @@ await batchSet(commonData);
 // Task completion triggers related cache updates
 async completeTask(discordId, taskNumber) {
     // ... task completion logic ...
-    
+
     // Smart invalidation of user-related data
     invalidateUserRelatedCache(discordId);
-    
+
     // This automatically handles:
     // - user_stats:${discordId}
     // - user_tasks:${discordId}:*

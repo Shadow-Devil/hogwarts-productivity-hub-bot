@@ -45,8 +45,8 @@ class VoiceService {
                 } else {
                     // Create new user
                     const newUserResult = await client.query(
-                        `INSERT INTO users (discord_id, username) 
-                         VALUES ($1, $2) 
+                        `INSERT INTO users (discord_id, username)
+                         VALUES ($1, $2)
                          RETURNING *`,
                         [discordId, username]
                     );
@@ -90,7 +90,7 @@ class VoiceService {
 
                 // Find the active session
                 const result = await client.query(
-                    `SELECT * FROM vc_sessions 
+                    `SELECT * FROM vc_sessions
                      WHERE discord_id = $1 AND voice_channel_id = $2 AND left_at IS NULL
                      ORDER BY joined_at DESC LIMIT 1`,
                     [discordId, voiceChannelId]
@@ -108,8 +108,8 @@ class VoiceService {
 
                 // Update the session with end time and duration
                 await client.query(
-                    `UPDATE vc_sessions 
-                     SET left_at = $1, duration_minutes = $2 
+                    `UPDATE vc_sessions
+                     SET left_at = $1, duration_minutes = $2
                      WHERE id = $3`,
                     [now, durationMinutes, session.id]
                 );
@@ -138,25 +138,25 @@ class VoiceService {
             try {
                 // Check and perform monthly reset if needed
                 await checkAndPerformMonthlyReset(discordId);
-                
+
                 // Get current user data
                 const userResult = await client.query(
                     'SELECT * FROM users WHERE discord_id = $1',
                     [discordId]
                 );
-                
+
                 if (userResult.rows.length === 0) return 0;
-                
+
                 const user = userResult.rows[0];
                 const sessionHours = durationMinutes / 60;
                 const currentMonthlyHours = parseFloat(user.monthly_hours) || 0;
-                
+
                 // Calculate points earned for voice time
                 const voiceTimePoints = durationMinutes > 0 ? calculatePointsForHours(currentMonthlyHours, sessionHours) : 0;
-                
+
                 // Total points to award (voice time + task completion)
                 const totalPointsEarned = voiceTimePoints + additionalPoints;
-                
+
                 // Determine user's house
                 let userHouse = user.house;
                 if (!userHouse && member) {
@@ -171,30 +171,30 @@ class VoiceService {
                         clearUserCache(discordId);
                     }
                 }
-                
+
                 // Update user's monthly totals
                 const newMonthlyPoints = user.monthly_points + totalPointsEarned;
                 const newMonthlyHours = currentMonthlyHours + sessionHours;
-                
+
                 await client.query(`
-                    UPDATE users SET 
+                    UPDATE users SET
                         monthly_points = $1,
                         monthly_hours = $2,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE discord_id = $3
                 `, [newMonthlyPoints, newMonthlyHours, discordId]);
-                
+
                 // Award points to user's house if they have one
                 if (userHouse && totalPointsEarned > 0) {
                     await updateHousePoints(userHouse, totalPointsEarned);
                 }
-                
+
                 // Clear user cache to force fresh data
                 clearUserCache(discordId);
-                
+
                 // Smart cache invalidation for user-related data
                 queryCache.invalidateUserRelatedCache(discordId);
-                
+
                 if (additionalPoints > 0) {
                     console.log(`💰 Points awarded to ${discordId}: ${voiceTimePoints} voice points + ${additionalPoints} task points = ${totalPointsEarned} total points${userHouse ? ` (House: ${userHouse})` : ''}`);
                 } else {
@@ -218,8 +218,8 @@ class VoiceService {
                 await client.query(
                     `INSERT INTO daily_voice_stats (discord_id, date, total_minutes, session_count, points_earned, user_id)
                      VALUES ($1, $2, $3, 1, $4, (SELECT id FROM users WHERE discord_id = $5))
-                     ON CONFLICT (discord_id, date) 
-                     DO UPDATE SET 
+                     ON CONFLICT (discord_id, date)
+                     DO UPDATE SET
                         total_minutes = daily_voice_stats.total_minutes + $6,
                         session_count = daily_voice_stats.session_count + 1,
                         points_earned = daily_voice_stats.points_earned + $7,
@@ -259,7 +259,7 @@ class VoiceService {
                 shouldUpdateLastVcDate = true;
             } else {
                 const daysDiff = today.diff(lastVcDate, 'day');
-                
+
                 if (daysDiff === 1) {
                     // Consecutive day - increment streak
                     newStreak = userData.current_streak + 1;
@@ -280,7 +280,7 @@ class VoiceService {
             // Only update if streak changed or it's a new day
             if (shouldUpdateLastVcDate) {
                 await client.query(
-                    `UPDATE users 
+                    `UPDATE users
                      SET current_streak = $1, longest_streak = $2, last_vc_date = $3, updated_at = CURRENT_TIMESTAMP
                      WHERE discord_id = $4`,
                     [newStreak, newLongestStreak, sessionDate, discordId]
@@ -310,7 +310,7 @@ class VoiceService {
             try {
                 // Check and perform monthly reset if needed
                 await checkAndPerformMonthlyReset(discordId);
-                
+
                 // Get user basic info using cached query
                 const { executeCachedQuery } = require('../models/db');
                 const userResult = await executeCachedQuery(
@@ -340,7 +340,7 @@ class VoiceService {
                 const monthlyStats = await executeCachedQuery(
                     'getMonthlyStats',
                     `SELECT SUM(total_minutes) as total_minutes, SUM(session_count) as session_count, SUM(points_earned) as points_earned
-                     FROM daily_voice_stats 
+                     FROM daily_voice_stats
                      WHERE discord_id = $1 AND date >= $2`,
                     [discordId, `${thisMonth}-01`],
                     'userStats'
@@ -350,7 +350,7 @@ class VoiceService {
                 const allTimeStats = await executeCachedQuery(
                     'getAllTimeStats',
                     `SELECT SUM(total_minutes) as total_minutes, SUM(session_count) as session_count, SUM(points_earned) as points_earned
-                     FROM daily_voice_stats 
+                     FROM daily_voice_stats
                      WHERE discord_id = $1`,
                     [discordId],
                     'userStats'
@@ -399,16 +399,16 @@ class VoiceService {
         const client = await pool.connect();
         try {
             const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
-            
+
             // Get all users who didn't join VC yesterday and have current streaks
             const usersToReset = await client.query(
-                `SELECT DISTINCT u.discord_id, u.current_streak 
-                 FROM users u 
-                 WHERE u.current_streak > 0 
+                `SELECT DISTINCT u.discord_id, u.current_streak
+                 FROM users u
+                 WHERE u.current_streak > 0
                  AND NOT EXISTS (
-                     SELECT 1 FROM daily_voice_stats dvs 
-                     WHERE dvs.discord_id = u.discord_id 
-                     AND dvs.date = $1 
+                     SELECT 1 FROM daily_voice_stats dvs
+                     WHERE dvs.discord_id = u.discord_id
+                     AND dvs.date = $1
                      AND dvs.total_minutes >= 15
                  )`,
                 [yesterday]
@@ -421,7 +421,7 @@ class VoiceService {
             // Use batch processing for streak resets (more efficient for multiple users)
             if (usersToReset.rows.length > 0) {
                 const { executeBatchQueries } = require('../models/db');
-                
+
                 const batchUpdates = usersToReset.rows.map(user => ({
                     query: 'UPDATE users SET current_streak = 0, updated_at = CURRENT_TIMESTAMP WHERE discord_id = $1',
                     params: [user.discord_id]
@@ -457,7 +457,7 @@ class VoiceService {
                 if (type === 'monthly') {
                     // Monthly leaderboard based on current month's hours and points
                     const result = await client.query(`
-                        SELECT 
+                        SELECT
                             u.discord_id,
                             u.username,
                             u.monthly_hours as hours,
@@ -471,7 +471,7 @@ class VoiceService {
                 } else {
                     // All-time leaderboard based on total hours and points
                     const result = await client.query(`
-                        SELECT 
+                        SELECT
                             u.discord_id,
                             u.username,
                             (u.all_time_hours + u.monthly_hours) as hours,
@@ -517,7 +517,7 @@ class VoiceService {
 
             const { getHouseLeaderboard } = require('../models/db');
             const result = await getHouseLeaderboard(type);
-            
+
             // Cache house leaderboards for 3 minutes (house stats change less frequently)
             queryCache.set(cacheKey, result, 'houseLeaderboard');
             return result;
@@ -536,7 +536,7 @@ class VoiceService {
 
             const { getHouseChampions } = require('../models/db');
             const result = await getHouseChampions(type);
-            
+
             // Cache house champions for 3 minutes
             queryCache.set(cacheKey, result, 'houseChampions');
             return result;

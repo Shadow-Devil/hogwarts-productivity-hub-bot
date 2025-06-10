@@ -11,11 +11,11 @@ class QueryCache {
             misses: 0,
             total: 0
         };
-        
+
         // Default TTL values for different types of data (in milliseconds)
         this.ttlSettings = {
             userStats: 1 * 60 * 1000,       // 1 minute - user statistics
-            leaderboard: 3 * 60 * 1000,     // 3 minutes - general leaderboards  
+            leaderboard: 3 * 60 * 1000,     // 3 minutes - general leaderboards
             houseLeaderboard: 3 * 60 * 1000, // 3 minutes - house leaderboards
             houseChampions: 3 * 60 * 1000,  // 3 minutes - house champions
             userTasks: 30 * 1000,           // 30 seconds - user task lists
@@ -40,9 +40,9 @@ class QueryCache {
      */
     get(key) {
         this.stats.total++;
-        
+
         const cached = this.cache.get(key);
-        
+
         if (!cached) {
             this.stats.misses++;
             return null;
@@ -50,7 +50,7 @@ class QueryCache {
 
         const ttl = this.ttlSettings[cached.type] || 60000; // Default 1 minute
         const isExpired = Date.now() - cached.timestamp > ttl;
-        
+
         if (isExpired) {
             this.cache.delete(key);
             this.stats.misses++;
@@ -85,14 +85,14 @@ class QueryCache {
     deletePattern(pattern) {
         const regex = new RegExp(pattern.replace('*', '.*'));
         let deletedCount = 0;
-        
+
         for (const key of this.cache.keys()) {
             if (regex.test(key)) {
                 this.cache.delete(key);
                 deletedCount++;
             }
         }
-        
+
         return deletedCount;
     }
 
@@ -101,10 +101,10 @@ class QueryCache {
      */
     getByQuery(cacheType, query, params = []) {
         this.stats.total++;
-        
+
         const key = this.generateKey(query, params);
         const cached = this.cache.get(key);
-        
+
         if (!cached) {
             this.stats.misses++;
             return null;
@@ -112,7 +112,7 @@ class QueryCache {
 
         const ttl = this.ttlSettings[cacheType] || 60000; // Default 1 minute
         const isExpired = Date.now() - cached.timestamp > ttl;
-        
+
         if (isExpired) {
             this.cache.delete(key);
             this.stats.misses++;
@@ -178,9 +178,9 @@ class QueryCache {
      * Get cache statistics
      */
     getStats() {
-        const hitRate = this.stats.total > 0 ? 
+        const hitRate = this.stats.total > 0 ?
             ((this.stats.hits / this.stats.total) * 100).toFixed(1) : 0;
-        
+
         return {
             size: this.cache.size,
             hits: this.stats.hits,
@@ -203,25 +203,6 @@ class QueryCache {
             estimatedSize += 64; // Overhead for timestamp, type, etc.
         }
         return `${(estimatedSize / 1024).toFixed(1)}KB`;
-    }
-
-    /**
-     * Helper method for caching database queries
-     */
-    async cachedQuery(cacheType, queryFunction, query, params = []) {
-        // Try to get from cache first
-        const cached = this.getByQuery(cacheType, query, params);
-        if (cached !== null) {
-            return cached;
-        }
-
-        // Execute query if not cached
-        const result = await queryFunction(query, params);
-        
-        // Cache the result
-        this.setByQuery(cacheType, query, params, result);
-        
-        return result;
     }
 
     /**
@@ -255,7 +236,7 @@ class QueryCache {
                 type: 'houseLeaderboard'
             },
             userTasks: {
-                generateKey: (discordId, completed = null) => 
+                generateKey: (discordId, completed = null) =>
                     `user_tasks:${discordId}:${completed !== null ? completed : 'all'}`,
                 ttl: this.ttlSettings.userTasks,
                 type: 'userTasks'

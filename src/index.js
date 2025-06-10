@@ -26,12 +26,12 @@ client.commands = new Collection();
 async function loadCommands() {
     const commandsPath = path.join(__dirname, 'commands');
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-    
+
     console.log('📂 Command Loading Process');
     console.log('─'.repeat(30));
     console.log(`📁 Scanning: ${commandsPath}`);
     console.log(`📄 Found ${commandFiles.length} command files`);
-    
+
     const loadPromises = commandFiles.map(async (file) => {
         try {
             const command = require(path.join(commandsPath, file));
@@ -48,7 +48,7 @@ async function loadCommands() {
             return null;
         }
     });
-    
+
     const commandNames = (await Promise.all(loadPromises)).filter(Boolean);
     console.log(`🎯 Successfully loaded ${commandNames.length}/${commandFiles.length} commands`);
     console.log('─'.repeat(30));
@@ -58,12 +58,12 @@ async function loadEvents() {
     const eventsPath = path.join(__dirname, 'events');
     if (fs.existsSync(eventsPath)) {
         const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
-        
+
         console.log('🎭 Event Loading Process');
         console.log('─'.repeat(30));
         console.log(`📁 Scanning: ${eventsPath}`);
         console.log(`📄 Found ${eventFiles.length} event files`);
-        
+
         const loadPromises = eventFiles.map(async (file) => {
             try {
                 const event = require(path.join(eventsPath, file));
@@ -80,7 +80,7 @@ async function loadEvents() {
                 return null;
             }
         });
-        
+
         const eventNames = (await Promise.all(loadPromises)).filter(Boolean);
         if (eventNames.length > 0) {
             console.log(`🎯 Successfully loaded ${eventNames.length}/${eventFiles.length} events`);
@@ -104,42 +104,54 @@ client.on('ready', async (c) => {
     console.log(`📊 Commands Loaded: ${client.commands.size}`);
     console.log('🔄 Starting system initialization...');
     console.log('');
-    
+
     try {
         // Initialize database with enhanced fault tolerance
         console.log('🗄️  Initializing database connection...');
         await initializeDatabase();
         console.log('✅ Database connection established');
-        
+
         // Initialize health monitoring system
         console.log('🩺 Setting up health monitoring...');
         const dbResilience = getDbResilience();
         healthMonitor = new BotHealthMonitor(client, dbResilience);
         client.healthMonitor = healthMonitor; // Attach to client for command access
         console.log('✅ Health monitoring system active');
-        
+
         // Initialize session recovery system
         console.log('🛡️  Initializing session recovery...');
         const { activeVoiceSessions } = require('./events/voiceStateUpdate');
-        await sessionRecovery.initialize(activeVoiceSessions);
+        const recoveryResults = await sessionRecovery.initialize(activeVoiceSessions);
         console.log('✅ Session recovery system initialized');
-        
+        if (recoveryResults.recoveredSessions > 0) {
+            console.log(`📈 Recovered ${recoveryResults.recoveredSessions} incomplete sessions from previous runs`);
+        }
+
         // Start performance monitoring and monthly reset scheduler
         console.log('⏰ Starting schedulers...');
         monthlyResetScheduler.start();
         console.log('✅ Monthly reset scheduler started');
-        
+
         // Initialize cache warming strategy
         console.log('🔥 Starting cache warming strategy...');
         const cacheWarming = require('./utils/cacheWarming');
         await cacheWarming.startCacheWarming();
         console.log('✅ Cache warming strategy activated');
-        
+
+        // Scan for users already in voice channels and start tracking
+        console.log('🔍 Scanning for users already in voice channels...');
+        const voiceStateScanner = require('./utils/voiceStateScanner');
+        const scanResults = await voiceStateScanner.scanAndStartTracking(client, activeVoiceSessions);
+        console.log('✅ Voice state scanning completed');
+
         console.log('');
         console.log('🎉 Bot is fully operational!');
         console.log(`🎯 Serving commands: ${Array.from(client.commands.keys()).join(', ')}`);
+        if (scanResults.trackingStarted > 0) {
+            console.log(`🎤 Auto-started tracking for ${scanResults.trackingStarted} users already in voice channels`);
+        }
         console.log('═'.repeat(50));
-        
+
         // Trigger initial health check
         setTimeout(() => {
             console.log('🔍 Running initial health check...');
@@ -162,7 +174,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
     const user = newState.member?.user?.tag || oldState.member?.user?.tag || 'Unknown User';
     const oldChannel = oldState.channel?.name || null;
     const newChannel = newState.channel?.name || null;
-    
+
     if (oldChannel !== newChannel && (oldChannel || newChannel)) {
         const action = !oldChannel ? 'joined' : !newChannel ? 'left' : 'moved to';
         const channel = newChannel || oldChannel;
@@ -173,24 +185,24 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isCommand()) return;
-    
+
     const command = client.commands.get(interaction.commandName);
     if (!command) {
         console.warn(`⚠️ Unknown command attempted: /${interaction.commandName} by ${interaction.user.tag}`);
         return;
     }
-    
+
     console.log(`🎯 Command executed: /${interaction.commandName} by ${interaction.user.tag} in #${interaction.channel?.name || 'DM'}`);
-    
+
     // Wrap command execution with performance monitoring and timeout protection
     const wrappedExecute = measureCommand(interaction.commandName, command.execute);
-    
+
     try {
         // Set a timeout to prevent Discord interaction expiration (3 second limit)
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('Command execution timeout')), 2500); // 2.5 seconds safety margin
         });
-        
+
         await Promise.race([
             wrappedExecute(interaction, { activeVoiceTimers }),
             timeoutPromise
@@ -202,13 +214,13 @@ client.on('interactionCreate', async (interaction) => {
             error: error.message,
             isTimeout: error.message === 'Command execution timeout'
         });
-        
+
         // Improved error response handling with interaction state checks
         try {
-            const errorMessage = error.message === 'Command execution timeout' 
+            const errorMessage = error.message === 'Command execution timeout'
                 ? '⏱️ Command timed out. Please try again - the bot may be under heavy load.'
                 : '❌ An error occurred. Please try again later.';
-                
+
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
                     content: errorMessage,
@@ -242,10 +254,10 @@ async function initializeBot() {
         console.log('🔧 Node.js Version:', process.version);
         console.log('💻 Platform:', process.platform);
         console.log('');
-        
+
         console.log('🔄 Loading bot components...');
         await Promise.all([loadCommands(), loadEvents()]);
-        
+
         console.log('🔐 Authenticating with Discord...');
         await client.login(process.env.DISCORD_TOKEN);
     } catch (error) {
@@ -280,14 +292,14 @@ async function shutdown() {
     console.log('🔄 Graceful Shutdown Sequence');
     console.log('═'.repeat(40));
     const shutdownStart = Date.now();
-    
+
     // Set a hard timeout to force exit if shutdown hangs
     const forceExitTimeout = setTimeout(() => {
         console.log('⚠️  Shutdown timeout exceeded (15s), forcing exit...');
         console.log('💀 Process terminated forcefully');
         process.exit(1);
     }, 15000); // 15 second timeout to accommodate database shutdown
-    
+
     try {
         // Handle session recovery first (save active voice sessions)
         console.log('💾 [1/5] Saving voice sessions...');
@@ -300,7 +312,7 @@ async function shutdown() {
             });
         }
         console.log('✅ Voice sessions saved');
-        
+
         // Stop health monitoring
         console.log('🩺 [2/5] Stopping health monitoring...');
         if (healthMonitor) {
@@ -312,7 +324,7 @@ async function shutdown() {
             });
         }
         console.log('✅ Health monitoring stopped');
-        
+
         // Stop schedulers
         console.log('⏰ [3/5] Stopping schedulers...');
         try {
@@ -322,7 +334,7 @@ async function shutdown() {
             console.warn('⚠️  Scheduler shutdown error:', error.message);
         }
         console.log('✅ Schedulers stopped');
-        
+
         // Close database connections gracefully
         console.log('🗄️  [4/5] Closing database connections...');
         const dbResilience = getDbResilience();
@@ -335,7 +347,7 @@ async function shutdown() {
             });
         }
         console.log('✅ Database connections closed');
-        
+
         // Disconnect Discord client
         console.log('🤖 [5/5] Disconnecting Discord client...');
         if (client && client.isReady()) {
@@ -347,7 +359,7 @@ async function shutdown() {
             });
         }
         console.log('✅ Discord client disconnected');
-        
+
         clearTimeout(forceExitTimeout);
         const shutdownTime = ((Date.now() - shutdownStart) / 1000).toFixed(2);
         console.log('');

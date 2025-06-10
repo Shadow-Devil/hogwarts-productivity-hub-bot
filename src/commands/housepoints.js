@@ -28,7 +28,7 @@ module.exports = {
             }
 
             const leaderboardType = interaction.options.getString('type');
-            
+
             if (leaderboardType === 'housechampion') {
                 await showHouseChampions(interaction);
             } else {
@@ -37,13 +37,13 @@ module.exports = {
 
         } catch (error) {
             console.error('Error in housepoints command:', error);
-            
+
             const embed = createErrorTemplate(
                 'House Points Load Failed',
                 'An error occurred while fetching house leaderboard data. Please try again in a moment.',
                 { helpText: 'If this problem persists, contact support' }
             );
-            
+
             await safeErrorReply(interaction, embed);
         }
     }
@@ -56,7 +56,7 @@ async function showHouseLeaderboard(interaction, type) {
         const embed = createErrorTemplate(
             `${StatusEmojis.INFO} No House Data`,
             'No house data is available yet. Houses need to earn points first!',
-            { 
+            {
                 helpText: 'Join a voice channel and complete tasks to start earning house points',
                 additionalInfo: 'House points are awarded for voice time and task completion.'
             }
@@ -68,7 +68,7 @@ async function showHouseLeaderboard(interaction, type) {
     const currentUserId = interaction.user.id;
     const userMember = await fastMemberFetch(interaction.guild, currentUserId, true);
     let userHouse = null;
-    
+
     if (userMember) {
         const { getUserHouse } = require('../models/db');
         userHouse = await getUserHouse(userMember);
@@ -90,13 +90,13 @@ async function showHouseChampions(interaction) {
         'house_champions:monthly',
         'house_champions:alltime'
     ];
-    
+
     const cacheResults = await queryCache.batchGet(cacheKeys);
-    
+
     // Check cache first, then fetch missing data
     let monthlyChampions = cacheResults['house_champions:monthly'];
     let allTimeChampions = cacheResults['house_champions:alltime'];
-    
+
     // Fetch any missing data
     if (!monthlyChampions) {
         monthlyChampions = await voiceService.getHouseChampions('monthly');
@@ -105,12 +105,12 @@ async function showHouseChampions(interaction) {
         allTimeChampions = await voiceService.getHouseChampions('alltime');
     }
 
-    if ((!monthlyChampions || monthlyChampions.length === 0) && 
+    if ((!monthlyChampions || monthlyChampions.length === 0) &&
         (!allTimeChampions || allTimeChampions.length === 0)) {
         const embed = createErrorTemplate(
             `${StatusEmojis.INFO} No Champions Data`,
             'No house champions data available yet. Users need to earn points first!',
-            { 
+            {
                 helpText: 'Join a voice channel and complete tasks to start earning house points',
                 additionalInfo: 'House champions are the highest point earners in each house.'
             }
@@ -122,7 +122,7 @@ async function showHouseChampions(interaction) {
     const currentUserId = interaction.user.id;
     const userMember = await fastMemberFetch(interaction.guild, currentUserId, true);
     let userHouse = null;
-    
+
     if (userMember) {
         const { getUserHouse } = require('../models/db');
         userHouse = await getUserHouse(userMember);

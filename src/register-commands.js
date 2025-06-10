@@ -138,6 +138,18 @@ const commands = [
                 .setName('save')
                 .setDescription('Force save current session states')),
 
+    new SlashCommandBuilder()
+        .setName('voicescan')
+        .setDescription('Scan voice channels and start tracking for users already in voice')
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('run')
+                .setDescription('Run a voice state scan to detect and start tracking users in voice channels'))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('status')
+                .setDescription('View the results of the last voice state scan')),
+
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -150,7 +162,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
         console.log(`📝 Registering ${commands.length} slash commands`);
         console.log('🎯 Target: Guild-specific commands');
         console.log('');
-        
+
         // List all commands being registered
         console.log('📋 Commands to register:');
         commands.forEach((cmd, index) => {
