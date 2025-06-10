@@ -804,6 +804,7 @@ module.exports = {
     getOptimizationReport() {
         return databaseOptimizer.getPerformanceReport();
     },
+
 };
 
 // Export database resilience instance for health monitoring

@@ -339,6 +339,7 @@ class QueryCache {
         });
         return results;
     }
+
 }
 
 module.exports = new QueryCache();
