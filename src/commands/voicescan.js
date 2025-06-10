@@ -7,14 +7,6 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('voicescan')
         .setDescription('Scan voice channels and start tracking for users already in voice')
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('run')
-                .setDescription('Run a voice state scan to detect and start tracking users in voice channels'))
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('status')
-                .setDescription('View the results of the last voice state scan'))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
@@ -26,19 +18,13 @@ module.exports = {
                 return;
             }
 
-            const subcommand = interaction.options.getSubcommand();
-
             // Overall command timeout (12 seconds to stay under Discord's 15s limit)
             const commandTimeout = setTimeout(() => {
                 console.warn('⏱️ /voicescan command approaching timeout limit');
             }, 12000);
 
             try {
-                if (subcommand === 'run') {
-                    await this.handleScanRun(interaction);
-                } else if (subcommand === 'status') {
-                    await this.handleScanStatus(interaction);
-                }
+                await module.exports.handleScanRun(interaction);
             } finally {
                 clearTimeout(commandTimeout);
             }
@@ -48,7 +34,6 @@ module.exports = {
                 error: error.message,
                 stack: error.stack,
                 user: interaction.user.tag,
-                subcommand: interaction.options?.getSubcommand(),
                 timestamp: new Date().toISOString()
             });
 
@@ -79,8 +64,8 @@ module.exports = {
                 .setColor(0xFEE75C)
                 .addFields([
                     {
-                        name: '💡 Status Check',
-                        value: 'Use `/voicescan status` to check the current scan progress.',
+                        name: '💡 Get Started',
+                        value: 'The scan will begin immediately and show results when complete.',
                         inline: false
                     }
                 ])
@@ -118,7 +103,7 @@ module.exports = {
             const scanResults = await Promise.race([scanPromise, timeoutPromise]);
 
             // Create comprehensive results embed
-            await this.sendScanResults(interaction, scanResults);
+            await module.exports.sendScanResults(interaction, scanResults);
 
         } catch (error) {
             console.error('❌ Voice scan failed:', error);
@@ -139,94 +124,6 @@ module.exports = {
                     {
                         name: '🔄 Try Again',
                         value: 'You can retry the scan in a few moments when server load is lower.',
-                        inline: false
-                    },
-                    {
-                        name: '📊 Status Check',
-                        value: 'Use `/voicescan status` to check the last successful scan results.',
-                        inline: false
-                    }
-                ])
-                .setTimestamp();
-
-            return interaction.editReply({ embeds: [errorEmbed] });
-        }
-    },
-
-    async handleScanStatus(interaction) {
-        try {
-            const lastResults = voiceStateScanner.getLastScanResults();
-            const isScanning = voiceStateScanner.isCurrentlyScanning();
-
-            const embed = new EmbedBuilder()
-                .setTitle(createHeader(
-                    'Voice Scan Status',
-                    isScanning ? 'Scan In Progress' : 'Last Completed Scan',
-                    '📊',
-                    'large'
-                ))
-                .setColor(isScanning ? 0x3498DB : 0x5865F2)
-                .setTimestamp();
-
-            if (isScanning) {
-                embed.setDescription('🔄 **A voice state scan is currently in progress...**\n\nPlease wait for it to complete to see the results.');
-                return interaction.editReply({ embeds: [embed] });
-            }
-
-            // Show last scan results
-            const statusStats = createStatsCard('Last Scan Results', {
-                'Users Found': `${lastResults.totalUsersFound}`,
-                'Tracking Started': `${lastResults.trackingStarted}`,
-                'Channels Found': `${lastResults.channels.length}`,
-                'Errors': `${lastResults.errors}`
-            }, {
-                showBigNumbers: true,
-                emphasizeFirst: true
-            });
-
-            embed.setDescription(`📈 **Last voice state scan results:**\n\n${statusStats}`);
-
-            // Add channel details if any were found
-            if (lastResults.channels.length > 0) {
-                const channelData = lastResults.channels.map(channel => [
-                    channel.name.length > 20 ? channel.name.substring(0, 17) + '...' : channel.name,
-                    `${channel.userCount} users`
-                ]);
-
-                const channelTable = formatDataTable(channelData, [20, 15]);
-
-                embed.addFields([
-                    {
-                        name: createHeader('Channels from Last Scan', null, '🎤', 'emphasis'),
-                        value: channelTable,
-                        inline: false
-                    }
-                ]);
-            } else {
-                embed.addFields([
-                    {
-                        name: createHeader('Channels Status', null, '📭', 'emphasis'),
-                        value: 'No active voice channels were found during the last scan.',
-                        inline: false
-                    }
-                ]);
-            }
-
-            embed.setFooter({ text: 'Use /voicescan run to perform a new scan' });
-
-            return interaction.editReply({ embeds: [embed] });
-
-        } catch (statusError) {
-            console.error('❌ Error getting scan status:', statusError);
-
-            const errorEmbed = new EmbedBuilder()
-                .setTitle('❌ Status Error')
-                .setDescription('Failed to retrieve scan status information.')
-                .setColor(0xED4245)
-                .addFields([
-                    {
-                        name: '🔄 Retry',
-                        value: 'Please try the command again in a moment.',
                         inline: false
                     }
                 ])

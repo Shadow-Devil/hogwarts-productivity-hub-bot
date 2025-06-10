@@ -201,14 +201,6 @@ class VoiceStateScanner {
     }
 
     /**
-     * Get the last scan results
-     * @returns {Object} Scan results
-     */
-    getLastScanResults() {
-        return { ...this.scanResults };
-    }
-
-    /**
      * Check if a scan is currently in progress
      * @returns {boolean} True if scanning
      */

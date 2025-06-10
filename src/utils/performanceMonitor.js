@@ -14,7 +14,7 @@ class PerformanceMonitor {
         };
         this.startTime = Date.now();
         this.memoryInterval = null;
-        
+
         // Start memory monitoring
         this.startMemoryMonitoring();
     }
@@ -24,11 +24,11 @@ class PerformanceMonitor {
         if (this.memoryInterval) {
             clearInterval(this.memoryInterval);
         }
-        
+
         this.memoryInterval = setInterval(() => {
             const memUsage = process.memoryUsage();
             const timestamp = Date.now();
-            
+
             this.metrics.memory.push({
                 timestamp,
                 rss: memUsage.rss / 1024 / 1024, // MB
@@ -37,17 +37,17 @@ class PerformanceMonitor {
                 external: memUsage.external / 1024 / 1024 // MB
             });
 
-            // Keep only last 1000 memory samples (about 16 minutes of data)
+            // Keep only last 1000 memory samples (about 50 minutes of data)
             if (this.metrics.memory.length > 1000) {
                 this.metrics.memory = this.metrics.memory.slice(-1000);
             }
-        }, 1000); // Sample every second
+        }, 3000); // Sample every 3 seconds (optimized for less overhead)
     }
 
     // Track command execution performance
     trackCommand(commandName, startTime, endTime, error = null) {
         const executionTime = endTime - startTime;
-        
+
         if (!this.metrics.commands.has(commandName)) {
             this.metrics.commands.set(commandName, {
                 totalExecutions: 0,
@@ -71,7 +71,7 @@ class PerformanceMonitor {
     // Track database operation performance
     trackDatabase(operation, startTime, endTime, error = null) {
         const executionTime = endTime - startTime;
-        
+
         if (!this.metrics.database.has(operation)) {
             this.metrics.database.set(operation, {
                 count: 0,
@@ -101,10 +101,10 @@ class PerformanceMonitor {
     getPerformanceSummary() {
         const uptime = Date.now() - this.startTime;
         const currentMemory = process.memoryUsage();
-        
+
         // Calculate memory trends
         const recentMemory = this.metrics.memory.slice(-60); // Last minute
-        const memoryTrend = recentMemory.length > 1 ? 
+        const memoryTrend = recentMemory.length > 1 ?
             recentMemory[recentMemory.length - 1].heapUsed - recentMemory[0].heapUsed : 0;
 
         // Find slowest commands
@@ -144,7 +144,7 @@ class PerformanceMonitor {
     // Get detailed performance report
     getDetailedReport() {
         const summary = this.getPerformanceSummary();
-        
+
         return {
             ...summary,
             commands: Object.fromEntries(this.metrics.commands),
@@ -238,7 +238,7 @@ function measureCommand(commandName, fn) {
     return async (...args) => {
         const startTime = Date.now();
         let error = null;
-        
+
         try {
             const result = await fn(...args);
             return result;
@@ -256,7 +256,7 @@ function measureDatabase(operation, fn) {
     return async () => {
         const startTime = Date.now();
         let error = null;
-        
+
         try {
             const result = await fn();
             return result;

@@ -57,8 +57,7 @@ async function showHouseLeaderboard(interaction, type) {
             `${StatusEmojis.INFO} No House Data`,
             'No house data is available yet. Houses need to earn points first!',
             {
-                helpText: 'Join a voice channel and complete tasks to start earning house points',
-                additionalInfo: 'House points are awarded for voice time and task completion.'
+                helpText: 'Join a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.'
             }
         );
         return interaction.editReply({ embeds: [embed] });
@@ -105,18 +104,7 @@ async function showHouseChampions(interaction) {
         allTimeChampions = await voiceService.getHouseChampions('alltime');
     }
 
-    if ((!monthlyChampions || monthlyChampions.length === 0) &&
-        (!allTimeChampions || allTimeChampions.length === 0)) {
-        const embed = createErrorTemplate(
-            `${StatusEmojis.INFO} No Champions Data`,
-            'No house champions data available yet. Users need to earn points first!',
-            {
-                helpText: 'Join a voice channel and complete tasks to start earning house points',
-                additionalInfo: 'House champions are the highest point earners in each house.'
-            }
-        );
-        return interaction.editReply({ embeds: [embed] });
-    }
+    // Always show the champion template, even if empty (to match house leaderboard behavior)
 
     // Get current user's house for personalization (optimized)
     const currentUserId = interaction.user.id;
