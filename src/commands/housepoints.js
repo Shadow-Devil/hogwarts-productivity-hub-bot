@@ -84,8 +84,26 @@ async function showHouseLeaderboard(interaction, type) {
 }
 
 async function showHouseChampions(interaction) {
-    const monthlyChampions = await voiceService.getHouseChampions('monthly');
-    const allTimeChampions = await voiceService.getHouseChampions('alltime');
+    // Use batch cache operations for efficiency
+    const queryCache = require('../utils/queryCache');
+    const cacheKeys = [
+        'house_champions:monthly',
+        'house_champions:alltime'
+    ];
+    
+    const cacheResults = await queryCache.batchGet(cacheKeys);
+    
+    // Check cache first, then fetch missing data
+    let monthlyChampions = cacheResults['house_champions:monthly'];
+    let allTimeChampions = cacheResults['house_champions:alltime'];
+    
+    // Fetch any missing data
+    if (!monthlyChampions) {
+        monthlyChampions = await voiceService.getHouseChampions('monthly');
+    }
+    if (!allTimeChampions) {
+        allTimeChampions = await voiceService.getHouseChampions('alltime');
+    }
 
     if ((!monthlyChampions || monthlyChampions.length === 0) && 
         (!allTimeChampions || allTimeChampions.length === 0)) {

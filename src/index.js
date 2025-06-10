@@ -129,6 +129,12 @@ client.on('ready', async (c) => {
         monthlyResetScheduler.start();
         console.log('✅ Monthly reset scheduler started');
         
+        // Initialize cache warming strategy
+        console.log('🔥 Starting cache warming strategy...');
+        const cacheWarming = require('./utils/cacheWarming');
+        await cacheWarming.startCacheWarming();
+        console.log('✅ Cache warming strategy activated');
+        
         console.log('');
         console.log('🎉 Bot is fully operational!');
         console.log(`🎯 Serving commands: ${Array.from(client.commands.keys()).join(', ')}`);

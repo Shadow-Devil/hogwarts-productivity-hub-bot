@@ -18,9 +18,8 @@ class TaskService {
                     [discordId, title]
                 );
                 
-                // Clear caches related to this user's tasks
-                queryCache.delete(`user_tasks:${discordId}`);
-                queryCache.delete(`task_stats:${discordId}`);
+                // Smart cache invalidation for user-related data
+                queryCache.invalidateUserRelatedCache(discordId);
                 
                 return result.rows[0];
             });
@@ -58,9 +57,8 @@ class TaskService {
                     [taskToRemove.id]
                 );
                 
-                // Clear caches related to this user's tasks
-                queryCache.delete(`user_tasks:${discordId}`);
-                queryCache.delete(`task_stats:${discordId}`);
+                // Smart cache invalidation for user-related data
+                queryCache.invalidateUserRelatedCache(discordId);
                 
                 return { 
                     success: true, 
@@ -145,10 +143,8 @@ class TaskService {
                 // Award points to user using voice service
                 await voiceService.calculateAndAwardPoints(discordId, 0, member, pointsAwarded);
                 
-                // Clear caches related to this user's tasks and stats
-                queryCache.delete(`user_tasks:${discordId}`);
-                queryCache.delete(`task_stats:${discordId}`);
-                queryCache.delete(`user_stats:${discordId}`);
+                // Smart cache invalidation for user-related data
+                queryCache.invalidateUserRelatedCache(discordId);
                 
                 return { 
                     success: true, 

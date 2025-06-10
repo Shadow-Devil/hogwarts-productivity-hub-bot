@@ -192,10 +192,8 @@ class VoiceService {
                 // Clear user cache to force fresh data
                 clearUserCache(discordId);
                 
-                // Clear query caches that depend on this user's data
-                queryCache.delete(`user_stats:${discordId}`);
-                queryCache.deletePattern('leaderboard:*');
-                queryCache.deletePattern('house_*');
+                // Smart cache invalidation for user-related data
+                queryCache.invalidateUserRelatedCache(discordId);
                 
                 if (additionalPoints > 0) {
                     console.log(`💰 Points awarded to ${discordId}: ${voiceTimePoints} voice points + ${additionalPoints} task points = ${totalPointsEarned} total points${userHouse ? ` (House: ${userHouse})` : ''}`);
@@ -313,10 +311,13 @@ class VoiceService {
                 // Check and perform monthly reset if needed
                 await checkAndPerformMonthlyReset(discordId);
                 
-                // Get user basic info
-                const userResult = await client.query(
+                // Get user basic info using cached query
+                const { executeCachedQuery } = require('../models/db');
+                const userResult = await executeCachedQuery(
+                    'getUserBasic',
                     'SELECT * FROM users WHERE discord_id = $1',
-                    [discordId]
+                    [discordId],
+                    'userStats'
                 );
 
                 if (userResult.rows.length === 0) {
@@ -327,26 +328,32 @@ class VoiceService {
                 const today = dayjs().format('YYYY-MM-DD');
                 const thisMonth = dayjs().format('YYYY-MM');
 
-                // Get today's stats
-                const todayStats = await client.query(
+                // Get today's stats using cached query
+                const todayStats = await executeCachedQuery(
+                    'getTodayStats',
                     'SELECT * FROM daily_voice_stats WHERE discord_id = $1 AND date = $2',
-                    [discordId, today]
+                    [discordId, today],
+                    'userStats'
                 );
 
-                // Get this month's stats
-                const monthlyStats = await client.query(
+                // Get this month's stats using cached query
+                const monthlyStats = await executeCachedQuery(
+                    'getMonthlyStats',
                     `SELECT SUM(total_minutes) as total_minutes, SUM(session_count) as session_count, SUM(points_earned) as points_earned
                      FROM daily_voice_stats 
                      WHERE discord_id = $1 AND date >= $2`,
-                    [discordId, `${thisMonth}-01`]
+                    [discordId, `${thisMonth}-01`],
+                    'userStats'
                 );
 
-                // Get all-time stats (combining current monthly + all-time stored)
-                const allTimeStats = await client.query(
+                // Get all-time stats using cached query
+                const allTimeStats = await executeCachedQuery(
+                    'getAllTimeStats',
                     `SELECT SUM(total_minutes) as total_minutes, SUM(session_count) as session_count, SUM(points_earned) as points_earned
                      FROM daily_voice_stats 
                      WHERE discord_id = $1`,
-                    [discordId]
+                    [discordId],
+                    'userStats'
                 );
 
                 // Calculate total all-time hours and points
@@ -408,11 +415,20 @@ class VoiceService {
             );
 
             for (const user of usersToReset.rows) {
-                await client.query(
-                    'UPDATE users SET current_streak = 0, updated_at = CURRENT_TIMESTAMP WHERE discord_id = $1',
-                    [user.discord_id]
-                );
                 console.log(`💔 Streak reset for ${user.discord_id} (was ${user.current_streak})`);
+            }
+
+            // Use batch processing for streak resets (more efficient for multiple users)
+            if (usersToReset.rows.length > 0) {
+                const { executeBatchQueries } = require('../models/db');
+                
+                const batchUpdates = usersToReset.rows.map(user => ({
+                    query: 'UPDATE users SET current_streak = 0, updated_at = CURRENT_TIMESTAMP WHERE discord_id = $1',
+                    params: [user.discord_id]
+                }));
+
+                await executeBatchQueries('resetStreaksBatch', batchUpdates, 25);
+                console.log(`🔄 Batch processed ${usersToReset.rows.length} streak resets`);
             }
 
             return usersToReset.rows.length;
