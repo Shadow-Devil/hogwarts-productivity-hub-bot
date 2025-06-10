@@ -34,7 +34,18 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName('performance')
-        .setDescription('Check bot health and performance status'),
+        .setDescription('Comprehensive bot performance and health monitoring')
+        .addStringOption(option =>
+            option.setName('view')
+                .setDescription('Choose the performance view to display')
+                .setRequired(false)
+                .addChoices(
+                    { name: 'Overview (Default)', value: 'overview' },
+                    { name: 'Memory Details', value: 'memory' },
+                    { name: 'Cache Analysis', value: 'cache' },
+                    { name: 'Database Health', value: 'database' },
+                    { name: 'System Health', value: 'health' }
+                )),
 
     new SlashCommandBuilder()
         .setName('leaderboard')
@@ -98,35 +109,6 @@ const commands = [
                 .setMinValue(1)),
 
     new SlashCommandBuilder()
-        .setName('cache')
-        .setDescription('Manage bot cache system (Admin only)')
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('stats')
-                .setDescription('View cache statistics and performance metrics'))
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('clear')
-                .setDescription('Clear all cached data')),
-
-    new SlashCommandBuilder()
-        .setName('health')
-        .setDescription('Check bot health and system status')
-        .addStringOption(option =>
-            option.setName('type')
-                .setDescription('Type of health check to perform')
-                .addChoices(
-                    { name: 'Overview', value: 'overview' },
-                    { name: 'Detailed', value: 'detailed' },
-                    { name: 'Database', value: 'database' },
-                    { name: 'Performance', value: 'performance' }
-                )),
-
-    new SlashCommandBuilder()
-        .setName('memory')
-        .setDescription('Show detailed memory usage information'),
-
-    new SlashCommandBuilder()
         .setName('recovery')
         .setDescription('View session recovery system status and force operations')
         .addSubcommand(subcommand =>
@@ -140,15 +122,7 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName('voicescan')
-        .setDescription('Scan voice channels and start tracking for users already in voice')
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('run')
-                .setDescription('Run a voice state scan to detect and start tracking users in voice channels'))
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('status')
-                .setDescription('View the results of the last voice state scan')),
+        .setDescription('Scan voice channels and start tracking for users already in voice'),
 
 ].map(command => command.toJSON());
 

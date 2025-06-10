@@ -8,7 +8,18 @@ const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('performance')
-        .setDescription('Check bot health and performance status'),
+        .setDescription('Comprehensive bot performance and health monitoring')
+        .addStringOption(option =>
+            option.setName('view')
+                .setDescription('Choose the performance view to display')
+                .setRequired(false)
+                .addChoices(
+                    { name: 'Overview (Default)', value: 'overview' },
+                    { name: 'Memory Details', value: 'memory' },
+                    { name: 'Cache Analysis', value: 'cache' },
+                    { name: 'Database Health', value: 'database' },
+                    { name: 'System Health', value: 'health' }
+                )),
     async execute(interaction) {
         try {
             // Immediately defer to prevent timeout
@@ -17,22 +28,44 @@ module.exports = {
                 console.warn('Failed to defer performance interaction');
                 return;
             }
-            
+
+            const view = interaction.options.getString('view') || 'overview';
             const startTime = Date.now();
+
+            // Get health monitor from client
+            const healthMonitor = interaction.client.healthMonitor;
+
+            // Gather all performance data
             const summary = performanceMonitor.getPerformanceSummary();
             const bottlenecks = performanceMonitor.identifyBottlenecks();
-            
-            // Get WebSocket latency (ping to Discord)
             const wsLatency = interaction.client.ws.ping;
             const apiLatency = Date.now() - startTime;
-            
-            // Get cache statistics
             const cacheStats = queryCache.getStats();
-            
-            // Get optimization insights
             const optimizationReport = databaseOptimizer.getPerformanceReport();
-            
-            const embed = createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, cacheStats, optimizationReport);
+            const healthReport = healthMonitor ? healthMonitor.getHealthReport() : null;
+
+            let embed;
+
+            switch (view) {
+                case 'memory':
+                    embed = createMemoryView(summary);
+                    break;
+                case 'cache':
+                    embed = createCacheView(cacheStats);
+                    break;
+                case 'database':
+                    embed = createDatabaseView(summary, optimizationReport);
+                    break;
+                case 'health':
+                    if (healthReport) {
+                        embed = createHealthView(healthReport, wsLatency, apiLatency);
+                    } else {
+                        embed = createHealthUnavailableView(wsLatency, apiLatency);
+                    }
+                    break;
+                default:
+                    embed = createOverviewEmbed(summary, bottlenecks, wsLatency, apiLatency, cacheStats, optimizationReport, healthReport);
+            }
 
             await interaction.editReply({ embeds: [embed] });
         } catch (error) {
@@ -42,27 +75,27 @@ module.exports = {
                 user: interaction.user.tag,
                 timestamp: new Date().toISOString()
             });
-            
-            // Safe error handling
-            const errorMessage = '❌ Unable to check performance right now. Please try again later.';
-            
-            try {
-                await interaction.editReply({ content: errorMessage });
-            } catch (err) {
-                console.error('🔥 Error sending performance error reply:', err.message);
-            }
+
+            await safeErrorReply(interaction, {
+                title: 'Performance Check Error',
+                description: 'Unable to check performance right now. Please try again later.',
+                color: 0xED4245
+            });
         }
     }
 };
 
-function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, cacheStats, optimizationReport) {
+/**
+ * Create comprehensive overview embed (default view)
+ */
+function createOverviewEmbed(summary, bottlenecks, wsLatency, apiLatency, cacheStats, optimizationReport, healthReport) {
     const uptimeHours = Math.floor(summary.uptime / 3600);
     const uptimeMinutes = Math.floor((summary.uptime % 3600) / 60);
-    
+
     // Calculate overall health score
     const memUsage = summary.memory.current;
     const memoryPercentage = (memUsage.heapUsed / memUsage.heapTotal) * 100;
-    
+
     const criticalIssues = bottlenecks.filter(b => b.severity === 'critical').length;
     const highIssues = bottlenecks.filter(b => b.severity === 'high').length;
     const mediumIssues = bottlenecks.filter(b => b.severity === 'medium').length;
@@ -71,7 +104,7 @@ function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, 
     let healthStatus = '🟢 Excellent';
     let healthColor = 0x00ff00;
     let healthMessage = 'Bot is running smoothly with optimal performance.';
-    
+
     if (criticalIssues > 0) {
         healthStatus = '🔴 Critical';
         healthColor = 0xff0000;
@@ -86,50 +119,42 @@ function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, 
         healthMessage = 'Minor issues detected. Consider monitoring more closely.';
     }
 
-    // Format latency information
-    const latencyText = formatLatencyInfo(wsLatency, apiLatency);
-
     const embed = new EmbedBuilder()
-        .setTitle(createHeader('Bot Performance Report', healthStatus, '🏥', 'large'))
+        .setTitle(createHeader('Bot Performance Dashboard', healthStatus, '📊', 'large'))
         .setColor(healthColor)
         .setTimestamp();
 
-    // Performance overview with big numbers
-    const performanceStats = createStatsCard('Performance Overview', {
+    // Performance overview with key metrics
+    const overviewStats = createStatsCard('System Overview', {
         'Status': healthStatus,
         'Uptime': `${uptimeHours}h ${uptimeMinutes}m`,
         'Commands': `${summary.commands.total}`,
-        'Memory': `${memUsage.heapUsed}MB`
+        'Memory': `${memUsage.heapUsed}MB`,
+        'Cache Hit Rate': cacheStats.hitRate,
+        'Discord Latency': `${wsLatency}ms`
     }, {
         showBigNumbers: true,
         emphasizeFirst: true
     });
 
-    embed.setDescription(`${healthMessage}\n\n${performanceStats}`);
+    embed.setDescription(`${healthMessage}\n\n${overviewStats}`);
 
-    // Performance metrics in table format
-    const performanceData = [
+    // Core metrics table
+    const metricsData = [
         ['System Status', healthStatus],
-        ['Uptime', `${uptimeHours}h ${uptimeMinutes}m`],
-        ['Commands Processed', `${summary.commands.total}`],
         ['Memory Usage', `${memUsage.heapUsed}MB / ${memUsage.heapTotal}MB`],
-        ['Discord Latency', `${wsLatency}ms`],
-        ['API Response', `${apiLatency}ms`],
-        ['Cache Hit Rate', cacheStats.hitRate || 'N/A'],
-        ['Active Connections', `${summary.database.activeConnections}`]
+        ['Cache Performance', `${cacheStats.hitRate} (${cacheStats.size} entries)`],
+        ['Database Queries', `${summary.database.totalQueries} total`],
+        ['Active Connections', `${summary.database.activeConnections}`],
+        ['Network Latency', `Discord: ${wsLatency}ms | API: ${apiLatency}ms`]
     ];
 
-    const performanceTable = formatDataTable(performanceData, [18, 25]);
+    const metricsTable = formatDataTable(metricsData, [18, 25]);
 
     embed.addFields([
         {
-            name: createHeader('System Metrics', null, '📊', 'emphasis'),
-            value: performanceTable,
-            inline: false
-        },
-        {
-            name: createHeader('Cache Performance', null, '💾', 'emphasis'),
-            value: `${cacheStats.hitRate} hit rate (${cacheStats.size} entries, ${cacheStats.memoryUsage})`,
+            name: createHeader('Key Metrics', null, '⚡', 'emphasis'),
+            value: metricsTable,
             inline: false
         }
     ]);
@@ -144,7 +169,114 @@ function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, 
         }]);
     }
 
-    // Add memory trend if significant
+    // Quick action tips
+    const tips = [];
+    if (memoryPercentage > 70) tips.push('• Monitor memory usage closely');
+    if (apiLatency > 200) tips.push('• Check database performance');
+    if (parseInt(cacheStats.hitRate) < 50) tips.push('• Cache is warming up');
+    if (wsLatency > 100) tips.push('• Network connectivity may be slow');
+
+    if (tips.length > 0) {
+        embed.addFields([{
+            name: '💡 Quick Tips',
+            value: tips.join('\n'),
+            inline: false
+        }]);
+    }
+
+    embed.setFooter({ text: 'Use /performance view:[type] for detailed views • Updates in real-time' });
+
+    return embed;
+}
+
+/**
+ * Create detailed memory view
+ */
+function createMemoryView(summary) {
+    const memUsage = summary.memory.current;
+
+    // Get Node.js memory limits
+    const v8 = require('v8');
+    const heapStats = v8.getHeapStatistics();
+    const maxHeapMB = Math.round(heapStats.heap_size_limit / 1024 / 1024);
+    const availableHeapMB = Math.round((heapStats.heap_size_limit - memUsage.heapUsed) / 1024 / 1024);
+
+    // Calculate percentages
+    const heapUsagePercent = ((memUsage.heapUsed / memUsage.heapTotal) * 100).toFixed(1);
+    const capacityPercent = ((memUsage.heapUsed / heapStats.heap_size_limit) * 100).toFixed(2);
+
+    // Determine status
+    let statusIcon = '🟢';
+    let statusText = 'Healthy';
+    if (parseFloat(capacityPercent) > 80) {
+        statusIcon = '🔴';
+        statusText = 'High Usage';
+    } else if (parseFloat(capacityPercent) > 60) {
+        statusIcon = '🟡';
+        statusText = 'Moderate Usage';
+    }
+
+    const embed = new EmbedBuilder()
+        .setTitle(createHeader('Memory Analysis', `${statusIcon} ${statusText}`, '🧠', 'large'))
+        .setColor(statusIcon === '🟢' ? '#00ff00' : statusIcon === '🟡' ? '#ffff00' : '#ff0000')
+        .setTimestamp();
+
+    // Memory overview stats
+    const memoryStats = createStatsCard('Memory Overview', {
+        'Current Usage': `${memUsage.heapUsed}MB`,
+        'Available': `${availableHeapMB}MB`,
+        'Capacity Used': `${capacityPercent}%`,
+        'Status': `${statusIcon} ${statusText}`
+    }, {
+        showBigNumbers: true,
+        emphasizeFirst: true
+    });
+
+    embed.setDescription(memoryStats);
+
+    // Memory breakdown table
+    const memoryData = [
+        ['Heap Used', `${memUsage.heapUsed}MB`, `${heapUsagePercent}%`],
+        ['Heap Total', `${memUsage.heapTotal}MB`, '—'],
+        ['RSS Memory', `${memUsage.rss}MB`, 'Process Total'],
+        ['Available', `${availableHeapMB}MB`, 'Remaining'],
+        ['Node.js Limit', `${maxHeapMB}MB`, 'Maximum']
+    ];
+
+    const memoryTable = formatDataTable(memoryData, [15, 12, 15]);
+
+    embed.addFields([
+        {
+            name: createHeader('Memory Breakdown', null, '📊', 'emphasis'),
+            value: memoryTable,
+            inline: false
+        }
+    ]);
+
+    // Memory usage progress bars
+    const heapProgress = createProgressSection('Heap Usage', memUsage.heapUsed, memUsage.heapTotal, {
+        showPercentage: true,
+        showNumbers: true,
+        barLength: 20
+    });
+
+    const capacityProgress = createProgressSection('Node.js Capacity', memUsage.heapUsed, maxHeapMB, {
+        showPercentage: true,
+        showNumbers: true,
+        barLength: 20,
+        warningThreshold: 60,
+        dangerThreshold: 80
+    });
+
+    embed.addFields([
+        {
+            name: createHeader('Usage Progress', null, '📈', 'emphasis'),
+            value: `${heapProgress}\n\n${capacityProgress}`,
+            inline: false
+        }
+    ]);
+
+    // Memory trend analysis
     if (Math.abs(summary.memory.trend) > 2) {
         const trendIcon = summary.memory.trend > 0 ? '📈' : '📉';
         const trendText = summary.memory.trend > 0 ? 'increasing' : 'decreasing';
@@ -155,128 +287,344 @@ function createComprehensiveReport(summary, bottlenecks, wsLatency, apiLatency, 
         }]);
     }
 
-    // Add performance tips if API latency is suboptimal
-    if (apiLatency > 200) {
-        const performanceTips = [];
-        if (apiLatency > 500) {
-            performanceTips.push('• Consider database query optimization');
-            performanceTips.push('• Check connection pool settings');
-        }
-        if (apiLatency > 300) {
-            performanceTips.push('• Review slow database operations');
-            performanceTips.push('• Consider implementing query caching');
-        }
-        if (apiLatency > 200) {
-            performanceTips.push('• Monitor database performance');
-        }
+    embed.setFooter({ text: `Node.js Memory Limit: ${maxHeapMB}MB • Memory stats updated every 3 seconds` });
 
-        if (performanceTips.length > 0) {
-            embed.addFields([{
-                name: '💡 Performance Tips',
-                value: performanceTips.join('\n'),
-                inline: false
-            }]);
-        }
+    return embed;
+}
+
+/**
+ * Create detailed cache view
+ */
+function createCacheView(cacheStats) {
+    const efficiency = parseInt(cacheStats.hitRate) || 0;
+
+    let statusIcon = '🟢';
+    let statusText = 'Excellent';
+    if (efficiency < 30) {
+        statusIcon = '🔴';
+        statusText = 'Poor';
+    } else if (efficiency < 60) {
+        statusIcon = '🟡';
+        statusText = 'Fair';
     }
 
-    // Add optimization report if available
+    const embed = new EmbedBuilder()
+        .setTitle(createHeader('Cache Performance Analysis', `${statusIcon} ${statusText}`, '💾', 'large'))
+        .setColor(statusIcon === '🟢' ? '#00ff00' : statusIcon === '🟡' ? '#ffff00' : '#ff0000')
+        .setTimestamp();
+
+    // Cache overview stats
+    const cacheOverview = createStatsCard('Cache Performance', {
+        'Hit Rate': cacheStats.hitRate,
+        'Total Queries': `${cacheStats.total}`,
+        'Cache Entries': `${cacheStats.size}`,
+        'Memory Usage': cacheStats.memoryUsage
+    }, {
+        showBigNumbers: true,
+        emphasizeFirst: true
+    });
+
+    embed.setDescription(`Cache system performance metrics and optimization analysis\n\n${cacheOverview}`);
+
+    // Cache metrics table
+    const cacheData = [
+        ['Hit Rate', cacheStats.hitRate],
+        ['Cache Hits', `${cacheStats.hits}`],
+        ['Cache Misses', `${cacheStats.misses}`],
+        ['Total Queries', `${cacheStats.total}`],
+        ['Entries Stored', `${cacheStats.size}`],
+        ['Memory Usage', cacheStats.memoryUsage]
+    ];
+
+    const cacheTable = formatDataTable(cacheData, [15, 20]);
+
+    embed.addFields([
+        {
+            name: createHeader('Cache Metrics', null, '📊', 'emphasis'),
+            value: cacheTable,
+            inline: false
+        }
+    ]);
+
+    // Performance impact analysis
+    if (cacheStats.hits > 0) {
+        const savedQueries = cacheStats.hits;
+        const estimatedTimeSaved = (cacheStats.hits * 50).toFixed(0);
+
+        const impactData = [
+            ['Queries Prevented', `${savedQueries}`],
+            ['Estimated Time Saved', `${estimatedTimeSaved}ms`],
+            ['Database Load Reduced', `${((cacheStats.hits / cacheStats.total) * 100).toFixed(1)}%`]
+        ];
+
+        const impactTable = formatDataTable(impactData, [20, 15]);
+
+        embed.addFields([
+            {
+                name: createHeader('Performance Impact', null, '⚡', 'emphasis'),
+                value: impactTable,
+                inline: false
+            }
+        ]);
+    } else {
+        embed.addFields([
+            {
+                name: createHeader('Performance Impact', null, '⚡', 'emphasis'),
+                value: 'Cache is building up - performance gains will increase over time',
+                inline: false
+            }
+        ]);
+    }
+
+    // Cache recommendations
+    const recommendations = [];
+    if (efficiency < 30) recommendations.push('• Cache is warming up - performance will improve');
+    if (efficiency >= 90) recommendations.push('• Excellent cache performance - system optimized');
+    if (cacheStats.size > 1000) recommendations.push('• Consider cache cleanup for memory optimization');
+
+    if (recommendations.length > 0) {
+        embed.addFields([{
+            name: '💡 Recommendations',
+            value: recommendations.join('\n'),
+            inline: false
+        }]);
+    }
+
+    embed.setFooter({ text: 'Cache automatically cleans expired entries every minute' });
+
+    return embed;
+}
+
+/**
+ * Create database health view
+ */
+function createDatabaseView(summary, optimizationReport) {
+    const dbHealth = getDatabaseHealth(summary);
+    const healthIcon = dbHealth.includes('🟢') ? '🟢' : dbHealth.includes('🟡') ? '🟡' : '🔴';
+
+    const embed = new EmbedBuilder()
+        .setTitle(createHeader('Database Performance Analysis', dbHealth, '🗄️', 'large'))
+        .setColor(healthIcon === '🟢' ? '#00ff00' : healthIcon === '🟡' ? '#ffff00' : '#ff0000')
+        .setTimestamp();
+
+    // Database overview
+    const dbStats = createStatsCard('Database Overview', {
+        'Status': dbHealth,
+        'Total Queries': `${summary.database.totalQueries}`,
+        'Active Connections': `${summary.database.activeConnections}`,
+        'Average Response': getAverageResponseTime(summary)
+    }, {
+        showBigNumbers: true,
+        emphasizeFirst: true
+    });
+
+    embed.setDescription(dbStats);
+
+    // Database metrics table
+    const dbData = [
+        ['Connection Status', dbHealth],
+        ['Total Queries', `${summary.database.totalQueries}`],
+        ['Active Connections', `${summary.database.activeConnections}`],
+        ['Slowest Operations', (summary.database.slowest && summary.database.slowest.length > 0) ? summary.database.slowest[0][0] : 'None'],
+        ['Error-Prone Operations', (summary.database.errorProne && summary.database.errorProne.length > 0) ? summary.database.errorProne[0][0] : 'None']
+    ];
+
+    const dbTable = formatDataTable(dbData, [18, 25]);
+
+    embed.addFields([
+        {
+            name: createHeader('Database Metrics', null, '📊', 'emphasis'),
+            value: dbTable,
+            inline: false
+        }
+    ]);
+
+    // Optimization insights
     if (optimizationReport && Object.keys(optimizationReport).length > 0) {
         const optimizationText = getOptimizationSummary(optimizationReport);
         embed.addFields([{
-            name: '⚙️ Database Optimization',
+            name: createHeader('Optimization Insights', null, '⚙️', 'emphasis'),
             value: optimizationText,
             inline: false
         }]);
     }
 
-    embed.setFooter({ text: 'This report helps ensure your bot runs smoothly for all users' });
+    embed.setFooter({ text: 'Database performance tracked in real-time' });
 
     return embed;
 }
 
-function getAverageResponseTime(summary) {
-    if (summary.commands.slowest.length === 0) {
-        return 'No data available';
+/**
+ * Create system health view
+ */
+function createHealthView(healthReport, wsLatency, apiLatency) {
+    const overallStatus = healthReport && healthReport.status ? healthReport.status : 'unknown';
+    const statusIcon = overallStatus === 'healthy' ? '🟢' : overallStatus === 'degraded' ? '🟡' : '🔴';
+
+    const embed = new EmbedBuilder()
+        .setTitle(createHeader('System Health Analysis', `${statusIcon} ${overallStatus.toUpperCase()}`, '🏥', 'large'))
+        .setColor(statusIcon === '🟢' ? '#00ff00' : statusIcon === '🟡' ? '#ffff00' : '#ff0000')
+        .setTimestamp();
+
+    // Health overview
+    const healthStats = createStatsCard('System Health', {
+        'Overall Status': `${statusIcon} ${overallStatus.toUpperCase()}`,
+        'Discord Latency': `${wsLatency}ms`,
+        'API Response': `${apiLatency}ms`,
+        'Dependencies': healthReport && healthReport.checks ? `${Object.keys(healthReport.checks).length} checked` : '0 checked'
+    }, {
+        showBigNumbers: true,
+        emphasizeFirst: true
+    });
+
+    embed.setDescription(healthStats);
+
+    // Health checks table
+    const healthData = [];
+    if (healthReport && healthReport.checks) {
+        for (const [checkName, checkResult] of Object.entries(healthReport.checks)) {
+            const statusEmoji = getStatusEmoji(checkResult.status);
+            const checkDisplayName = checkName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            healthData.push([checkDisplayName, `${statusEmoji} ${checkResult.status}`]);
+        }
+    } else {
+        healthData.push(['No Health Checks', '⚪ No data available']);
     }
-    
-    const totalTime = summary.commands.slowest.reduce((sum, [, metrics]) => sum + metrics.avgResponseTime, 0);
-    const avgTime = totalTime / summary.commands.slowest.length;
-    
-    if (avgTime < 100) return `🟢 Fast (${avgTime.toFixed(0)}ms)`;
-    if (avgTime < 500) return `🟡 Good (${avgTime.toFixed(0)}ms)`;
-    return `🔴 Slow (${avgTime.toFixed(0)}ms)`;
+
+    const healthTable = formatDataTable(healthData, [18, 15]);
+
+    embed.addFields([
+        {
+            name: createHeader('Health Checks', null, '🔍', 'emphasis'),
+            value: healthTable,
+            inline: false
+        }
+    ]);
+
+    // Trends if available
+    if (healthReport && healthReport.trends && Object.keys(healthReport.trends).length > 0) {
+        const trendsText = Object.entries(healthReport.trends)
+            .map(([key, value]) => `${key}: ${getTrendEmoji(value)} ${value}`)
+            .join('\n');
+
+        embed.addFields([{
+            name: createHeader('Performance Trends', null, '📈', 'emphasis'),
+            value: trendsText,
+            inline: false
+        }]);
+    }
+
+    embed.setFooter({ text: 'Health monitoring runs continuously in the background' });
+
+    return embed;
+}
+
+/**
+ * Create health unavailable view when health monitor is not ready
+ */
+function createHealthUnavailableView(wsLatency, apiLatency) {
+    const embed = new EmbedBuilder()
+        .setTitle(createHeader('System Health Analysis', '⚠️ UNAVAILABLE', '🏥', 'large'))
+        .setColor('#ffff00')
+        .setTimestamp();
+
+    // Basic stats without health monitor
+    const basicStats = createStatsCard('Basic System Status', {
+        'Health Monitor': '⚠️ Initializing',
+        'Discord Latency': `${wsLatency}ms`,
+        'API Response': `${apiLatency}ms`,
+        'Status': 'Partial data available'
+    }, {
+        showBigNumbers: true,
+        emphasizeFirst: true
+    });
+
+    embed.setDescription(`Health monitoring system is initializing. Basic metrics available.\n\n${basicStats}`);
+
+    embed.addFields([
+        {
+            name: createHeader('Available Metrics', null, '📊', 'emphasis'),
+            value: 'Discord Connection: ✅ Active\nAPI Response: ✅ Responding\nHealth Monitor: ⏳ Starting up',
+            inline: false
+        },
+        {
+            name: '💡 Information',
+            value: 'Full health monitoring will be available once the bot finishes initialization.\nTry using other performance views in the meantime.',
+            inline: false
+        }
+    ]);
+
+    embed.setFooter({ text: 'Use /performance view:overview for basic metrics' });
+
+    return embed;
+}
+
+/**
+ * Helper functions
+ */
+function getAverageResponseTime(summary) {
+    if (summary.database.totalQueries === 0) return 'No data';
+
+    let totalTime = 0;
+    let totalOperations = 0;
+
+    // Safely iterate through slowest operations if they exist
+    if (summary.database.slowest && Array.isArray(summary.database.slowest)) {
+        for (const [, metrics] of summary.database.slowest) {
+            if (metrics && metrics.totalTime && metrics.count) {
+                totalTime += metrics.totalTime;
+                totalOperations += metrics.count;
+            }
+        }
+    }
+
+    return totalOperations > 0 ? `${Math.round(totalTime / totalOperations)}ms` : 'No data';
 }
 
 function getDatabaseHealth(summary) {
-    const errorRate = summary.database.errorProne.length > 0 ? 
-        summary.database.errorProne[0][1].errors / summary.database.errorProne[0][1].count : 0;
-    
+    let errorRate = 0;
+
+    // Safely calculate error rate
+    if (summary.database.errorProne && Array.isArray(summary.database.errorProne) && summary.database.errorProne.length > 0) {
+        const firstErrorProne = summary.database.errorProne[0];
+        if (firstErrorProne && firstErrorProne[1] && firstErrorProne[1].errors && firstErrorProne[1].count) {
+            errorRate = firstErrorProne[1].errors / firstErrorProne[1].count;
+        }
+    }
+
     if (summary.database.activeConnections > 15) return '🟡 High load';
     if (errorRate > 0.1) return '🔴 Errors detected';
     if (summary.database.totalQueries > 0) return '🟢 Healthy';
     return '⚪ No activity';
 }
 
-function formatLatencyInfo(wsLatency, apiLatency) {
-    // Format WebSocket latency (ping to Discord)
-    let wsStatus = '🟢';
-    if (wsLatency > 100) wsStatus = '🟡';
-    if (wsLatency > 300) wsStatus = '🔴';
-    if (wsLatency < 0) wsLatency = 'N/A'; // Sometimes ping can be -1 if not available yet
-    
-    // Format API response latency - Updated thresholds for better optimization
-    let apiStatus = '🟢';
-    if (apiLatency > 200) apiStatus = '🟡';
-    if (apiLatency > 500) apiStatus = '🔴';
-    
-    const wsText = wsLatency === 'N/A' ? 'N/A' : `${wsLatency}ms`;
-    const apiText = `${apiLatency}ms`;
-    
-    return `${wsStatus} WS: ${wsText}\n${apiStatus} API: ${apiText}`;
-}
-
 function getIssuesSummary(bottlenecks) {
     const critical = bottlenecks.filter(b => b.severity === 'critical');
     const high = bottlenecks.filter(b => b.severity === 'high');
     const medium = bottlenecks.filter(b => b.severity === 'medium');
-    
-    let summary = [];
-    
-    if (critical.length > 0) {
-        summary.push(`🔴 **${critical.length} Critical Issue${critical.length > 1 ? 's' : ''}**`);
-        summary.push(...critical.slice(0, 2).map(b => `• ${b.message}`));
-        if (critical.length > 2) summary.push(`• ...and ${critical.length - 2} more critical issue${critical.length - 2 > 1 ? 's' : ''}`);
-    }
-    
-    if (high.length > 0) {
-        summary.push(`🟡 **${high.length} High Priority Issue${high.length > 1 ? 's' : ''}**`);
-        summary.push(...high.slice(0, 2).map(b => `• ${b.message}`));
-        if (high.length > 2) summary.push(`• ...and ${high.length - 2} more issue${high.length - 2 > 1 ? 's' : ''}`);
-    }
-    
-    if (medium.length > 0 && critical.length === 0 && high.length === 0) {
-        summary.push(`🟠 **${medium.length} Minor Issue${medium.length > 1 ? 's' : ''}**`);
-        summary.push(...medium.slice(0, 3).map(b => `• ${b.message}`));
-        if (medium.length > 3) summary.push(`• ...and ${medium.length - 3} more minor issue${medium.length - 3 > 1 ? 's' : ''}`);
-    }
-    
-    return summary.join('\n');
+
+    const issues = [];
+    if (critical.length > 0) issues.push(`🔴 **Critical:** ${critical[0].message}`);
+    if (high.length > 0) issues.push(`🟡 **High:** ${high[0].message}`);
+    if (medium.length > 0) issues.push(`🟠 **Medium:** ${medium[0].message}`);
+
+    return issues.slice(0, 3).join('\n') || 'No issues detected';
 }
 
 function getOptimizationSummary(optimizationReport) {
     const summary = [];
-    
+
     // Query analysis insights
     if (optimizationReport.queryAnalysis) {
         const analysis = optimizationReport.queryAnalysis;
         summary.push(`🔍 Queries: ${analysis.totalQueries} total, ${analysis.slowQueryRate}% slow`);
-        
+
         if (analysis.topSlowOperations && analysis.topSlowOperations.length > 0) {
             const slowest = analysis.topSlowOperations[0];
             summary.push(`⏱️ Slowest: ${slowest.operation} (${slowest.avgTime.toFixed(0)}ms avg)`);
         }
     }
-    
+
     // Connection pool insights
     if (optimizationReport.connectionPool) {
         const poolData = optimizationReport.connectionPool;
@@ -284,13 +632,9 @@ function getOptimizationSummary(optimizationReport) {
             const pool = poolData.stats;
             const utilization = ((pool.totalConnections / pool.maxConnections) * 100).toFixed(1);
             summary.push(`🏊 Pool: ${pool.totalConnections}/${pool.maxConnections} (${utilization}%)`);
-            
-            if (pool.waitingClients > 0) {
-                summary.push(`⚠️ ${pool.waitingClients} clients waiting for connections`);
-            }
         }
     }
-    
+
     // Cache performance
     if (optimizationReport.cacheStats) {
         const cache = optimizationReport.cacheStats;
@@ -298,49 +642,27 @@ function getOptimizationSummary(optimizationReport) {
         if (hitRate > 0) {
             summary.push(`💾 Cache: ${cache.hitRate} hit rate (${cache.size} entries)`);
         } else {
-            summary.push(`💾 Cache: No cache hits yet (${cache.size} entries)`);
+            summary.push(`💾 Cache: Building up (${cache.size} entries)`);
         }
     }
-    
-    // Optimization recommendations
-    if (optimizationReport.recommendations && optimizationReport.recommendations.length > 0) {
-        const highPriority = optimizationReport.recommendations.filter(r => r.priority === 'high').length;
-        const mediumPriority = optimizationReport.recommendations.filter(r => r.priority === 'medium').length;
-        
-        if (highPriority > 0) {
-            summary.push(`🔧 ${highPriority} high-priority optimization${highPriority > 1 ? 's' : ''} recommended`);
-        } else if (mediumPriority > 0) {
-            summary.push(`💡 ${mediumPriority} optimization suggestion${mediumPriority > 1 ? 's' : ''} available`);
-        }
-    }
-    
-    // Monitoring stats
-    if (optimizationReport.monitoringStats) {
-        const stats = optimizationReport.monitoringStats;
-        if (stats.totalQueries > 0) {
-            summary.push(`📊 Monitoring: ${stats.totalQueries} queries tracked, ${stats.slowQueries} slow`);
-        }
-    }
-    
-    return summary.length > 0 ? summary.join('\n') : '✅ All database optimizations active, no issues detected';
+
+    return summary.join('\n') || 'No optimization data available';
 }
 
-function getMemoryReport(memUsage, memoryPercentage) {
-    // Get Node.js memory limits
-    const v8 = require('v8');
-    const heapStats = v8.getHeapStatistics();
-    const maxHeapMB = Math.round(heapStats.heap_size_limit / 1024 / 1024);
-    const availableHeapMB = Math.round((heapStats.heap_size_limit - memUsage.heapUsed) / 1024 / 1024);
-    
-    // Calculate capacity percentage (heap used vs Node.js limit)
-    const capacityPercentage = (memUsage.heapUsed / heapStats.heap_size_limit) * 100;
-    
-    // Format memory report
-    const parts = [
-        `${memoryPercentage.toFixed(1)}% heap (${memUsage.heapUsed}MB/${memUsage.heapTotal}MB)`,
-        `${capacityPercentage.toFixed(1)}% capacity (${availableHeapMB}MB/${maxHeapMB}MB available)`,
-        `RSS: ${memUsage.rss}MB`
-    ];
-    
-    return parts.join('\n');
+function getStatusEmoji(status) {
+    switch (status) {
+        case 'healthy': return '🟢';
+        case 'degraded': return '🟡';
+        case 'unhealthy': return '🔴';
+        default: return '⚪';
+    }
+}
+
+function getTrendEmoji(trend) {
+    if (typeof trend === 'string') {
+        if (trend.includes('up') || trend.includes('increasing')) return '📈';
+        if (trend.includes('down') || trend.includes('decreasing')) return '📉';
+        return '➡️';
+    }
+    return '➡️';
 }

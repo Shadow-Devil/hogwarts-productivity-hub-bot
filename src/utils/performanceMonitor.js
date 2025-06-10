@@ -117,6 +117,11 @@ class PerformanceMonitor {
             .filter(([, metrics]) => metrics.errors > 0)
             .sort((a, b) => (b[1].errors / b[1].count) - (a[1].errors / a[1].count));
 
+        // Find slowest database operations
+        const slowestOps = Array.from(this.metrics.database.entries())
+            .sort((a, b) => b[1].avgTime - a[1].avgTime)
+            .slice(0, 5);
+
         return {
             uptime: Math.floor(uptime / 1000), // seconds
             memory: {
@@ -136,6 +141,7 @@ class PerformanceMonitor {
                 totalQueries: Array.from(this.metrics.database.values())
                     .reduce((sum, db) => sum + db.count, 0),
                 activeConnections: this.metrics.activeConnections,
+                slowest: slowestOps,
                 errorProne: errorProneOps
             }
         };
