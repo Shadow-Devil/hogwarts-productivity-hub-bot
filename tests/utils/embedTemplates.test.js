@@ -100,7 +100,7 @@ describe('Embed Templates', () => {
                     const invalidUser = { username: 'TestUser' }; // Missing displayAvatarURL method
                     embedTemplates.createTaskTemplate([], invalidUser);
                 }).toThrow('user.displayAvatarURL is not a function');
-                
+
                 // This documents the expected behavior - it should work with proper objects
                 expect(typeof embedTemplates.createTaskTemplate).toBe('function');
             });
@@ -142,7 +142,7 @@ describe('Embed Templates', () => {
                     { discord_id: '1', username: 'User1', hours: 10.5, points: 100 },
                     { discord_id: '2', username: 'User2', hours: 8.3, points: 80 }
                 ];
-                
+
                 const currentUser = { id: '1' };
 
                 const result = embedTemplates.createLeaderboardTemplate('monthly', leaderboardData, currentUser);
@@ -152,7 +152,7 @@ describe('Embed Templates', () => {
 
             it('should handle empty leaderboard data', () => {
                 const currentUser = { id: '1' };
-                
+
                 expect(() => {
                     embedTemplates.createLeaderboardTemplate('monthly', [], currentUser);
                 }).not.toThrow();
@@ -237,7 +237,7 @@ describe('Embed Templates', () => {
         it('should validate return types are objects', () => {
             const successResult = embedTemplates.createSuccessTemplate('Test', 'Message');
             const errorResult = embedTemplates.createErrorTemplate('Error', 'Message');
-            
+
             expect(typeof successResult).toBe('object');
             expect(typeof errorResult).toBe('object');
             expect(successResult).toBeDefined();
@@ -247,7 +247,7 @@ describe('Embed Templates', () => {
         it('should handle edge cases that the functions are designed for', () => {
             // Test functions with their expected minimal data structures
             // Note: Some functions expect Discord.js objects and will fail with improper mocks
-            
+
             // Leaderboard with empty but valid array
             expect(() => {
                 embedTemplates.createLeaderboardTemplate('all-time', [], { id: 'user123' });
@@ -279,10 +279,10 @@ describe('Embed Templates', () => {
             // The templates should be using constants from our centralized file
             // This is tested indirectly by ensuring the functions don't throw
             // and that they call the expected Discord.js methods
-            
+
             const result = embedTemplates.createSuccessTemplate('Test', 'Message');
             expect(result.setColor).toHaveBeenCalled();
-            
+
             const houseResult = embedTemplates.createHouseTemplate([
                 { name: 'Gryffindor', points: 100 }
             ], 'monthly');
