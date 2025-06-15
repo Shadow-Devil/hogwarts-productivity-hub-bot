@@ -1,4 +1,4 @@
-const { pool, executeWithResilience } = require('../models/db');
+const { executeWithResilience } = require('../models/db');
 const { measureDatabase } = require('./performanceMonitor');
 const dayjs = require('dayjs');
 
@@ -299,7 +299,7 @@ class SessionRecovery {
         });
 
         // Handle unhandled promise rejections
-        process.on('unhandledRejection', async(reason, promise) => {
+        process.on('unhandledRejection', async(reason, _promise) => {
             console.error('💥 Unhandled Rejection - attempting session recovery:', reason);
             try {
                 await this.forceSave();

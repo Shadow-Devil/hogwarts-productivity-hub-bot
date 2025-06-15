@@ -5,7 +5,6 @@
  */
 
 const voiceService = require('../services/voiceService');
-const { measureDatabase } = require('./performanceMonitor');
 
 class VoiceStateScanner {
     constructor() {
@@ -48,7 +47,7 @@ class VoiceStateScanner {
                 return this.scanResults;
             }
 
-            for (const [guildId, guild] of guilds) {
+            for (const [_guildId, guild] of guilds) {
                 console.log(`🏰 Scanning guild: ${guild.name} (${guild.id})`);
                 await this.scanGuildVoiceStates(guild, activeVoiceSessions, gracePeriodSessions);
             }
@@ -107,7 +106,7 @@ class VoiceStateScanner {
 
             console.log(`🎤 Found ${voiceChannels.size} voice channels with users`);
 
-            for (const [channelId, channel] of voiceChannels) {
+            for (const [_channelId, channel] of voiceChannels) {
                 await this.scanVoiceChannel(channel, activeVoiceSessions, gracePeriodSessions);
             }
 

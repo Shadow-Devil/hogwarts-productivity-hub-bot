@@ -122,7 +122,6 @@ function createInfoBox(title, content, style = 'default') {
 function formatDataGrid(data, options = {}) {
     const {
         columns = 2,
-        alignRight = false,
         separator = ' • ',
         prefix = '├─',
         spacing = true,
@@ -307,7 +306,7 @@ function createCenteredLayout(sections, options = {}) {
     const fields = [];
 
     // Process sections into fields with proper inline configuration
-    sections.forEach((section, index) => {
+    sections.forEach((section, _index) => {
         fields.push({
             name: section.name,
             value: section.value,
@@ -382,9 +381,7 @@ function formatUserStatus(user, status = {}) {
     const {
         points = 0,
         streak = 0,
-        house = null,
-        level = 1,
-        achievements = []
+        house = null
     } = status;
 
     const houseEmojis = {
@@ -411,9 +408,7 @@ function createStatsCard(title, stats, options = {}) {
     const {
         emoji = '📊',
         style = 'card',
-        showProgress = false,
         highlightMain = false,
-        showBigNumbers = false,
         emphasizeFirst = false
     } = options;
 
