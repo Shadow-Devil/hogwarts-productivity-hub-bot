@@ -47,24 +47,24 @@ module.exports = {
             let embed;
 
             switch (view) {
-                case 'memory':
-                    embed = createMemoryView(summary);
-                    break;
-                case 'cache':
-                    embed = createCacheView(cacheStats);
-                    break;
-                case 'database':
-                    embed = createDatabaseView(summary, optimizationReport);
-                    break;
-                case 'health':
-                    if (healthReport) {
-                        embed = createHealthView(healthReport, wsLatency, apiLatency);
-                    } else {
-                        embed = createHealthUnavailableView(wsLatency, apiLatency);
-                    }
-                    break;
-                default:
-                    embed = createOverviewEmbed(summary, bottlenecks, wsLatency, apiLatency, cacheStats, optimizationReport, healthReport);
+            case 'memory':
+                embed = createMemoryView(summary);
+                break;
+            case 'cache':
+                embed = createCacheView(cacheStats);
+                break;
+            case 'database':
+                embed = createDatabaseView(summary, optimizationReport);
+                break;
+            case 'health':
+                if (healthReport) {
+                    embed = createHealthView(healthReport, wsLatency, apiLatency);
+                } else {
+                    embed = createHealthUnavailableView(wsLatency, apiLatency);
+                }
+                break;
+            default:
+                embed = createOverviewEmbed(summary, bottlenecks, wsLatency, apiLatency, cacheStats, optimizationReport, healthReport);
             }
 
             await interaction.editReply({ embeds: [embed] });
@@ -670,10 +670,10 @@ function getOptimizationSummary(optimizationReport) {
 
 function getStatusEmoji(status) {
     switch (status) {
-        case 'healthy': return '🟢';
-        case 'degraded': return '🟡';
-        case 'unhealthy': return '🔴';
-        default: return '⚪';
+    case 'healthy': return '🟢';
+    case 'degraded': return '🟡';
+    case 'unhealthy': return '🔴';
+    default: return '⚪';
     }
 }
 

@@ -53,7 +53,7 @@ const pool = new Pool({
     createTimeoutMillis: 30000,  // Timeout for creating connections
     destroyTimeoutMillis: 5000,  // Timeout for destroying connections
     reapIntervalMillis: 1000,    // Cleanup interval
-    createRetryIntervalMillis: 200, // Retry interval for connection creation
+    createRetryIntervalMillis: 200 // Retry interval for connection creation
 });
 
 // Monitor connection pool
@@ -682,7 +682,7 @@ async function updateHousePoints(houseName, pointsEarned) {
 
     const lockId = generateLockId(`house_${houseName}`);
 
-    return await withAdvisoryLock(lockId, async (client) => {
+    return await withAdvisoryLock(lockId, async(client) => {
         // Check and perform monthly reset for houses if needed
         await checkAndPerformHouseMonthlyReset();
 
@@ -867,7 +867,7 @@ module.exports = {
     getCachedUser,
     setCachedUser,
     clearUserCache,
-    executeWithResilience: async (callback, options = {}) => {
+    executeWithResilience: async(callback, options = {}) => {
         return await dbResilience.executeWithResilience(callback, options);
     },
 
@@ -884,7 +884,7 @@ module.exports = {
     // Get performance insights
     getOptimizationReport() {
         return databaseOptimizer.getPerformanceReport();
-    },
+    }
 
 };
 

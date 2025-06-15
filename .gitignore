@@ -15,11 +15,40 @@ build/
 *~
 utils-backup/
 
+# Test and diagnostic files
+test-*.js
+test_*.js
+*-test.js
+*-diagnostic.js
+bot-database-diagnostic.js
+migrate-user-timezones.js
+functionality_audit.js
+
 # Test outputs
 test-output/
+coverage/
+.nyc_output/
 
-# VSCode
+# Development tools
 .vscode/
+.idea/
+*.swp
+*.swo
 
 # OS
 Thumbs.db
+.DS_Store
+
+# Logs and monitoring
+logs/
+*.log
+winston.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Production secrets
+.env.production
+.env.local

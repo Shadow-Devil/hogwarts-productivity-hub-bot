@@ -341,21 +341,21 @@ function createStyledEmbed(type = 'default') {
 
     // Set default styling based on type
     switch (type) {
-        case 'success':
-            embed.setColor(BotColors.SUCCESS);
-            break;
-        case 'warning':
-            embed.setColor(BotColors.WARNING);
-            break;
-        case 'error':
-            embed.setColor(BotColors.ERROR);
-            break;
-        case 'info':
-            embed.setColor(BotColors.INFO);
-            break;
-        case 'premium':
-            embed.setColor(BotColors.PREMIUM);
-            break;
+    case 'success':
+        embed.setColor(BotColors.SUCCESS);
+        break;
+    case 'warning':
+        embed.setColor(BotColors.WARNING);
+        break;
+    case 'error':
+        embed.setColor(BotColors.ERROR);
+        break;
+    case 'info':
+        embed.setColor(BotColors.INFO);
+        break;
+    case 'premium':
+        embed.setColor(BotColors.PREMIUM);
+        break;
     }
 
     return embed;

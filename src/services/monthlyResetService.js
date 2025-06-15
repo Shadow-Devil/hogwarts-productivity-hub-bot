@@ -23,12 +23,12 @@ class MonthlyResetService {
         }
 
         // Check every hour for monthly resets
-        this.intervalId = setInterval(async () => {
+        this.intervalId = setInterval(async() => {
             await this.checkAllUsersForReset();
         }, 60 * 60 * 1000); // Every hour
 
         // Also run an initial check when starting
-        setTimeout(async () => {
+        setTimeout(async() => {
             await this.checkAllUsersForReset();
         }, 5000); // 5 seconds after startup
 

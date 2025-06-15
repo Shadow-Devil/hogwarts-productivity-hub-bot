@@ -19,7 +19,7 @@ const client = new Client({
         IntentsBitField.Flags.GuildMessages,
         IntentsBitField.Flags.MessageContent,
         IntentsBitField.Flags.GuildMembers,
-        IntentsBitField.Flags.GuildVoiceStates, // Required for voice channel detection
+        IntentsBitField.Flags.GuildVoiceStates // Required for voice channel detection
     ]
 });
 
@@ -35,7 +35,7 @@ async function loadCommands() {
     console.log(`📁 Scanning: ${commandsPath}`);
     console.log(`📄 Found ${commandFiles.length} command files`);
 
-    const loadPromises = commandFiles.map(async (file) => {
+    const loadPromises = commandFiles.map(async(file) => {
         try {
             const command = require(path.join(commandsPath, file));
             if (command.data && command.data.name) {
@@ -67,7 +67,7 @@ async function loadEvents() {
         console.log(`📁 Scanning: ${eventsPath}`);
         console.log(`📄 Found ${eventFiles.length} event files`);
 
-        const loadPromises = eventFiles.map(async (file) => {
+        const loadPromises = eventFiles.map(async(file) => {
             try {
                 const event = require(path.join(eventsPath, file));
                 if (event.name && event.execute) {
@@ -101,7 +101,7 @@ let centralResetService = null; // Will be initialized after database connection
 
 // Bot login
 
-client.on('ready', async (c) => {
+client.on('ready', async(c) => {
     console.log('🚀 Discord Bot Initialization');
     console.log('═'.repeat(50));
     console.log(`🤖 Bot User: ${c.user.tag}`);
@@ -229,7 +229,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
     }
 });
 
-client.on('interactionCreate', async (interaction) => {
+client.on('interactionCreate', async(interaction) => {
     if (!interaction.isCommand()) return;
 
     const command = client.commands.get(interaction.commandName);

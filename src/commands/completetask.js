@@ -31,7 +31,7 @@ module.exports = {
 
             if (result.success) {
                 const embed = createSuccessTemplate(
-                    `Task Completed Successfully!`,
+                    'Task Completed Successfully!',
                     `**${result.message}**\n\nGreat job on completing your task! Keep up the momentum and continue building your productivity streak.`,
                     {
                         celebration: true,

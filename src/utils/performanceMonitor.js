@@ -250,7 +250,7 @@ const performanceMonitor = new PerformanceMonitor();
 
 // Helper functions for easy usage
 function measureCommand(commandName, fn) {
-    return async (...args) => {
+    return async(...args) => {
         const startTime = Date.now();
         let error = null;
 
@@ -268,7 +268,7 @@ function measureCommand(commandName, fn) {
 }
 
 function measureDatabase(operation, fn) {
-    return async () => {
+    return async() => {
         const startTime = Date.now();
         let error = null;
 

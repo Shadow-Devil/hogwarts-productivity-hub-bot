@@ -45,8 +45,8 @@ class SessionRecovery {
      * Recover incomplete sessions from database
      */
     async recoverIncompleteSessions() {
-        return measureDatabase('recoverIncompleteSessions', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('recoverIncompleteSessions', async() => {
+            return executeWithResilience(async(client) => {
                 const now = new Date();
                 const staleThreshold = new Date(now.getTime() - (this.config.maxSessionDurationHours * 60 * 60 * 1000));
 
@@ -139,7 +139,7 @@ class SessionRecovery {
             clearInterval(this.periodicSaveInterval);
         }
 
-        this.periodicSaveInterval = setInterval(async () => {
+        this.periodicSaveInterval = setInterval(async() => {
             if (!this.isShuttingDown) {
                 try {
                     await this.saveActiveSessionStates();
@@ -160,8 +160,8 @@ class SessionRecovery {
             return;
         }
 
-        return measureDatabase('saveActiveSessionStates', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('saveActiveSessionStates', async() => {
+            return executeWithResilience(async(client) => {
                 const now = new Date();
                 const activeSessions = Array.from(this.activeVoiceSessions.entries());
 
@@ -217,8 +217,8 @@ class SessionRecovery {
             return;
         }
 
-        return measureDatabase('closeAllActiveSessions', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('closeAllActiveSessions', async() => {
+            return executeWithResilience(async(client) => {
                 const now = new Date();
                 const voiceService = require('../services/voiceService');
                 let closedSessions = 0;
@@ -288,7 +288,7 @@ class SessionRecovery {
         // This only handles unexpected crashes and exceptions
 
         // Handle uncaught exceptions
-        process.on('uncaughtException', async (error) => {
+        process.on('uncaughtException', async(error) => {
             console.error('💥 Uncaught Exception - attempting session recovery:', error);
             try {
                 await this.forceSave();
@@ -299,7 +299,7 @@ class SessionRecovery {
         });
 
         // Handle unhandled promise rejections
-        process.on('unhandledRejection', async (reason, promise) => {
+        process.on('unhandledRejection', async(reason, promise) => {
             console.error('💥 Unhandled Rejection - attempting session recovery:', reason);
             try {
                 await this.forceSave();

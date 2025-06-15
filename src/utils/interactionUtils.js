@@ -56,13 +56,13 @@ async function safeReply(interaction, payload) {
         return true;
     } catch (error) {
         console.error(`Failed to send reply for /${interaction?.commandName}:`, error.message);
-        
+
         // If the error is about unknown interaction or already acknowledged, don't retry
         if (error.code === 10062 || error.code === 40060) {
             console.warn('Interaction expired or already handled - skipping retry');
             return false;
         }
-        
+
         return false;
     }
 }
@@ -78,11 +78,11 @@ async function safeErrorReply(interaction, errorEmbed) {
         return await safeReply(interaction, { embeds: [errorEmbed] });
     } catch (error) {
         console.error(`Failed to send error reply for /${interaction?.commandName}:`, error.message);
-        
+
         // Last resort: try a simple text reply
         try {
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ 
+                await interaction.reply({
                     content: '❌ An error occurred while processing your command.',
                     ephemeral: true
                 });
@@ -91,7 +91,7 @@ async function safeErrorReply(interaction, errorEmbed) {
         } catch (fallbackError) {
             console.error('Even fallback error reply failed:', fallbackError.message);
         }
-        
+
         return false;
     }
 }
@@ -104,13 +104,13 @@ async function safeErrorReply(interaction, errorEmbed) {
  */
 async function executeWithTimeout(interaction, commandFunction, options = {}) {
     const { timeout = 10000, errorTemplate } = options;
-    
+
     let deferred = false;
-    
+
     try {
         // Immediately defer the interaction to prevent timeout
         deferred = await safeDeferReply(interaction);
-        
+
         if (!deferred) {
             console.warn(`Failed to defer interaction for /${interaction?.commandName}`);
             return false;
@@ -124,15 +124,15 @@ async function executeWithTimeout(interaction, commandFunction, options = {}) {
 
         await Promise.race([commandPromise, timeoutPromise]);
         return true;
-        
+
     } catch (error) {
         console.error(`Error executing /${interaction?.commandName}:`, error.message);
-        
+
         // Send error reply if we successfully deferred
         if (deferred && errorTemplate) {
             await safeErrorReply(interaction, errorTemplate);
         }
-        
+
         return false;
     }
 }
@@ -144,17 +144,17 @@ async function executeWithTimeout(interaction, commandFunction, options = {}) {
  */
 function isInteractionValid(interaction) {
     if (!interaction) return false;
-    
+
     // Check if interaction has expired (Discord interactions expire after 15 minutes)
     const now = Date.now();
     const interactionTime = interaction.createdTimestamp;
     const maxAge = 15 * 60 * 1000; // 15 minutes
-    
+
     if (now - interactionTime > maxAge) {
         console.warn(`Interaction for /${interaction.commandName} has expired`);
         return false;
     }
-    
+
     return true;
 }
 
@@ -168,19 +168,19 @@ function isInteractionValid(interaction) {
 async function fastMemberFetch(guild, userId, useCache = true) {
     try {
         if (!guild || !userId) return null;
-        
+
         // Try cache first if requested
         if (useCache) {
             const cachedMember = guild.members.cache.get(userId);
             if (cachedMember) return cachedMember;
         }
-        
+
         // Fallback to API fetch with timeout
         const fetchPromise = guild.members.fetch(userId);
         const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Member fetch timeout')), 3000)
         );
-        
+
         return await Promise.race([fetchPromise, timeoutPromise]);
     } catch (error) {
         console.warn(`Failed to fetch member ${userId}:`, error.message);

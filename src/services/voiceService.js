@@ -14,13 +14,13 @@ class VoiceService extends BaseService {
     }
     // Get or create user in database with caching
     async getOrCreateUser(discordId, username) {
-        return measureDatabase('getOrCreateUser', async () => {
+        return measureDatabase('getOrCreateUser', async() => {
             // Check cache first
             const cachedUser = getCachedUser(discordId);
             if (cachedUser) {
                 // Update username if it changed (but don't query DB every time)
                 if (cachedUser.username !== username) {
-                    await executeWithResilience(async (client) => {
+                    await executeWithResilience(async(client) => {
                         await client.query(
                             'UPDATE users SET username = $1, updated_at = CURRENT_TIMESTAMP WHERE discord_id = $2',
                             [username, discordId]
@@ -32,7 +32,7 @@ class VoiceService extends BaseService {
                 return cachedUser;
             }
 
-            return executeWithResilience(async (client) => {
+            return executeWithResilience(async(client) => {
                 // Try to find existing user
                 const result = await client.query(
                     'SELECT * FROM users WHERE discord_id = $1',
@@ -70,8 +70,8 @@ class VoiceService extends BaseService {
 
     // Start a voice session when user joins VC (timezone-aware)
     async startVoiceSession(discordId, username, voiceChannelId, voiceChannelName) {
-        return measureDatabase('startVoiceSession', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('startVoiceSession', async() => {
+            return executeWithResilience(async(client) => {
                 const user = await this.getOrCreateUser(discordId, username);
                 const now = new Date();
 
@@ -94,8 +94,8 @@ class VoiceService extends BaseService {
 
     // End a voice session when user leaves VC
     async endVoiceSession(discordId, voiceChannelId, member = null) {
-        return measureDatabase('endVoiceSession', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('endVoiceSession', async() => {
+            return executeWithResilience(async(client) => {
                 const now = new Date();
 
                 // Find the active session
@@ -146,7 +146,7 @@ class VoiceService extends BaseService {
 
     // Calculate and award points based on time spent and/or task completion
     async calculateAndAwardPoints(discordId, durationMinutes, member = null, additionalPoints = 0, applyRounding = true) {
-        return measureDatabase('calculateAndAwardPoints', async () => {
+        return measureDatabase('calculateAndAwardPoints', async() => {
             const client = await pool.connect();
             try {
                 // Check and perform monthly reset if needed
@@ -291,7 +291,7 @@ class VoiceService extends BaseService {
 
     // Update daily voice stats
     async updateDailyStats(discordId, date, additionalMinutes, pointsEarned = 0) {
-        return measureDatabase('updateDailyStats', async () => {
+        return measureDatabase('updateDailyStats', async() => {
             const client = await pool.connect();
             try {
                 // For the new daily cumulative system, we need to recalculate total daily points
@@ -344,8 +344,8 @@ class VoiceService extends BaseService {
 
     // Handle session that crosses midnight - split into separate daily sessions (timezone-aware)
     async handleMidnightCrossover(discordId, voiceChannelId, member = null) {
-        return measureDatabase('handleMidnightCrossover', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('handleMidnightCrossover', async() => {
+            return executeWithResilience(async(client) => {
                 const now = new Date();
 
                 // Use user's timezone for accurate midnight calculation
@@ -417,7 +417,7 @@ class VoiceService extends BaseService {
 
     // Get user's daily voice time for limit checking (timezone-aware)
     async getUserDailyTime(discordId, date = null) {
-        return measureDatabase('getUserDailyTime', async () => {
+        return measureDatabase('getUserDailyTime', async() => {
             const client = await pool.connect();
             try {
                 // Use user's timezone for accurate date calculation
@@ -530,7 +530,7 @@ class VoiceService extends BaseService {
 
     // Get user voice stats using optimized view (replaces getUserStats)
     async getUserStatsOptimized(discordId) {
-        return measureDatabase('getUserStatsOptimized', async () => {
+        return measureDatabase('getUserStatsOptimized', async() => {
             // Try cache first
             const cacheKey = `user_stats_optimized:${discordId}`;
             const cached = queryCache.get(cacheKey);
@@ -538,7 +538,7 @@ class VoiceService extends BaseService {
                 return cached;
             }
 
-            return executeWithResilience(async (client) => {
+            return executeWithResilience(async(client) => {
                 // Check and perform monthly reset if needed
                 await checkAndPerformMonthlyReset(discordId);
 
@@ -611,7 +611,7 @@ class VoiceService extends BaseService {
 
     // Get leaderboard using optimized views
     async getLeaderboardOptimized(type = 'monthly') {
-        return measureDatabase('getLeaderboardOptimized', async () => {
+        return measureDatabase('getLeaderboardOptimized', async() => {
             // Try cache first
             const cacheKey = `leaderboard_optimized:${type}`;
             const cached = queryCache.get(cacheKey);
@@ -619,7 +619,7 @@ class VoiceService extends BaseService {
                 return cached;
             }
 
-            return executeWithResilience(async (client) => {
+            return executeWithResilience(async(client) => {
                 let result;
 
                 if (type === 'monthly') {
@@ -648,7 +648,7 @@ class VoiceService extends BaseService {
 
     // Get house leaderboard using optimized views
     async getHouseLeaderboardOptimized(type = 'monthly') {
-        return measureDatabase('getHouseLeaderboardOptimized', async () => {
+        return measureDatabase('getHouseLeaderboardOptimized', async() => {
             // Try cache first
             const cacheKey = `house_leaderboard_optimized:${type}`;
             const cached = queryCache.get(cacheKey);
@@ -656,7 +656,7 @@ class VoiceService extends BaseService {
                 return cached;
             }
 
-            return executeWithResilience(async (client) => {
+            return executeWithResilience(async(client) => {
                 // Use house_leaderboard_with_champions view - single optimized query
                 const result = await client.query('SELECT * FROM house_leaderboard_with_champions');
 
@@ -684,8 +684,8 @@ class VoiceService extends BaseService {
 
     // Get active voice sessions using optimized view
     async getActiveVoiceSessionsOptimized() {
-        return measureDatabase('getActiveVoiceSessionsOptimized', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('getActiveVoiceSessionsOptimized', async() => {
+            return executeWithResilience(async(client) => {
                 // Use active_voice_sessions view - single optimized query
                 const result = await client.query('SELECT * FROM active_voice_sessions');
 
@@ -706,8 +706,8 @@ class VoiceService extends BaseService {
 
     // Get daily voice activity summary using optimized view
     async getDailyVoiceActivityOptimized(days = 30) {
-        return measureDatabase('getDailyVoiceActivityOptimized', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('getDailyVoiceActivityOptimized', async() => {
+            return executeWithResilience(async(client) => {
                 // Use daily_voice_activity view with limit
                 const result = await client.query(
                     'SELECT * FROM daily_voice_activity ORDER BY date DESC LIMIT $1',
@@ -721,8 +721,8 @@ class VoiceService extends BaseService {
 
     // Refresh materialized views (call periodically)
     async refreshMaterializedViews() {
-        return measureDatabase('refreshMaterializedViews', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('refreshMaterializedViews', async() => {
+            return executeWithResilience(async(client) => {
                 // Call the database function to refresh materialized views
                 await client.query('SELECT refresh_materialized_views()');
                 console.log('✅ Materialized views refreshed successfully');
@@ -785,7 +785,7 @@ class VoiceService extends BaseService {
 
     // Get house champions (top contributor per house)
     async getHouseChampions(type = 'monthly') {
-        return measureDatabase('getHouseChampions', async () => {
+        return measureDatabase('getHouseChampions', async() => {
             // Try cache first
             const cacheKey = `house_champions:${type}`;
             const cached = queryCache.get(cacheKey);
@@ -808,7 +808,7 @@ class VoiceService extends BaseService {
 
     // Fallback method for user stats (used only if optimized version fails)
     async getUserStatsOriginal(discordId) {
-        return measureDatabase('getUserStats', async () => {
+        return measureDatabase('getUserStats', async() => {
             // Try cache first
             const cacheKey = `user_stats:${discordId}`;
             const cached = queryCache.get(cacheKey);
@@ -914,7 +914,7 @@ class VoiceService extends BaseService {
 
     // Fallback method for leaderboard (used only if optimized version fails)
     async getLeaderboardOriginal(type = 'monthly') {
-        return measureDatabase('getLeaderboard', async () => {
+        return measureDatabase('getLeaderboard', async() => {
             // Try cache first
             const cacheKey = `leaderboard:${type}`;
             const cached = queryCache.get(cacheKey);
@@ -979,7 +979,7 @@ class VoiceService extends BaseService {
 
     // Fallback method for house leaderboard (used only if optimized version fails)
     async getHouseLeaderboardOriginal(type = 'monthly') {
-        return measureDatabase('getHouseLeaderboard', async () => {
+        return measureDatabase('getHouseLeaderboard', async() => {
             // Try cache first
             const cacheKey = `house_leaderboard:${type}`;
             const cached = queryCache.get(cacheKey);

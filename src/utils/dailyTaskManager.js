@@ -35,7 +35,7 @@ class DailyTaskManager {
         }
 
         // Check every minute for cleanup (23:59)
-        this.cleanupInterval = setInterval(async () => {
+        this.cleanupInterval = setInterval(async() => {
             await this.checkMidnightCleanup();
         }, 60 * 1000); // Every minute
 
@@ -142,7 +142,7 @@ class DailyTaskManager {
 
             const resetResults = await this.resetDailyVoiceStats();
 
-            console.log(`✅ All voice session processing completed during daily reset`);
+            console.log('✅ All voice session processing completed during daily reset');
             return resetResults;
 
         } catch (error) {
@@ -156,7 +156,7 @@ class DailyTaskManager {
      * FULLY COMPATIBLE WITH: Daily Cumulative Points, Grace Period, 55-Min Rounding, Task Integration
      */
     async resetDailyVoiceStats() {
-        return executeWithResilience(async (client) => {
+        return executeWithResilience(async(client) => {
             console.log('🌅 Starting comprehensive midnight reset system...');
 
             // Get reference to active voice sessions and grace period sessions
@@ -225,7 +225,7 @@ class DailyTaskManager {
             // Step 4: Log comprehensive reset summary
             console.log('✅ Enhanced midnight reset completed successfully!');
             console.log('═'.repeat(50));
-            console.log(`📊 MIDNIGHT RESET SUMMARY:`);
+            console.log('📊 MIDNIGHT RESET SUMMARY:');
             console.log(`   👥 Users Processed: ${resetResults.processedSessions}`);
             console.log(`   🔄 Grace Period Handled: ${resetResults.gracePeriodHandled}`);
             console.log(`   🆕 New Sessions Created: ${resetResults.newSessionsCreated}`);
@@ -363,7 +363,7 @@ class DailyTaskManager {
      * Clean up tasks for a specific user and send notification
      */
     async cleanupUserTasks(discordId, taskCount, taskTitles) {
-        return executeWithResilience(async (client) => {
+        return executeWithResilience(async(client) => {
             // Delete all pending tasks for this user
             await client.query(
                 'DELETE FROM tasks WHERE discord_id = $1 AND is_complete = FALSE',
@@ -426,8 +426,8 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
      * Check if user can add more tasks today
      */
     async canUserAddTask(discordId) {
-        return measureDatabase('checkDailyTaskLimit', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('checkDailyTaskLimit', async() => {
+            return executeWithResilience(async(client) => {
                 const today = dayjs().format('YYYY-MM-DD');
 
                 // Get today's task stats
@@ -460,8 +460,8 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
      * Record a task action (add or complete)
      */
     async recordTaskAction(discordId, actionType) {
-        return measureDatabase('recordTaskAction', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('recordTaskAction', async() => {
+            return executeWithResilience(async(client) => {
                 const today = dayjs().format('YYYY-MM-DD');
 
                 // Ensure user exists
@@ -495,8 +495,8 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
      * Get user's daily task stats
      */
     async getUserDailyStats(discordId) {
-        return measureDatabase('getUserDailyTaskStats', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('getUserDailyTaskStats', async() => {
+            return executeWithResilience(async(client) => {
                 const today = dayjs().format('YYYY-MM-DD');
 
                 const result = await client.query(
@@ -542,8 +542,8 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
      * Regain a task slot when removing a task (only for tasks added today)
      */
     async reclaimTaskSlot(discordId, taskCreatedAt) {
-        return measureDatabase('reclaimTaskSlot', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('reclaimTaskSlot', async() => {
+            return executeWithResilience(async(client) => {
                 const today = dayjs().format('YYYY-MM-DD');
                 const taskDate = dayjs(taskCreatedAt).format('YYYY-MM-DD');
 

@@ -22,14 +22,14 @@ class BaseService {
     async executeWithFallback(methodName, optimizedFn, fallbackFn, ...args) {
         try {
             // Try optimized version first
-            return await measureDatabase(`${methodName}Optimized`, async () => {
+            return await measureDatabase(`${methodName}Optimized`, async() => {
                 return await optimizedFn(...args);
             });
         } catch (error) {
             console.warn(`⚠️ Optimized ${methodName} failed, falling back to original:`, error.message);
 
             // Fall back to original implementation
-            return await measureDatabase(`${methodName}Original`, async () => {
+            return await measureDatabase(`${methodName}Original`, async() => {
                 return await fallbackFn(...args);
             });
         }
@@ -43,7 +43,7 @@ class BaseService {
      * @returns {Promise} Result from function
      */
     async executeWithMonitoring(methodName, fn, ...args) {
-        return await measureDatabase(methodName, async () => {
+        return await measureDatabase(methodName, async() => {
             return await fn(...args);
         });
     }

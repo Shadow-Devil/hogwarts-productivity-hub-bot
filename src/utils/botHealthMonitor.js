@@ -26,7 +26,7 @@ class BotHealthMonitor {
 
     setupHealthChecks() {
         // Discord Client Health Check
-        this.healthChecker.registerCheck('discord_client', async () => {
+        this.healthChecker.registerCheck('discord_client', async() => {
             if (!this.client.isReady()) {
                 throw new Error('Discord client is not ready');
             }
@@ -46,12 +46,12 @@ class BotHealthMonitor {
         }, { critical: true, timeout: 5000 });
 
         // Database Health Check
-        this.healthChecker.registerCheck('database', async () => {
+        this.healthChecker.registerCheck('database', async() => {
             return await this.databaseResilience.healthCheck();
         }, { critical: true, timeout: 10000 });
 
         // Memory Health Check
-        this.healthChecker.registerCheck('memory', async () => {
+        this.healthChecker.registerCheck('memory', async() => {
             const memUsage = process.memoryUsage();
 
             // Focus on Node.js process memory instead of system memory
@@ -131,7 +131,7 @@ class BotHealthMonitor {
         }, { critical: false, timeout: 2000 });
 
         // Performance Health Check
-        this.healthChecker.registerCheck('performance', async () => {
+        this.healthChecker.registerCheck('performance', async() => {
             const summary = performanceMonitor.getPerformanceSummary();
             const bottlenecks = performanceMonitor.identifyBottlenecks();
 
@@ -150,7 +150,7 @@ class BotHealthMonitor {
         }, { critical: false, timeout: 3000 });
 
         // Command Response Health Check
-        this.healthChecker.registerCheck('command_responsiveness', async () => {
+        this.healthChecker.registerCheck('command_responsiveness', async() => {
             const summary = performanceMonitor.getPerformanceSummary();
 
             // Check average response times
@@ -183,7 +183,7 @@ class BotHealthMonitor {
         }, { critical: false, timeout: 2000 });
 
         // Cache Health Check
-        this.healthChecker.registerCheck('cache_system', async () => {
+        this.healthChecker.registerCheck('cache_system', async() => {
             const queryCache = require('./queryCache');
             const stats = queryCache.getStats();
 
@@ -201,7 +201,7 @@ class BotHealthMonitor {
 
     startPeriodicChecks() {
         // Run health checks every 30 seconds
-        this.healthCheckInterval = setInterval(async () => {
+        this.healthCheckInterval = setInterval(async() => {
             try {
                 await this.runHealthCheck();
             } catch (error) {
@@ -262,25 +262,25 @@ class BotHealthMonitor {
         for (const issue of issues) {
             try {
                 switch (issue.name) {
-                    case 'database':
-                        console.log('🔄 Attempting database recovery...');
-                        this.databaseResilience.resetCircuitBreakers();
-                        break;
+                case 'database':
+                    console.log('🔄 Attempting database recovery...');
+                    this.databaseResilience.resetCircuitBreakers();
+                    break;
 
-                    case 'memory':
-                        console.log('🧹 Attempting memory cleanup...');
-                        if (global.gc) {
-                            global.gc();
-                        }
-                        // Clear old cache entries
-                        const queryCache = require('./queryCache');
-                        queryCache.clear();
-                        break;
+                case 'memory':
+                    console.log('🧹 Attempting memory cleanup...');
+                    if (global.gc) {
+                        global.gc();
+                    }
+                    // Clear old cache entries
+                    const queryCache = require('./queryCache');
+                    queryCache.clear();
+                    break;
 
-                    case 'discord_client':
-                        console.log('🔌 Discord client issue detected - monitoring for auto-reconnect...');
-                        // Discord.js handles reconnection automatically
-                        break;
+                case 'discord_client':
+                    console.log('🔌 Discord client issue detected - monitoring for auto-reconnect...');
+                    // Discord.js handles reconnection automatically
+                    break;
                 }
             } catch (recoveryError) {
                 console.error(`❌ Auto-recovery failed for ${issue.name}:`, recoveryError);
@@ -317,10 +317,10 @@ class BotHealthMonitor {
 
     getStatusEmoji(status) {
         switch (status) {
-            case 'healthy': return '🟢';
-            case 'degraded': return '🟡';
-            case 'critical': return '🔴';
-            default: return '⚪';
+        case 'healthy': return '🟢';
+        case 'degraded': return '🟡';
+        case 'critical': return '🔴';
+        default: return '⚪';
         }
     }
 

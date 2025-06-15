@@ -31,10 +31,10 @@ function createStatsTemplate(user, stats, options = {}) {
 
     if (useEnhancedLayout) {
         embed.setTitle('📊 Personal Productivity Dashboard')
-             .setDescription(createHeader('Statistics Overview', `Performance metrics for **${user.username}**`, '📈', 'emphasis'));
+            .setDescription(createHeader('Statistics Overview', `Performance metrics for **${user.username}**`, '📈', 'emphasis'));
     } else {
         embed.setTitle('📊 Personal Productivity Dashboard')
-             .setDescription(createHeader('Statistics Overview', `Data for **${user.username}**`, '📈'));
+            .setDescription(createHeader('Statistics Overview', `Data for **${user.username}**`, '📈'));
     }
 
     if (showThumbnail) {
@@ -69,10 +69,10 @@ function createTaskTemplate(user, tasks, options = {}) {
 
     if (useEnhancedLayout) {
         embed.setTitle('📋 Personal Task Dashboard')
-             .setThumbnail(user.displayAvatarURL());
+            .setThumbnail(user.displayAvatarURL());
     } else {
         embed.setTitle('📋 Personal Task Dashboard')
-             .setThumbnail(user.displayAvatarURL());
+            .setThumbnail(user.displayAvatarURL());
     }
 
     if (emptyState || (Array.isArray(tasks) && tasks.length === 0)) {
@@ -263,10 +263,10 @@ function createLeaderboardTemplate(type, data, currentUser, options = {}) {
 
     if (useEnhancedLayout) {
         embed.setTitle(title)
-             .setDescription(createHeader('Rankings', subtitle, '🏆', 'emphasis'));
+            .setDescription(createHeader('Rankings', subtitle, '🏆', 'emphasis'));
     } else {
         embed.setTitle(title)
-             .setDescription(createHeader('Rankings', subtitle, '🏆'));
+            .setDescription(createHeader('Rankings', subtitle, '🏆'));
     }
 
     // Get current user's position
@@ -358,7 +358,7 @@ function createLeaderboardTemplate(type, data, currentUser, options = {}) {
         } else if (userPosition === 0) {
             embed.addFields([{
                 name: '📍 Your Position',
-                value: `### 🚀 Get Started\nJoin a voice channel to appear on the leaderboard!`,
+                value: '### 🚀 Get Started\nJoin a voice channel to appear on the leaderboard!',
                 inline: false
             }]);
         }
@@ -628,10 +628,10 @@ function createHealthTemplate(title, healthData, options = {}) {
     // Determine status emoji and health state
     const finalStatusEmoji = statusEmoji || (
         status === 'healthy' ? StatusEmojis.HEALTHY :
-        status === 'degraded' ? StatusEmojis.WARNING :
-        status === 'unavailable' ? '⚠️' :
-        status === 'initializing' ? '🔄' :
-        StatusEmojis.ERROR
+            status === 'degraded' ? StatusEmojis.WARNING :
+                status === 'unavailable' ? '⚠️' :
+                    status === 'initializing' ? '🔄' :
+                        StatusEmojis.ERROR
     );
     const isHealthy = systemHealth !== undefined ? systemHealth : status === 'healthy';
 
@@ -639,10 +639,10 @@ function createHealthTemplate(title, healthData, options = {}) {
         .setTitle(`🩺 ${title}`)
         .setColor(
             isHealthy ? BotColors.SUCCESS :
-            status === 'degraded' ? BotColors.WARNING :
-            status === 'unavailable' ? BotColors.WARNING :
-            status === 'initializing' ? BotColors.INFO :
-            BotColors.ERROR
+                status === 'degraded' ? BotColors.WARNING :
+                    status === 'unavailable' ? BotColors.WARNING :
+                        status === 'initializing' ? BotColors.INFO :
+                            BotColors.ERROR
         );
 
     if (useEnhancedLayout) {
@@ -814,10 +814,10 @@ function createSuccessTemplate(title, message, options = {}) {
 
     if (useEnhancedLayout) {
         embed.setTitle(`${includeEmoji ? emoji + ' ' : ''}${title}`)
-             .setDescription(message);
+            .setDescription(message);
     } else {
         embed.setTitle(`${includeEmoji ? emoji + ' ' : ''}${title}`)
-             .setDescription(message);
+            .setDescription(message);
     }
 
     if (points !== null || streak !== null) {
@@ -873,120 +873,120 @@ function createTimerTemplate(action, data, options = {}) {
     let embed;
 
     switch (action) {
-        case 'start':
-            embed = createStyledEmbed('primary')
-                .setTitle('⏱️ Pomodoro Timer Started')
-                .setDescription(createHeader('Focus Session Active', 'Time to boost your productivity!', '🎯'));
+    case 'start':
+        embed = createStyledEmbed('primary')
+            .setTitle('⏱️ Pomodoro Timer Started')
+            .setDescription(createHeader('Focus Session Active', 'Time to boost your productivity!', '🎯'));
 
-            // Add timer configuration
-            const configFields = [
-                `🕒 **Work Time:** ${workTime} minutes`,
-                breakTime > 0 ? `☕ **Break Time:** ${breakTime} minutes` : null,
-                `📍 **Location:** <#${voiceChannel.id}>`
-            ].filter(Boolean);
+        // Add timer configuration
+        const configFields = [
+            `🕒 **Work Time:** ${workTime} minutes`,
+            breakTime > 0 ? `☕ **Break Time:** ${breakTime} minutes` : null,
+            `📍 **Location:** <#${voiceChannel.id}>`
+        ].filter(Boolean);
 
+        embed.addFields([{
+            name: '📋 Session Configuration',
+            value: configFields.join('\n'),
+            inline: false
+        }]);
+
+        if (showProgress) {
+            const progressBar = createProgressBar(0, workTime, 15, '▓', '░');
             embed.addFields([{
-                name: '📋 Session Configuration',
-                value: configFields.join('\n'),
+                name: '📊 Progress Tracker',
+                value: `${progressBar.bar}\n**Phase:** Work Session • **Status:** ${StatusEmojis.IN_PROGRESS} Active`,
                 inline: false
             }]);
+        }
 
-            if (showProgress) {
-                const progressBar = createProgressBar(0, workTime, 15, '▓', '░');
-                embed.addFields([{
-                    name: '📊 Progress Tracker',
-                    value: `${progressBar.bar}\n**Phase:** Work Session • **Status:** ${StatusEmojis.IN_PROGRESS} Active`,
-                    inline: false
-                }]);
-            }
-
-            if (includeMotivation) {
-                embed.addFields([{
-                    name: '💪 Stay Focused!',
-                    value: 'Focus time! Good luck with your session!\nRemember: great achievements require focused effort.',
-                    inline: false
-                }]);
-            }
-
-            embed.setFooter({ text: 'Use /stoptimer if you need to stop early • /time to check remaining time' });
-            break;
-
-        case 'work_complete':
-            embed = createStyledEmbed('success')
-                .setTitle('🔔 Work Session Complete!')
-                .setDescription(createHeader('Great Work!', 'You\'ve successfully completed your focus session', '🎉'));
-
-            if (breakTime > 0) {
-                embed.addFields([{
-                    name: '☕ Break Time!',
-                    value: `Take a well-deserved **${breakTime}-minute break**.\n🔔 I'll notify you when it's time to get back to work.`,
-                    inline: false
-                }]);
-            } else {
-                embed.addFields([{
-                    name: '🎯 Session Finished!',
-                    value: 'Great job staying focused! You\'ve completed your productivity session.',
-                    inline: false
-                }]);
-            }
-            break;
-
-        case 'break_complete':
-            embed = createStyledEmbed('info')
-                .setTitle('🕒 Break Time Is Over!')
-                .setDescription(createHeader('Back to Work!', 'Time to get back to your productive flow', '💪'));
-
+        if (includeMotivation) {
             embed.addFields([{
-                name: '🎯 Ready to Focus',
-                value: 'Break\'s over! Time to get back to work.\nYou\'ve got this! Stay focused and productive!',
+                name: '💪 Stay Focused!',
+                value: 'Focus time! Good luck with your session!\nRemember: great achievements require focused effort.',
                 inline: false
             }]);
-            break;
+        }
 
-        case 'status':
-            const isBreak = phase === 'break';
-            embed = createStyledEmbed(isBreak ? 'warning' : 'primary')
-                .setTitle(`⏰ Timer Status - ${phase.charAt(0).toUpperCase() + phase.slice(1)} Phase`)
-                .setDescription(createHeader('Active Session', `Currently in ${phase} phase`, isBreak ? '☕' : '🎯'));
+        embed.setFooter({ text: 'Use /stoptimer if you need to stop early • /time to check remaining time' });
+        break;
 
-            if (showProgress && timeRemaining !== undefined) {
-                const totalTime = isBreak ? breakTime : workTime;
-                const elapsed = totalTime - timeRemaining;
-                const progressBar = createProgressBar(elapsed, totalTime, 15);
+    case 'work_complete':
+        embed = createStyledEmbed('success')
+            .setTitle('🔔 Work Session Complete!')
+            .setDescription(createHeader('Great Work!', 'You\'ve successfully completed your focus session', '🎉'));
 
-                embed.addFields([{
-                    name: '📊 Progress',
-                    value: `${progressBar.bar}\n**Time Remaining:** ${timeRemaining} minutes • **Status:** ${StatusEmojis.IN_PROGRESS} Active`,
-                    inline: false
-                }]);
-            }
-
+        if (breakTime > 0) {
             embed.addFields([{
-                name: '📍 Session Info',
-                value: `**Location:** <#${voiceChannel.id}>\n**Phase:** ${phase.charAt(0).toUpperCase() + phase.slice(1)}`,
+                name: '☕ Break Time!',
+                value: `Take a well-deserved **${breakTime}-minute break**.\n🔔 I'll notify you when it's time to get back to work.`,
                 inline: false
             }]);
-            break;
-
-        case 'no_timer':
-            embed = createStyledEmbed('secondary')
-                .setTitle('⏰ Timer Status')
-                .setDescription(createHeader('No Active Timer', `No Pomodoro timer is currently running in <#${voiceChannel.id}>`, '💤'));
-
+        } else {
             embed.addFields([{
-                name: '💡 Get Started',
-                value: 'Use `/timer <work_minutes>` to start a new Pomodoro session!\nRecommended: `/timer 25 5` for a classic 25-minute work session with 5-minute break.',
+                name: '🎯 Session Finished!',
+                value: 'Great job staying focused! You\'ve completed your productivity session.',
                 inline: false
             }]);
+        }
+        break;
 
-            if (includeMotivation) {
-                embed.addFields([{
-                    name: '🎯 Productivity Tips',
-                    value: '• Choose focused work periods (20-50 minutes)\n• Take regular breaks to maintain concentration\n• Stay in your voice channel during sessions',
-                    inline: false
-                }]);
-            }
-            break;
+    case 'break_complete':
+        embed = createStyledEmbed('info')
+            .setTitle('🕒 Break Time Is Over!')
+            .setDescription(createHeader('Back to Work!', 'Time to get back to your productive flow', '💪'));
+
+        embed.addFields([{
+            name: '🎯 Ready to Focus',
+            value: 'Break\'s over! Time to get back to work.\nYou\'ve got this! Stay focused and productive!',
+            inline: false
+        }]);
+        break;
+
+    case 'status':
+        const isBreak = phase === 'break';
+        embed = createStyledEmbed(isBreak ? 'warning' : 'primary')
+            .setTitle(`⏰ Timer Status - ${phase.charAt(0).toUpperCase() + phase.slice(1)} Phase`)
+            .setDescription(createHeader('Active Session', `Currently in ${phase} phase`, isBreak ? '☕' : '🎯'));
+
+        if (showProgress && timeRemaining !== undefined) {
+            const totalTime = isBreak ? breakTime : workTime;
+            const elapsed = totalTime - timeRemaining;
+            const progressBar = createProgressBar(elapsed, totalTime, 15);
+
+            embed.addFields([{
+                name: '📊 Progress',
+                value: `${progressBar.bar}\n**Time Remaining:** ${timeRemaining} minutes • **Status:** ${StatusEmojis.IN_PROGRESS} Active`,
+                inline: false
+            }]);
+        }
+
+        embed.addFields([{
+            name: '📍 Session Info',
+            value: `**Location:** <#${voiceChannel.id}>\n**Phase:** ${phase.charAt(0).toUpperCase() + phase.slice(1)}`,
+            inline: false
+        }]);
+        break;
+
+    case 'no_timer':
+        embed = createStyledEmbed('secondary')
+            .setTitle('⏰ Timer Status')
+            .setDescription(createHeader('No Active Timer', `No Pomodoro timer is currently running in <#${voiceChannel.id}>`, '💤'));
+
+        embed.addFields([{
+            name: '💡 Get Started',
+            value: 'Use `/timer <work_minutes>` to start a new Pomodoro session!\nRecommended: `/timer 25 5` for a classic 25-minute work session with 5-minute break.',
+            inline: false
+        }]);
+
+        if (includeMotivation) {
+            embed.addFields([{
+                name: '🎯 Productivity Tips',
+                value: '• Choose focused work periods (20-50 minutes)\n• Take regular breaks to maintain concentration\n• Stay in your voice channel during sessions',
+                inline: false
+            }]);
+        }
+        break;
     }
 
     return embed;
@@ -1042,10 +1042,10 @@ function createChampionTemplate(monthlyChampions, allTimeChampions, currentUser,
 
     if (useEnhancedLayout) {
         embed.setTitle('👑 House Champions')
-             .setDescription('Top contributors from each house');
+            .setDescription('Top contributors from each house');
     } else {
         embed.setTitle('👑 House Champions')
-             .setDescription('Top contributing members from each house');
+            .setDescription('Top contributing members from each house');
     }
 
     // Define all houses for consistent display
@@ -1084,7 +1084,7 @@ function createChampionTemplate(monthlyChampions, allTimeChampions, currentUser,
                 monthlyText += `   ${champion.points.toLocaleString()} points\n\n`;
             } else {
                 monthlyText += `${emoji} **${house}**: No champion yet\n`;
-                monthlyText += `   0 points\n\n`;
+                monthlyText += '   0 points\n\n';
             }
         });
 
@@ -1128,7 +1128,7 @@ function createChampionTemplate(monthlyChampions, allTimeChampions, currentUser,
                 allTimeText += `   ${champion.points.toLocaleString()} points\n\n`;
             } else {
                 allTimeText += `${emoji} **${house}**: No champion yet\n`;
-                allTimeText += `   0 points\n\n`;
+                allTimeText += '   0 points\n\n';
             }
         });
 

@@ -57,7 +57,7 @@ class VoiceStateScanner {
 
             console.log('✅ Voice state scan completed');
             console.log('═'.repeat(40));
-            console.log(`📊 VOICE SCAN SUMMARY:`);
+            console.log('📊 VOICE SCAN SUMMARY:');
             console.log(`   🔍 Scan Duration: ${scanDuration}ms`);
             console.log(`   👥 Users Found: ${this.scanResults.totalUsersFound}`);
             console.log(`   ✅ Tracking Started: ${this.scanResults.trackingStarted}`);
@@ -65,7 +65,7 @@ class VoiceStateScanner {
             console.log(`   🎤 Active Channels: ${this.scanResults.channels.length}`);
 
             if (this.scanResults.channels.length > 0) {
-                console.log(`   📍 Voice Channels with Users:`);
+                console.log('   📍 Voice Channels with Users:');
                 this.scanResults.channels.forEach(channel => {
                     console.log(`      • ${channel.name}: ${channel.userCount} users`);
                 });
@@ -74,9 +74,9 @@ class VoiceStateScanner {
             if (this.scanResults.trackingStarted > 0) {
                 console.log(`   🎯 Successfully started automatic tracking for ${this.scanResults.trackingStarted} users`);
             } else if (this.scanResults.totalUsersFound > 0) {
-                console.log(`   ℹ️  All found users were already being tracked`);
+                console.log('   ℹ️  All found users were already being tracked');
             } else {
-                console.log(`   📭 No users currently in voice channels`);
+                console.log('   📭 No users currently in voice channels');
             }
             console.log('═'.repeat(40));
 

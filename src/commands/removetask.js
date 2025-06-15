@@ -40,8 +40,8 @@ module.exports = {
                     const slotReclaimedText = result.slotReclaimed ?
                         ' ✨ **Slot Reclaimed!**' :
                         result.slotReclaimed === false && result.maxRecoverableSlots !== undefined ?
-                        ` 🚫 **Slot Not Reclaimed**` :
-                        '';
+                            ' 🚫 **Slot Not Reclaimed**' :
+                            '';
                     slotInfo = `\n\n**Daily Task Slots:** ${result.stats.remaining}/${result.stats.limit} remaining • **Resets:** <t:${resetTime}:R>${slotReclaimedText}`;
                 }
 

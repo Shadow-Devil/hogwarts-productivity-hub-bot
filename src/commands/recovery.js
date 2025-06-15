@@ -16,7 +16,7 @@ module.exports = {
                 .setName('save')
                 .setDescription('Force save current session states'))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-        
+
     async execute(interaction) {
         try {
             // Immediately defer to prevent timeout
@@ -25,12 +25,12 @@ module.exports = {
                 console.warn('Failed to defer recovery interaction');
                 return;
             }
-            
+
             const subcommand = interaction.options.getSubcommand();
-            
+
             if (subcommand === 'status') {
                 const stats = sessionRecovery.getRecoveryStats();
-                
+
                 const embed = new EmbedBuilder()
                     .setTitle(createHeader('Session Recovery System', stats.isInitialized ? 'Operational' : 'Inactive', '🛡️', 'large'))
                     .setColor(stats.isInitialized ? 0x57F287 : 0xED4245)
@@ -93,21 +93,21 @@ module.exports = {
                 ]);
 
                 embed.setFooter({ text: 'Session data is protected against crashes and server restarts' });
-                
+
                 return interaction.editReply({ embeds: [embed] });
-                
+
             } else if (subcommand === 'save') {
                 await sessionRecovery.forceSave();
-                
+
                 const embed = new EmbedBuilder()
                     .setTitle('💾 Force Save Completed')
                     .setDescription('All active session states have been saved to the database')
                     .setColor(0x57F287)
                     .setTimestamp();
-                
+
                 return interaction.editReply({ embeds: [embed] });
             }
-            
+
         } catch (error) {
             console.error('💥 Error in /recovery command:', {
                 error: error.message,
@@ -116,12 +116,12 @@ module.exports = {
                 subcommand: interaction.options.getSubcommand(),
                 timestamp: new Date().toISOString()
             });
-            
+
             const errorEmbed = new EmbedBuilder()
                 .setTitle('❌ Error')
                 .setDescription('An error occurred while accessing the session recovery system')
                 .setColor(0xED4245);
-                
+
             try {
                 if (interaction.deferred) {
                     await interaction.editReply({ embeds: [errorEmbed] });

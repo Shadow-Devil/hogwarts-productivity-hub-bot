@@ -18,7 +18,7 @@ class DatabaseOptimizer {
             queryTimeouts: 0
         };
         this.monitoringIntervals = []; // Store interval IDs for cleanup
-        
+
         // Start monitoring
         this.startMonitoring();
     }
@@ -36,7 +36,7 @@ class DatabaseOptimizer {
     async executeTrackedQuery(operation, query, params = [], useCache = false, cacheType = 'default') {
         const startTime = Date.now();
         const queryId = this.generateQueryId(query, params);
-        
+
         try {
             // Try cache first if enabled
             if (useCache) {
@@ -53,17 +53,17 @@ class DatabaseOptimizer {
             }
             const client = await this.pool.connect();
             let result;
-            
+
             try {
                 // Set statement timeout for long-running queries
                 await client.query('SET statement_timeout = 30000'); // 30 seconds
                 result = await client.query(query, params);
-                
+
                 // Cache result if caching is enabled
                 if (useCache && result) {
                     queryCache.setByQuery(cacheType, query, params, result);
                 }
-                
+
             } finally {
                 client.release();
             }
@@ -74,12 +74,12 @@ class DatabaseOptimizer {
         } catch (error) {
             const endTime = Date.now();
             this.trackQueryPerformance(operation, startTime, endTime, false, error);
-            
+
             // Log slow or failed queries
             if (endTime - startTime > this.slowQueryThreshold) {
                 console.warn(`🐌 Slow query detected: ${operation} (${endTime - startTime}ms)`);
             }
-            
+
             throw error;
         }
     }
@@ -97,26 +97,26 @@ class DatabaseOptimizer {
 
         try {
             await client.query('BEGIN');
-            
+
             // Process in batches to avoid memory issues
             for (let i = 0; i < queries.length; i += batchSize) {
                 const batch = queries.slice(i, i + batchSize);
-                
+
                 for (const { query, params } of batch) {
                     const result = await client.query(query, params);
                     results.push(result);
                 }
-                
+
                 // Periodic commit for large batches
                 if (i + batchSize < queries.length && batch.length === batchSize) {
                     await client.query('COMMIT');
                     await client.query('BEGIN');
                 }
             }
-            
+
             await client.query('COMMIT');
             this.trackQueryPerformance(operation, startTime, Date.now(), false);
-            
+
             return results;
 
         } catch (error) {
@@ -235,19 +235,19 @@ class DatabaseOptimizer {
 
             // Enable query plan caching for repeated queries
             if (options.enablePlanCache !== false) {
-                await client.query("SET plan_cache_mode = 'force_generic_plan'");
+                await client.query('SET plan_cache_mode = \'force_generic_plan\'');
                 results.push('✅ Enabled query plan caching');
             }
 
             // Optimize work memory for complex queries
             if (options.optimizeWorkMem !== false) {
-                await client.query("SET work_mem = '16MB'");
+                await client.query('SET work_mem = \'16MB\'');
                 results.push('✅ Optimized work memory for complex queries');
             }
 
             // Enable parallel queries for aggregations
             if (options.enableParallel !== false) {
-                await client.query("SET max_parallel_workers_per_gather = 2");
+                await client.query('SET max_parallel_workers_per_gather = 2');
                 results.push('✅ Enabled parallel query execution');
             }
 
@@ -287,7 +287,7 @@ class DatabaseOptimizer {
                        ON users(discord_id) INCLUDE (monthly_points, monthly_hours, current_streak)`,
                 description: 'Covering index for user stats lookups'
             },
-            
+
             // Composite index for active voice sessions
             {
                 name: 'idx_vc_sessions_active_user',
@@ -295,7 +295,7 @@ class DatabaseOptimizer {
                        ON vc_sessions(discord_id, joined_at) WHERE left_at IS NULL`,
                 description: 'Partial index for active voice sessions'
             },
-            
+
             // BRIN index for time-series data
             {
                 name: 'idx_vc_sessions_date_brin',
@@ -303,7 +303,7 @@ class DatabaseOptimizer {
                        ON vc_sessions USING BRIN(date)`,
                 description: 'BRIN index for efficient date range queries'
             },
-            
+
             // Composite index for daily stats queries
             {
                 name: 'idx_daily_stats_user_date_points',
@@ -311,7 +311,7 @@ class DatabaseOptimizer {
                        ON daily_voice_stats(discord_id, date DESC) INCLUDE (points_earned)`,
                 description: 'Optimized index for daily statistics queries'
             },
-            
+
             // Task completion performance index
             {
                 name: 'idx_tasks_user_completion',
@@ -342,7 +342,7 @@ class DatabaseOptimizer {
      */
     trackQueryPerformance(operation, startTime, endTime, fromCache = false, error = null) {
         const executionTime = endTime - startTime;
-        
+
         // Update connection monitor
         this.connectionMonitor.totalQueries++;
         if (executionTime > this.slowQueryThreshold) {
@@ -475,12 +475,12 @@ class DatabaseOptimizer {
     logPerformanceSummary() {
         const analysis = this.analyzeQueryPerformance();
         const poolStats = this.getConnectionPoolStats();
-        
+
         console.log('📊 Database Performance Summary:');
         console.log(`   Queries: ${analysis.totalQueries} total, ${analysis.slowQueries} slow (${analysis.slowQueryRate}%)`);
         console.log(`   Cache: ${analysis.cacheEfficiency.hitRate} hit rate, ${analysis.cacheEfficiency.size} entries`);
         console.log(`   Pool: ${poolStats.totalConnections}/${poolStats.maxConnections} connections, ${poolStats.waitingClients} waiting`);
-        
+
         if (analysis.recommendations.length > 0) {
             console.log('   Recommendations:', analysis.recommendations.map(r => r.message).join('; '));
         }

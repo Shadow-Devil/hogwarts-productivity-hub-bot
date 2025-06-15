@@ -24,8 +24,8 @@ We use GitHub to host code, to track issues and feature requests, as well as acc
 ## Development Setup
 
 ### Prerequisites
-- Node.js v18+
-- PostgreSQL v12+
+- Node.js v22+
+- PostgreSQL v17.5+
 - Discord Developer Account
 
 ### Local Development
@@ -45,6 +45,9 @@ cp .env.example .env
 
 # Register commands
 npm run register
+
+# Run tests and linting
+npm run validate
 
 # Start development server
 npm run dev
@@ -144,6 +147,39 @@ We welcome feature requests! Please:
 - Describe your use case
 - Explain why this feature would be useful
 - Consider if this fits the project's scope
+
+## Code Quality Standards
+
+### Before Submitting
+Always run the validation suite before creating a pull request:
+```bash
+npm run validate  # Runs linting and tests
+```
+
+### Code Style
+- **Linting**: We use ESLint with 4-space indentation
+- **Testing**: Jest for unit and integration tests
+- **Coverage**: Aim for 90%+ test coverage on new code
+- **Documentation**: JSDoc comments for all exported functions
+
+### Development Scripts
+```bash
+npm run dev          # Development with nodemon
+npm run test         # Run Jest tests
+npm run test:watch   # Tests in watch mode
+npm run test:coverage # Coverage report
+npm run lint         # Check code style
+npm run lint:fix     # Auto-fix linting issues
+npm run validate     # Full validation (lint + test)
+```
+
+### Architecture Guidelines
+- **Services**: Centralize cross-command logic in `/services`
+- **Commands**: Keep command files focused on interaction handling
+- **Utils**: Pure functions for reusable operations
+- **Error Handling**: Distinguish user vs system errors
+- **Logging**: Use structured logging with winston
+- **Database**: Always use prepared statements and transactions
 
 ## Code of Conduct
 

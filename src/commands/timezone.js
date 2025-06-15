@@ -195,18 +195,18 @@ module.exports = {
             const discordId = interaction.user.id;
 
             switch (subcommand) {
-                case 'view':
-                    await module.exports.handleViewTimezone(interaction, discordId);
-                    break;
-                case 'set':
-                    const timezone = interaction.options.getString('timezone');
-                    await module.exports.handleSetTimezone(interaction, discordId, timezone);
-                    break;
-                case 'list':
-                    await module.exports.handleListTimezones(interaction);
-                    break;
-                default:
-                    await safeErrorReply(interaction, 'Unknown subcommand');
+            case 'view':
+                await module.exports.handleViewTimezone(interaction, discordId);
+                break;
+            case 'set':
+                const timezone = interaction.options.getString('timezone');
+                await module.exports.handleSetTimezone(interaction, discordId, timezone);
+                break;
+            case 'list':
+                await module.exports.handleListTimezones(interaction);
+                break;
+            default:
+                await safeErrorReply(interaction, 'Unknown subcommand');
             }
 
         } catch (error) {

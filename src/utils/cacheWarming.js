@@ -25,7 +25,7 @@ class CacheWarming {
         console.log('🔥 Starting cache warming strategy...');
 
         // Wait a bit for database and services to be ready
-        setTimeout(async () => {
+        setTimeout(async() => {
             try {
                 await this.performWarmUp();
             } catch (error) {
@@ -35,7 +35,7 @@ class CacheWarming {
         }, 3000); // Wait 3 seconds for services to be ready
 
         // Set up periodic warming every 30 minutes
-        this.warmingInterval = setInterval(async () => {
+        this.warmingInterval = setInterval(async() => {
             try {
                 await this.performWarmUp();
             } catch (error) {

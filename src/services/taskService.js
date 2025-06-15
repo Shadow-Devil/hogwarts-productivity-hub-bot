@@ -13,7 +13,7 @@ class TaskService extends BaseService {
     }
     // Add a new task for a user
     async addTask(discordId, title) {
-        return measureDatabase('addTask', async () => {
+        return measureDatabase('addTask', async() => {
             // Check daily task limit first
             const limitCheck = await dailyTaskManager.canUserAddTask(discordId);
             if (!limitCheck.canAdd) {
@@ -25,7 +25,7 @@ class TaskService extends BaseService {
                 };
             }
 
-            return executeWithResilience(async (client) => {
+            return executeWithResilience(async(client) => {
                 // First ensure user exists in database
                 await this.ensureUserExists(discordId, client);
 
@@ -54,8 +54,8 @@ class TaskService extends BaseService {
 
     // Remove a task by its number (position in user's task list)
     async removeTask(discordId, taskNumber) {
-        return measureDatabase('removeTask', async () => {
-            return executeWithResilience(async (client) => {
+        return measureDatabase('removeTask', async() => {
+            return executeWithResilience(async(client) => {
                 // Get all incomplete tasks for the user, ordered by creation date
                 const tasksResult = await client.query(
                     `SELECT id, title, created_at FROM tasks
@@ -115,7 +115,7 @@ class TaskService extends BaseService {
 
     // Mark a task as complete
     async completeTask(discordId, taskNumber, member = null) {
-        return measureDatabase('completeTask', async () => {
+        return measureDatabase('completeTask', async() => {
             // Check daily task limit first
             const limitCheck = await dailyTaskManager.canUserCompleteTask(discordId);
             if (!limitCheck.canAdd) {
@@ -127,7 +127,7 @@ class TaskService extends BaseService {
                 };
             }
 
-            return executeWithResilience(async (client) => {
+            return executeWithResilience(async(client) => {
                 // Get all incomplete tasks for the user, ordered by creation date
                 const tasksResult = await client.query(
                     `SELECT id, title, created_at FROM tasks
@@ -189,7 +189,7 @@ class TaskService extends BaseService {
 
     // Validate voice channel requirements for task completion
     async validateVoiceChannelRequirements(discordId) {
-        return executeWithResilience(async (client) => {
+        return executeWithResilience(async(client) => {
             // Check if user has an active voice session
             const activeSessionResult = await client.query(
                 `SELECT joined_at FROM vc_sessions
@@ -209,10 +209,10 @@ class TaskService extends BaseService {
         });
     }    // Validate task age requirements for task completion
     async validateTaskAge(taskId) {
-        return executeWithResilience(async (client) => {
+        return executeWithResilience(async(client) => {
             // Check task creation time
             const taskResult = await client.query(
-                `SELECT created_at FROM tasks WHERE id = $1`,
+                'SELECT created_at FROM tasks WHERE id = $1',
                 [taskId]
             );
 
@@ -270,7 +270,7 @@ class TaskService extends BaseService {
 
     // Get task statistics using optimized view (replaces getTaskStats)
     async getTaskStatsOptimized(discordId) {
-        return measureDatabase('getTaskStatsOptimized', async () => {
+        return measureDatabase('getTaskStatsOptimized', async() => {
             // Try cache first
             const cacheKey = `task_stats_optimized:${discordId}`;
             const cached = queryCache.get(cacheKey);
@@ -278,7 +278,7 @@ class TaskService extends BaseService {
                 return cached;
             }
 
-            return executeWithResilience(async (client) => {
+            return executeWithResilience(async(client) => {
                 // Single query using optimized view - replaces aggregation query
                 const result = await client.query(
                     'SELECT * FROM user_task_summary WHERE discord_id = $1',
@@ -316,7 +316,7 @@ class TaskService extends BaseService {
 
     // Get all user tasks with enhanced information using optimized approach
     async getUserTasksOptimized(discordId) {
-        return measureDatabase('getUserTasksOptimized', async () => {
+        return measureDatabase('getUserTasksOptimized', async() => {
             // Try cache first
             const cacheKey = `user_tasks_optimized:${discordId}`;
             const cached = queryCache.get(cacheKey);
@@ -324,7 +324,7 @@ class TaskService extends BaseService {
                 return cached;
             }
 
-            return executeWithResilience(async (client) => {
+            return executeWithResilience(async(client) => {
                 // Get tasks with additional user context
                 const result = await client.query(
                     `SELECT
@@ -353,7 +353,7 @@ class TaskService extends BaseService {
 
     // Fallback method for task statistics (used only if optimized version fails)
     async getTaskStatsOriginal(discordId) {
-        return measureDatabase('getTaskStats', async () => {
+        return measureDatabase('getTaskStats', async() => {
             // Try cache first
             const cacheKey = `task_stats:${discordId}`;
             const cached = queryCache.get(cacheKey);
@@ -361,7 +361,7 @@ class TaskService extends BaseService {
                 return cached;
             }
 
-            return executeWithResilience(async (client) => {
+            return executeWithResilience(async(client) => {
                 const result = await client.query(
                     `SELECT
                         COUNT(*) as total_tasks,
@@ -384,7 +384,7 @@ class TaskService extends BaseService {
 
     // Fallback method for user tasks (used only if optimized version fails)
     async getUserTasksOriginal(discordId) {
-        return measureDatabase('getUserTasks', async () => {
+        return measureDatabase('getUserTasks', async() => {
             // Try cache first
             const cacheKey = `user_tasks:${discordId}`;
             const cached = queryCache.get(cacheKey);
@@ -392,7 +392,7 @@ class TaskService extends BaseService {
                 return cached;
             }
 
-            return executeWithResilience(async (client) => {
+            return executeWithResilience(async(client) => {
                 const result = await client.query(
                     `SELECT id, title, is_complete, created_at, completed_at, points_awarded
                      FROM tasks

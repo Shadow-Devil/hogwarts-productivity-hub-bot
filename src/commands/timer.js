@@ -143,7 +143,7 @@ module.exports = {
                 console.warn('Could not add timezone info to timer:', error.message);
                 // Timer already started, timezone display is optional
             }
-            const workTimeout = setTimeout(async () => {
+            const workTimeout = setTimeout(async() => {
                 try {
                     const workCompleteEmbed = createTimerTemplate('work_complete', {
                         workTime: work,
@@ -160,7 +160,7 @@ module.exports = {
                     console.error('Error sending work over message:', err);
                 }
                 if (breakTime > 0) {
-                    const breakTimeout = setTimeout(async () => {
+                    const breakTimeout = setTimeout(async() => {
                         try {
                             const breakCompleteEmbed = createTimerTemplate('break_complete', {
                                 workTime: work,
@@ -181,7 +181,7 @@ module.exports = {
                     activeVoiceTimers.set(voiceChannelId, {
                         breakTimeout,
                         phase: 'break',
-                        endTime: new Date(Date.now() + breakTime * 60 * 1000),
+                        endTime: new Date(Date.now() + breakTime * 60 * 1000)
                     });
                 } else {
                     activeVoiceTimers.delete(voiceChannelId);
@@ -190,7 +190,7 @@ module.exports = {
             activeVoiceTimers.set(voiceChannelId, {
                 workTimeout,
                 phase: 'work',
-                endTime: new Date(Date.now() + work * 60 * 1000),
+                endTime: new Date(Date.now() + work * 60 * 1000)
             });
         } catch (error) {
             console.error('Error in /timer:', error);

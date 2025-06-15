@@ -52,6 +52,15 @@
 </td>
 <td width="50%">
 
+### 🌍 **Timezone-Aware System**
+- 🌐 **Global timezone support** - Works across all timezones
+- ⏰ **Localized time displays** - See times in your timezone
+- 🔄 **Smart daily resets** - Accurate reset timing per user
+- 📅 **Timezone-aware stats** - Proper daily/weekly tracking
+
+</td>
+<td width="50%">
+
 ### 🔧 **Advanced Monitoring**
 - ⚡ Real-time performance analytics
 - 🩺 Comprehensive health monitoring
@@ -201,7 +210,15 @@ npm run dev
 | `/stoptimer` | ⏹️ Stop active timer | `/stoptimer` |
 | `/time` | ⏱️ Check remaining time | `/time` |
 
-### **🏆 Points & Competition**
+### **� Timezone Management**
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/timezone set <timezone>` | 🌐 Set your timezone | `/timezone set America/New_York` |
+| `/timezone view` | 👁️ View your current timezone | `/timezone view` |
+| `/timezone list [region]` | 📋 List available timezones | `/timezone list America` |
+
+### **�🏆 Points & Competition**
 
 | Command | Description | What it shows |
 |---------|-------------|---------------|

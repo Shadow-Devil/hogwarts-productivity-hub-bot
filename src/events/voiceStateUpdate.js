@@ -25,7 +25,7 @@ let discordClient = null;
 
 // Enhanced smart cleanup with grace period handling
 // Runs every 15 minutes and processes both active sessions and grace period sessions
-setInterval(async () => {
+setInterval(async() => {
     if ((activeVoiceSessions.size === 0 && gracePeriodSessions.size === 0) || !discordClient) return;
 
     console.log(`🔍 Running enhanced session cleanup check (${activeVoiceSessions.size} active, ${gracePeriodSessions.size} grace period)...`);
@@ -149,7 +149,7 @@ setInterval(async () => {
 }, 900000); // Run every 15 minutes
 
 // Midnight crossover handler - runs every hour to check for sessions crossing midnight
-setInterval(async () => {
+setInterval(async() => {
     if (activeVoiceSessions.size === 0 || !discordClient) return;
 
     const now = dayjs();

@@ -147,13 +147,13 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName('voicescan')
-        .setDescription('Scan voice channels and start tracking for users already in voice'),
+        .setDescription('Scan voice channels and start tracking for users already in voice')
 
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-(async () => {
+(async() => {
     try {
         console.log('🚀 Discord Bot Command Registration');
         console.log('═'.repeat(50));
@@ -172,7 +172,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
         console.log('🔄 Sending registration request to Discord API...');
         await rest.put(
             Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-            { body: commands },
+            { body: commands }
         );
 
         console.log('✅ Successfully registered all slash commands!');

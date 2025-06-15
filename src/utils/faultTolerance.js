@@ -236,7 +236,7 @@ class HealthChecker {
 
     async runAllChecks() {
         const results = {};
-        const promises = Array.from(this.checks.keys()).map(async (name) => {
+        const promises = Array.from(this.checks.keys()).map(async(name) => {
             try {
                 results[name] = await this.runCheck(name);
             } catch (error) {

@@ -89,9 +89,9 @@ class DatabaseResilience {
         const timeout = options.timeout || 30000; // 30 seconds default
 
         try {
-            return await this.circuitBreakers.query.execute(async () => {
-                return await this.retryHandler.execute(async () => {
-                    return await TimeoutHandler.withTimeout((async () => {
+            return await this.circuitBreakers.query.execute(async() => {
+                return await this.retryHandler.execute(async() => {
+                    return await TimeoutHandler.withTimeout((async() => {
                         this.connectionMetrics.activeConnections++;
                         this.connectionMetrics.totalQueries++;
 
@@ -143,8 +143,8 @@ class DatabaseResilience {
         const timeout = options.timeout || 30000; // 30 seconds default
 
         try {
-            return await this.circuitBreakers.query.execute(async () => {
-                return await this.retryHandler.execute(async () => {
+            return await this.circuitBreakers.query.execute(async() => {
+                return await this.retryHandler.execute(async() => {
                     return await TimeoutHandler.withTimeout(
                         this._executeQueryInternal(text, params),
                         timeout,
@@ -180,8 +180,8 @@ class DatabaseResilience {
         const timeout = options.timeout || 60000; // 60 seconds for transactions
 
         try {
-            return await this.circuitBreakers.transaction.execute(async () => {
-                return await this.retryHandler.execute(async () => {
+            return await this.circuitBreakers.transaction.execute(async() => {
+                return await this.retryHandler.execute(async() => {
                     return await TimeoutHandler.withTimeout(
                         this._executeTransactionInternal(callback),
                         timeout,
@@ -217,7 +217,7 @@ class DatabaseResilience {
      * Get database connection with circuit breaker protection
      */
     async getConnection() {
-        return await this.circuitBreakers.connection.execute(async () => {
+        return await this.circuitBreakers.connection.execute(async() => {
             return await this.pool.connect();
         });
     }

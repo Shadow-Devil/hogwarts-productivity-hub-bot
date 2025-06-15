@@ -42,7 +42,7 @@ module.exports = {
 
             if (!stats) {
                 await interaction.editReply({
-                    content: '📊 You haven\'t joined any voice channels yet! Join a voice channel to start tracking your time.',
+                    content: '📊 You haven\'t joined any voice channels yet! Join a voice channel to start tracking your time.'
                 });
                 return;
             }

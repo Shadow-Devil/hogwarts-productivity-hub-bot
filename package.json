@@ -5,7 +5,15 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "register": "node src/register-commands.js"
+    "register": "node src/register-commands.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/ --max-warnings=0",
+    "lint:fix": "eslint src/ --fix",
+    "build": "echo 'Build step placeholder - add if needed'",
+    "validate": "npm run lint && npm run test",
+    "precommit": "npm run validate"
   },
   "keywords": [
     "discord",
@@ -26,6 +34,10 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "eslint": "^8.57.1",
+    "eslint-config-standard": "^17.1.0",
+    "jest": "^30.0.0",
     "nodemon": "^3.1.10"
   }
 }

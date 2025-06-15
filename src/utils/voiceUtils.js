@@ -7,7 +7,7 @@
  */
 async function getUserVoiceChannel(interaction, options = {}) {
     const { useForceFetch = false, timeout = 3000 } = options;
-    
+
     try {
         if (!interaction.guild) {
             console.warn('No guild found in interaction');

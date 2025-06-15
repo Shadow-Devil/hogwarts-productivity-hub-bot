@@ -35,7 +35,7 @@ class MaterializedViewManager {
         });
 
         // Set up periodic refresh
-        this.refreshInterval = setInterval(async () => {
+        this.refreshInterval = setInterval(async() => {
             try {
                 await this.refreshViews();
             } catch (error) {
@@ -64,8 +64,8 @@ class MaterializedViewManager {
         this.refreshStats.totalRefreshes++;
 
         try {
-            return await measureDatabase('refreshMaterializedViews', async () => {
-                return executeWithResilience(async (client) => {
+            return await measureDatabase('refreshMaterializedViews', async() => {
+                return executeWithResilience(async(client) => {
                     console.log('🔄 Refreshing materialized views...');
 
                     // Call the database function to refresh materialized views
@@ -149,8 +149,8 @@ class MaterializedViewManager {
     // Get view freshness information
     async getViewFreshness() {
         try {
-            return await measureDatabase('getViewFreshness', async () => {
-                return executeWithResilience(async (client) => {
+            return await measureDatabase('getViewFreshness', async() => {
+                return executeWithResilience(async(client) => {
                     // Check when materialized views were last updated
                     const result = await client.query(`
                         SELECT

@@ -46,7 +46,7 @@ class TimezoneService extends BaseService {
                 new winston.transports.File({
                     filename: 'logs/timezone-operations.log',
                     level: 'info',
-                    format: winston.format.json(),
+                    format: winston.format.json()
                 }),
                 new winston.transports.File({
                     filename: 'logs/timezone-errors.log',
