@@ -99,7 +99,6 @@ class BotHealthMonitor {
             }
 
             // Log memory status for better monitoring
-            const status = capacityPercent > 70 ? 'high' : capacityPercent > 50 ? 'moderate' : 'normal';
             const efficiency = heapUsagePercent > 98 ? 'very-high' : heapUsagePercent > 90 ? 'high' : 'normal';
 
             // Enhanced logging for memory insights
@@ -240,7 +239,7 @@ class BotHealthMonitor {
     }
 
     async handleHealthResults(healthSnapshot) {
-        const { overall, results } = healthSnapshot;
+        const { overall } = healthSnapshot;
 
         if (overall.status === 'critical') {
             console.error('🚨 CRITICAL HEALTH ISSUES DETECTED:');
@@ -267,7 +266,7 @@ class BotHealthMonitor {
                     this.databaseResilience.resetCircuitBreakers();
                     break;
 
-                case 'memory':
+                case 'memory': {
                     console.log('🧹 Attempting memory cleanup...');
                     if (global.gc) {
                         global.gc();
@@ -276,6 +275,7 @@ class BotHealthMonitor {
                     const queryCache = require('./queryCache');
                     queryCache.clear();
                     break;
+                }
 
                 case 'discord_client':
                     console.log('🔌 Discord client issue detected - monitoring for auto-reconnect...');

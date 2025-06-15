@@ -156,7 +156,6 @@ class DatabaseResilience {
             this.handleQueryError(error, text);
             throw error;
         } finally {
-            const duration = Date.now() - startTime;
             this.connectionMetrics.totalQueries++;
             performanceMonitor.trackDatabase('query', startTime, Date.now());
         }
@@ -193,7 +192,6 @@ class DatabaseResilience {
             this.handleTransactionError(error);
             throw error;
         } finally {
-            const duration = Date.now() - startTime;
             performanceMonitor.trackDatabase('transaction', startTime, Date.now());
         }
     }

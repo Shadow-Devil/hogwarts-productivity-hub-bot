@@ -35,7 +35,6 @@ class DatabaseOptimizer {
      */
     async executeTrackedQuery(operation, query, params = [], useCache = false, cacheType = 'default') {
         const startTime = Date.now();
-        const queryId = this.generateQueryId(query, params);
 
         try {
             // Try cache first if enabled

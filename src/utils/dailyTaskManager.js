@@ -5,7 +5,6 @@
 
 const { pool, executeWithResilience } = require('../models/db');
 const { measureDatabase } = require('./performanceMonitor');
-const queryCache = require('./queryCache');
 const CacheInvalidationService = require('./cacheInvalidationService');
 const dayjs = require('dayjs');
 
@@ -569,7 +568,6 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
                 }
 
                 const stats = result.rows[0];
-                const currentTasksAdded = stats.tasks_added;
                 const tasksCompleted = stats.tasks_completed;
                 const currentTotalActions = stats.total_task_actions;
 
