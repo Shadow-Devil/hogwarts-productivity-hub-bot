@@ -58,7 +58,7 @@ const pool = new Pool({
 
 // Monitor connection pool
 let connectionCount = 0;
-pool.on('connect', (client) => {
+pool.on('connect', (_client) => {
     connectionCount++;
     // Only log the first few connections to avoid spam
     if (connectionCount <= 3) {
@@ -69,11 +69,11 @@ pool.on('connect', (client) => {
     performanceMonitor.updateActiveConnections(pool.totalCount);
 });
 
-pool.on('acquire', (client) => {
+pool.on('acquire', (_client) => {
     performanceMonitor.updateActiveConnections(pool.totalCount);
 });
 
-pool.on('release', (client) => {
+pool.on('release', (_client) => {
     performanceMonitor.updateActiveConnections(pool.totalCount);
 });
 
@@ -546,7 +546,6 @@ function calculatePointsForHours(startingHours, hoursToCalculate) {
 async function checkAndPerformMonthlyReset(discordId) {
     const client = await pool.connect();
     try {
-        const currentYearMonth = dayjs().format('YYYY-MM');
         const firstOfMonth = dayjs().startOf('month').format('YYYY-MM-DD');
 
         // Get user data
@@ -607,7 +606,6 @@ async function checkAndPerformMonthlyReset(discordId) {
 async function checkAndPerformHouseMonthlyReset() {
     const client = await pool.connect();
     try {
-        const currentYearMonth = dayjs().format('YYYY-MM');
         const firstOfMonth = dayjs().startOf('month').format('YYYY-MM-DD');
 
         // Get houses data
@@ -713,17 +711,15 @@ async function getHouseLeaderboard(type = 'monthly') {
         // Check and perform monthly reset for houses if needed
         await checkAndPerformHouseMonthlyReset();
 
-        let query, pointsColumn;
+        let query;
 
         if (type === 'monthly') {
-            pointsColumn = 'monthly_points';
             query = `
                 SELECT name, monthly_points as points
                 FROM houses
                 ORDER BY monthly_points DESC, name ASC
             `;
         } else {
-            pointsColumn = 'all_time_points';
             query = `
                 SELECT name, all_time_points as points
                 FROM houses
@@ -745,10 +741,9 @@ async function getHouseLeaderboard(type = 'monthly') {
 async function getHouseChampions(type = 'monthly') {
     const client = await pool.connect();
     try {
-        let query, pointsColumn;
+        let query;
 
         if (type === 'monthly') {
-            pointsColumn = 'monthly_points';
             query = `
                 WITH ranked_users AS (
                     SELECT
@@ -766,7 +761,6 @@ async function getHouseChampions(type = 'monthly') {
                 ORDER BY points DESC, username ASC
             `;
         } else {
-            pointsColumn = 'all_time_points';
             query = `
                 WITH ranked_users AS (
                     SELECT

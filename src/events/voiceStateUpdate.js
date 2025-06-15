@@ -59,12 +59,10 @@ setInterval(async() => {
                 }
             } else {
                 // Check if user has returned to voice during grace period
-                let userBackInVoice = false;
-                for (const [guildId, guild] of discordClient.guilds.cache) {
+                for (const [_guildId, guild] of discordClient.guilds.cache) {
                     try {
                         const voiceState = guild.voiceStates.cache.get(userId);
                         if (voiceState?.channel) {
-                            userBackInVoice = true;
                             console.log(`🔄 User ${userId} returned during grace period - resuming session`);
 
                             // Update session data and remove from grace period
@@ -102,7 +100,7 @@ setInterval(async() => {
                 let userStillInVoice = false;
 
                 // Check all guilds to see if user is actually in a voice channel
-                for (const [guildId, guild] of discordClient.guilds.cache) {
+                for (const [_guildId, guild] of discordClient.guilds.cache) {
                     try {
                         // Check voice states cache first (most efficient)
                         const voiceState = guild.voiceStates.cache.get(userId);
@@ -166,7 +164,6 @@ setInterval(async() => {
         for (const [userId, sessionData] of activeVoiceSessions.entries()) {
             try {
                 // Check if session started yesterday (before midnight)
-                const sessionStartHour = dayjs(sessionData.joinTime).hour();
                 const sessionStartDay = dayjs(sessionData.joinTime).format('YYYY-MM-DD');
                 const today = dayjs().format('YYYY-MM-DD');
 
@@ -176,7 +173,7 @@ setInterval(async() => {
 
                     // Find the user's member object for notifications
                     let member = null;
-                    for (const [guildId, guild] of discordClient.guilds.cache) {
+                    for (const [_guildId, guild] of discordClient.guilds.cache) {
                         try {
                             member = await guild.members.fetch(userId);
                             if (member) break;
@@ -268,7 +265,7 @@ async function manualCleanup() {
 
         try {
             // Check all guilds to see if user is actually in a voice channel
-            for (const [guildId, guild] of discordClient.guilds.cache) {
+            for (const [_guildId, guild] of discordClient.guilds.cache) {
                 const voiceState = guild.voiceStates.cache.get(userId);
                 if (voiceState?.channel) {
                     userStillInVoice = true;
@@ -345,9 +342,8 @@ module.exports = {
                         lastSeen: new Date()
                     });
                 }
-            }
-            // User left a voice channel
-            else if (oldChannel && !newChannel) {
+            } else if (oldChannel && !newChannel) {
+                // User left a voice channel
                 const sessionData = activeVoiceSessions.get(userId);
 
                 if (sessionData) {
@@ -361,9 +357,8 @@ module.exports = {
                 } else {
                     console.log(`⚠️ ${username} left ${oldChannel.name} but no active session found`);
                 }
-            }
-            // User switched voice channels
-            else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
+            } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
+                // User switched voice channels
                 console.log(`🔄 ${username} switched from ${oldChannel.name} to ${newChannel.name}`);
 
                 // For channel switches, end the old session and start new one immediately (no grace period needed)
