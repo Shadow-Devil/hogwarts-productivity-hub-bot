@@ -19,7 +19,7 @@ module.exports = {
             }
 
             const discordId = interaction.user.id;
-            const tasks = await taskService.getUserTasks(discordId);
+            const tasks = await taskService.getUserTasksOptimized(discordId);
 
             if (tasks.length === 0) {
                 const embed = createTaskTemplate(interaction.user, [], {
@@ -42,6 +42,9 @@ module.exports = {
             const totalTaskPoints = tasks.reduce((sum, task) => sum + (task.points_awarded || 0), 0);
             const completionRate = totalTasks > 0 ? (totalCompleted / totalTasks) * 100 : 0;
 
+            // Get daily task limit information
+            const dailyStats = await taskService.getDailyTaskStats(discordId);
+
             // Create enhanced task display using our template with all new features
             const embed = createTaskTemplate(interaction.user, {
                 incompleteTasks,
@@ -52,25 +55,27 @@ module.exports = {
                     totalPending,
                     totalTaskPoints,
                     completionRate
-                }
+                },
+                dailyStats
             }, {
                 showProgress: true,
                 includeRecentCompleted: true,
                 useEnhancedLayout: true,
                 useTableFormat: true,
-                maxRecentCompleted: 5
+                maxRecentCompleted: 5,
+                showDailyLimit: true
             });
 
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error in /viewtasks:', error);
-            
+
             const embed = createErrorTemplate(
                 'Failed to Load Tasks',
                 'An error occurred while fetching your tasks. Please try again in a moment.',
                 { helpText: 'If this problem persists, contact support' }
             );
-            
+
             await safeErrorReply(interaction, embed);
         }
     }

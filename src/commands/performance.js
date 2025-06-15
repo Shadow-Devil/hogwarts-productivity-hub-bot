@@ -184,7 +184,7 @@ function createOverviewEmbed(summary, bottlenecks, wsLatency, apiLatency, cacheS
         }]);
     }
 
-    embed.setFooter({ text: 'Use /performance view:[type] for detailed views • Updates in real-time' });
+    embed.setFooter({ text: 'Use /performance view:[type] for detailed views | Updates in real-time' });
 
     return embed;
 }
@@ -205,15 +205,23 @@ function createMemoryView(summary) {
     const heapUsagePercent = ((memUsage.heapUsed / memUsage.heapTotal) * 100).toFixed(1);
     const capacityPercent = ((memUsage.heapUsed / heapStats.heap_size_limit) * 100).toFixed(2);
 
-    // Determine status
+    // Determine status based on V8 capacity, not current heap allocation
     let statusIcon = '🟢';
     let statusText = 'Healthy';
-    if (parseFloat(capacityPercent) > 80) {
+    let statusExplanation = 'Efficient memory usage';
+
+    if (parseFloat(capacityPercent) > 85) {
         statusIcon = '🔴';
-        statusText = 'High Usage';
-    } else if (parseFloat(capacityPercent) > 60) {
+        statusText = 'High Capacity';
+        statusExplanation = 'Approaching V8 memory limit';
+    } else if (parseFloat(capacityPercent) > 70) {
         statusIcon = '🟡';
-        statusText = 'Moderate Usage';
+        statusText = 'Moderate Capacity';
+        statusExplanation = 'Higher than typical usage';
+    } else if (parseFloat(heapUsagePercent) > 95) {
+        statusIcon = '🟡';
+        statusText = 'Efficient';
+        statusExplanation = 'High heap efficiency (normal)';
     }
 
     const embed = new EmbedBuilder()
@@ -221,29 +229,29 @@ function createMemoryView(summary) {
         .setColor(statusIcon === '🟢' ? '#00ff00' : statusIcon === '🟡' ? '#ffff00' : '#ff0000')
         .setTimestamp();
 
-    // Memory overview stats
+    // Memory overview stats with better context
     const memoryStats = createStatsCard('Memory Overview', {
-        'Current Usage': `${memUsage.heapUsed}MB`,
-        'Available': `${availableHeapMB}MB`,
-        'Capacity Used': `${capacityPercent}%`,
-        'Status': `${statusIcon} ${statusText}`
+        'Heap Efficiency': `${heapUsagePercent}%`,
+        'V8 Capacity': `${capacityPercent}%`,
+        'Available Space': `${availableHeapMB}MB`,
+        'Status': `${statusIcon} ${statusExplanation}`
     }, {
         showBigNumbers: true,
         emphasizeFirst: true
     });
 
-    embed.setDescription(memoryStats);
+    embed.setDescription(`**${statusText}** - ${statusExplanation}\n\n${memoryStats}`);
 
-    // Memory breakdown table
+    // Memory breakdown table with better context
     const memoryData = [
-        ['Heap Used', `${memUsage.heapUsed}MB`, `${heapUsagePercent}%`],
-        ['Heap Total', `${memUsage.heapTotal}MB`, '—'],
-        ['RSS Memory', `${memUsage.rss}MB`, 'Process Total'],
-        ['Available', `${availableHeapMB}MB`, 'Remaining'],
-        ['Node.js Limit', `${maxHeapMB}MB`, 'Maximum']
+        ['Heap Used', `${memUsage.heapUsed}MB`, `${heapUsagePercent}% (efficiency)`],
+        ['Heap Total', `${memUsage.heapTotal}MB`, 'Current allocation'],
+        ['V8 Capacity', `${capacityPercent}%`, `of ${maxHeapMB}MB limit`],
+        ['RSS Memory', `${memUsage.rss}MB`, 'Process total'],
+        ['Available', `${availableHeapMB}MB`, 'Can grow to']
     ];
 
-    const memoryTable = formatDataTable(memoryData, [15, 12, 15]);
+    const memoryTable = formatDataTable(memoryData, [15, 12, 18]);
 
     embed.addFields([
         {
@@ -287,7 +295,18 @@ function createMemoryView(summary) {
         }]);
     }
 
-    embed.setFooter({ text: `Node.js Memory Limit: ${maxHeapMB}MB • Memory stats updated every 3 seconds` });
+    // Add informational note about heap efficiency
+    if (parseFloat(heapUsagePercent) > 90 && parseFloat(capacityPercent) < 50) {
+        embed.addFields([{
+            name: '💡 Memory Insight',
+            value: 'High heap efficiency (>90%) is **normal and healthy** for Node.js applications. V8 automatically manages heap size and will expand when needed.',
+            inline: false
+        }]);
+    }
+
+    embed.setFooter({
+        text: `V8 Limit: ${maxHeapMB}MB | Heap efficiency shows how well allocated memory is used`
+    });
 
     return embed;
 }
@@ -390,7 +409,7 @@ function createCacheView(cacheStats) {
         }]);
     }
 
-    embed.setFooter({ text: 'Cache automatically cleans expired entries every minute' });
+    embed.setFooter({ text: 'Cache auto-cleans expired entries every 3 minutes' });
 
     return embed;
 }
@@ -458,7 +477,7 @@ function createDatabaseView(summary, optimizationReport) {
  * Create system health view
  */
 function createHealthView(healthReport, wsLatency, apiLatency) {
-    const overallStatus = healthReport && healthReport.status ? healthReport.status : 'unknown';
+    const overallStatus = healthReport && healthReport.current ? healthReport.current.status : (healthReport && healthReport.status ? healthReport.status : 'unknown');
     const statusIcon = overallStatus === 'healthy' ? '🟢' : overallStatus === 'degraded' ? '🟡' : '🔴';
 
     const embed = new EmbedBuilder()

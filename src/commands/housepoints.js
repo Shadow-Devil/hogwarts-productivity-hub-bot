@@ -50,7 +50,7 @@ module.exports = {
 };
 
 async function showHouseLeaderboard(interaction, type) {
-    const houseLeaderboard = await voiceService.getHouseLeaderboard(type);
+    const houseLeaderboard = await voiceService.getHouseLeaderboardOptimized(type);
 
     if (!houseLeaderboard || houseLeaderboard.length === 0) {
         const embed = createErrorTemplate(

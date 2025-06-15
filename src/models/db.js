@@ -194,6 +194,34 @@ async function runMigrations(client) {
             }
         }
 
+        // Migration 5: Create daily_task_stats table for task limits
+        try {
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS daily_task_stats (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    discord_id VARCHAR(255) NOT NULL,
+                    date DATE NOT NULL,
+                    tasks_added INTEGER DEFAULT 0,
+                    tasks_completed INTEGER DEFAULT 0,
+                    total_task_actions INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(discord_id, date)
+                )
+            `);
+            console.log('✅ Created daily_task_stats table for daily task limits');
+
+            // Create indexes
+            await client.query(`
+                CREATE INDEX IF NOT EXISTS idx_daily_task_stats_discord_id_date ON daily_task_stats(discord_id, date);
+                CREATE INDEX IF NOT EXISTS idx_daily_task_stats_date ON daily_task_stats(date);
+            `);
+            console.log('✅ Created indexes for daily_task_stats table');
+        } catch (error) {
+            console.log('ℹ️  daily_task_stats table already exists or other issue:', error.message);
+        }
+
         console.log('✅ Database migrations completed');
     } catch (error) {
         console.error('❌ Error running migrations:', error);
@@ -270,10 +298,17 @@ async function initializeDatabase() {
                 total_minutes INTEGER DEFAULT 0,
                 session_count INTEGER DEFAULT 0,
                 points_earned INTEGER DEFAULT 0,
+                archived BOOLEAN DEFAULT false,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(discord_id, date)
             )
+        `);
+
+        // Add archived column if it doesn't exist (for existing databases)
+        await client.query(`
+            ALTER TABLE daily_voice_stats
+            ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false
         `);
 
         // Monthly voice summary for tracking monthly totals
@@ -369,6 +404,28 @@ async function initializeDatabase() {
             CREATE INDEX IF NOT EXISTS idx_house_monthly_summary_year_month ON house_monthly_summary(year_month);
         `);
 
+        // Daily task stats table for tracking daily task limits (10 per day)
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS daily_task_stats (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                discord_id VARCHAR(255) NOT NULL,
+                date DATE NOT NULL,
+                tasks_added INTEGER DEFAULT 0,
+                tasks_completed INTEGER DEFAULT 0,
+                total_task_actions INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(discord_id, date)
+            )
+        `);
+
+        // Create performance indexes for daily_task_stats
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_daily_task_stats_discord_id_date ON daily_task_stats(discord_id, date);
+            CREATE INDEX IF NOT EXISTS idx_daily_task_stats_date ON daily_task_stats(date);
+        `);
+
         console.log('✅ Database tables initialized successfully');
     } catch (error) {
         console.error('❌ Error initializing database:', error);
@@ -425,22 +482,23 @@ async function processBatch() {
 setInterval(processBatch, BATCH_TIMEOUT);
 
 // Calculate points based on hours spent
-// First hour: 5 points, subsequent hours: 2 points each
-function calculatePointsForHours(totalHoursThisMonth, newHours) {
+// First hour daily: 5 points, subsequent hours: 2 points each (daily cumulative system)
+// NOTE: Rounding is handled in the voice service, this function receives already-rounded hours
+function calculatePointsForHours(startingHours, hoursToCalculate) {
     let points = 0;
-    let remainingHours = newHours;
-    let currentTotal = totalHoursThisMonth;
+    let remainingHours = hoursToCalculate;
+    let currentTotal = startingHours;
 
     while (remainingHours > 0) {
         if (currentTotal < 1) {
             // First hour territory (5 points per hour)
-            const firstHourPortion = Math.min(remainingHours, 1 - currentTotal);
-            points += Math.floor(firstHourPortion * 5);
+            const firstHourPortion = Math.min(remainingHours, 1 - Math.floor(currentTotal));
+            points += firstHourPortion * 5;
             remainingHours -= firstHourPortion;
             currentTotal += firstHourPortion;
         } else {
             // Subsequent hours territory (2 points per hour)
-            points += Math.floor(remainingHours * 2);
+            points += remainingHours * 2;
             break;
         }
     }
@@ -469,13 +527,9 @@ async function checkAndPerformMonthlyReset(discordId) {
 
         // Check if we need to perform monthly reset
         if (!lastReset || lastReset.isBefore(currentMonth)) {
-            console.log(`🔄 Performing monthly reset for user ${discordId}`);
+            console.log(`🔄 Performing monthly reset for user ${discordId} (all-time stats now continuously updated)`);
 
-            // Add current monthly stats to all-time
-            const newAllTimePoints = user.all_time_points + user.monthly_points;
-            const newAllTimeHours = parseFloat(user.all_time_hours) + parseFloat(user.monthly_hours);
-
-            // Store the monthly summary before reset
+            // Store the monthly summary before reset (for historical tracking)
             if (user.monthly_hours > 0 || user.monthly_points > 0) {
                 const lastMonth = lastReset ? lastReset.format('YYYY-MM') : dayjs().subtract(1, 'month').format('YYYY-MM');
                 await client.query(`
@@ -489,17 +543,15 @@ async function checkAndPerformMonthlyReset(discordId) {
                 `, [user.id, discordId, lastMonth, user.monthly_hours, user.monthly_points]);
             }
 
-            // Reset monthly stats and update all-time
+            // Reset monthly stats only (all-time stats are continuously updated now)
             await client.query(`
                 UPDATE users SET
                     monthly_points = 0,
                     monthly_hours = 0,
-                    all_time_points = $1,
-                    all_time_hours = $2,
-                    last_monthly_reset = $3,
+                    last_monthly_reset = $1,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE discord_id = $4
-            `, [newAllTimePoints, newAllTimeHours, firstOfMonth, discordId]);
+                WHERE discord_id = $2
+            `, [firstOfMonth, discordId]);
 
             // Use smart cache invalidation for user data
             const queryCache = require('../utils/queryCache');
@@ -531,12 +583,9 @@ async function checkAndPerformHouseMonthlyReset() {
 
             // Check if we need to perform monthly reset for this house
             if (!lastReset || lastReset.isBefore(currentMonth)) {
-                console.log(`🏠 Performing monthly reset for house ${house.name}`);
+                console.log(`🏠 Performing monthly reset for house ${house.name} (all-time stats now continuously updated)`);
 
-                // Add current monthly stats to all-time
-                const newAllTimePoints = house.all_time_points + house.monthly_points;
-
-                // Store the monthly summary before reset
+                // Store the monthly summary before reset (for historical tracking)
                 if (house.monthly_points > 0) {
                     const lastMonth = lastReset ? lastReset.format('YYYY-MM') : dayjs().subtract(1, 'month').format('YYYY-MM');
                     await client.query(`
@@ -549,15 +598,14 @@ async function checkAndPerformHouseMonthlyReset() {
                     `, [house.id, house.name, lastMonth, house.monthly_points]);
                 }
 
-                // Reset monthly stats and update all-time
+                // Reset monthly stats only (all-time stats are continuously updated now)
                 await client.query(`
                     UPDATE houses SET
                         monthly_points = 0,
-                        all_time_points = $1,
-                        last_monthly_reset = $2,
+                        last_monthly_reset = $1,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE id = $3
-                `, [newAllTimePoints, firstOfMonth, house.id]);
+                    WHERE id = $2
+                `, [firstOfMonth, house.id]);
 
                 console.log(`✅ Monthly reset completed for house ${house.name}`);
             }
@@ -602,21 +650,22 @@ async function updateHousePoints(houseName, pointsEarned) {
         // Check and perform monthly reset for houses if needed
         await checkAndPerformHouseMonthlyReset();
 
-        // Update house points atomically
+        // Update house points atomically (continuous all-time update system)
         const result = await client.query(`
             UPDATE houses SET
                 monthly_points = monthly_points + $1,
+                all_time_points = all_time_points + $1,
                 total_points = total_points + $1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE name = $2
-            RETURNING monthly_points, total_points
+            RETURNING monthly_points, all_time_points, total_points
         `, [pointsEarned, houseName]);
 
         if (result.rows.length === 0) {
             throw new Error(`House ${houseName} not found`);
         }
 
-        console.log(`🏠 Added ${pointsEarned} points to ${houseName} (Monthly: ${result.rows[0].monthly_points}, Total: ${result.rows[0].total_points})`);
+        console.log(`🏠 Added ${pointsEarned} points to ${houseName} (Monthly: ${result.rows[0].monthly_points}, All-time: ${result.rows[0].all_time_points}, Total: ${result.rows[0].total_points})`);
         return result.rows[0];
     });
 }

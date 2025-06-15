@@ -27,31 +27,31 @@ module.exports = {
 
             // Use the reliable voice channel detection utility
             const voiceChannel = await getUserVoiceChannel(interaction);
-            
+
             if (!voiceChannel) {
                 const embed = createErrorTemplate(
                     `${StatusEmojis.ERROR} Voice Channel Required`,
                     'You must be in a voice channel to start a Pomodoro timer and track your productivity.',
-                    { 
+                    {
                         helpText: 'Join any voice channel first, then try again',
                         additionalInfo: 'Timers help you maintain focus during productive voice sessions.'
                     }
                 );
-                
+
                 return safeReply(interaction, { embeds: [embed] });
             }
             const voiceChannelId = voiceChannel.id;
             // Enforce: only one timer per voice channel
             if (activeVoiceTimers.has(voiceChannelId)) {
                 const existingTimer = activeVoiceTimers.get(voiceChannelId);
-                
+
                 // Safety check for timer data integrity
                 if (!existingTimer || !existingTimer.endTime || !existingTimer.phase) {
                     console.warn(`Corrupted timer data found for channel ${voiceChannelId}, cleaning up...`);
                     activeVoiceTimers.delete(voiceChannelId);
                 } else {
                     const timeRemaining = Math.ceil((existingTimer.endTime - new Date()) / 60000);
-                    
+
                     // If timer has already expired, clean it up
                     if (timeRemaining <= 0) {
                         console.log(`Expired timer found for channel ${voiceChannelId}, cleaning up...`);
@@ -61,14 +61,14 @@ module.exports = {
                     } else {
                         // Timer is valid and active, reject the new timer request
                         const embed = createErrorTemplate(
-                            `${StatusEmojis.WARNING} Timer Already Running`,
+                            'Timer Already Running',
                             `A Pomodoro timer is already active in <#${voiceChannelId}>! Only one timer per voice channel is allowed.`,
-                            { 
+                            {
                                 helpText: 'Use `/stoptimer` to stop the current timer first',
                                 additionalInfo: `**Current Phase:** ${existingTimer.phase.toUpperCase()}\n**Time Remaining:** ${timeRemaining} minutes`
                             }
                         );
-                        
+
                         if (!interaction.replied && !interaction.deferred) {
                             return safeReply(interaction, { embeds: [embed] });
                         }
@@ -80,14 +80,14 @@ module.exports = {
             const breakTime = interaction.options.getInteger('break') || 0;
             if (work < 20 || (breakTime > 0 && breakTime < 5)) {
                 const embed = createErrorTemplate(
-                    `${StatusEmojis.WARNING} Invalid Timer Values`,
+                    'Invalid Timer Values',
                     'Please ensure your timer values meet the minimum requirements for effective productivity sessions.',
-                    { 
+                    {
                         helpText: 'Try again with valid values',
-                        additionalInfo: '**Minimum Requirements:**\n🕒 Work Time: **20 minutes**\n☕ Break Time: **5 minutes** (if specified)'
+                        additionalInfo: '**Minimum Requirements:** Work Time: **20 minutes** • Break Time: **5 minutes** (if specified)'
                     }
                 );
-                
+
                 return safeReply(interaction, { embeds: [embed] });
             }
             const embed = createTimerTemplate('start', {
@@ -100,7 +100,7 @@ module.exports = {
                 includeMotivation: true,
                 style: 'pomodoro'
             });
-            
+
             await safeReply(interaction, { embeds: [embed] });
             const workTimeout = setTimeout(async () => {
                 try {
@@ -110,8 +110,8 @@ module.exports = {
                         voiceChannel: voiceChannel,
                         phase: 'work_complete'
                     });
-                    
-                    await interaction.followUp({ 
+
+                    await interaction.followUp({
                         content: `<@${interaction.user.id}>`,
                         embeds: [workCompleteEmbed]
                     });
@@ -127,8 +127,8 @@ module.exports = {
                                 voiceChannel: voiceChannel,
                                 phase: 'break_complete'
                             });
-                            
-                            await interaction.followUp({ 
+
+                            await interaction.followUp({
                                 content: `<@${interaction.user.id}>`,
                                 embeds: [breakCompleteEmbed]
                             });
@@ -153,13 +153,13 @@ module.exports = {
             });
         } catch (error) {
             console.error('Error in /timer:', error);
-            
+
             const embed = createErrorTemplate(
                 'Timer Creation Failed',
                 'An unexpected error occurred while starting your Pomodoro timer. Please try again in a moment.',
                 { helpText: 'If this problem persists, contact support' }
             );
-            
+
             await safeErrorReply(interaction, embed);
         }
     }

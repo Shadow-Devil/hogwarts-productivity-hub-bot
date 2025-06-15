@@ -2,14 +2,15 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js'
 const voiceService = require('../services/voiceService');
 const taskService = require('../services/taskService');
 const dayjs = require('dayjs');
-const { createStatsTemplate, createSuccessTemplate } = require('../utils/embedTemplates');
-const { BotColors, createProgressBar, formatDataGrid, formatDataTable, createStatsCard, createProgressSection, createAchievementBadge, formatUserStatus } = require('../utils/visualHelpers');
+const { BotColors } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
+const { formatDailyLimitStatus } = require('../utils/dailyLimitUtils');
+const { formatHours } = require('../utils/timeUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('stats')
-        .setDescription('View your voice channel time and streak statistics'),
+        .setDescription('View your productivity statistics'),
     async execute(interaction) {
         try {
             // Immediately defer to prevent timeout
@@ -20,8 +21,17 @@ module.exports = {
             }
 
             const discordId = interaction.user.id;
-            const stats = await voiceService.getUserStats(discordId);
-            const taskStats = await taskService.getTaskStats(discordId);
+            const stats = await voiceService.getUserStatsOptimized(discordId);
+            const taskStats = await taskService.getTaskStatsOptimized(discordId);
+
+            // Fetch user tasks with error handling
+            let userTasks = [];
+            try {
+                userTasks = await taskService.getUserTasksOptimized(discordId);
+            } catch (error) {
+                console.warn('⚠️ Failed to fetch user tasks for stats:', error.message);
+                // Continue without tasks - will show fallback message
+            }
 
             if (!stats) {
                 await interaction.editReply({
@@ -32,194 +42,143 @@ module.exports = {
 
             const { user, today, thisMonth, allTime } = stats;
 
-            // Enhanced visual formatting helpers
-            function formatTime(minutes) {
-                const hours = Math.floor(minutes / 60);
-                const mins = minutes % 60;
-                
-                if (hours > 0) {
-                    return `${hours}h ${mins}m`;
-                } else {
-                    const decimalHours = (minutes / 60).toFixed(1);
-                    return `${decimalHours}h`;
-                }
-            }
+            // Use centralized formatHours utility (no need for local function)            // Create minimal, clean embed
+            const embed = new EmbedBuilder()
+                .setTitle('📊 Your Stats')
+                .setColor(BotColors.PRIMARY)
+                .setThumbnail(interaction.user.displayAvatarURL());
 
-            function formatHours(hours) {
-                return `${hours.toFixed(1)}h`;
-            }
-
-            // Create enhanced stats embed using new visual system
-            const embed = createStatsTemplate(interaction.user, stats, { 
-                showThumbnail: true, 
-                includeFooter: true,
-                useEnhancedLayout: true
-            });
-
-            // Status indicator based on current streak
-            let streakStatus = '🆕';
-            let streakColor = BotColors.INFO;
-            if (user.current_streak >= 30) {
-                streakStatus = '🔥';
-                streakColor = BotColors.PREMIUM;
-            } else if (user.current_streak >= 7) {
-                streakStatus = '⚡';
-                streakColor = BotColors.SUCCESS;
+            // Personalized greeting based on streak
+            let greeting = '';
+            if (user.current_streak >= 7) {
+                greeting = `🔥 Hey ${user.username}! You're on a ${user.current_streak}-day streak!`;
             } else if (user.current_streak > 0) {
-                streakStatus = '💪';
-                streakColor = BotColors.WARNING;
-            }
-
-            embed.setColor(streakColor);
-
-            // Enhanced streak display with bigger numbers for main stats
-            const streakDisplay = user.current_streak > 0 ? 
-                `# ${user.current_streak}\n### ${streakStatus} Day Streak\n**Personal Best:** ${user.longest_streak} days` :
-                `### 💤 No Active Streak\n**Personal Best:** ${user.longest_streak} days`;
-
-            embed.addFields([
-                {
-                    name: '🔥 Productivity Streak',
-                    value: streakDisplay,
-                    inline: false
-                },
-                {
-                    name: '📅 Last Active',
-                    value: user.last_vc_date ? 
-                        `📍 ${dayjs(user.last_vc_date).format('MMM DD, YYYY')} (${dayjs(user.last_vc_date).fromNow()})` : 
-                        '❓ Never recorded',
-                    inline: false
-                }
-            ]);
-
-            // Today's progress with enhanced visual progress section
-            const todayTarget = 60; // 1 hour target
-            const progressSection = createProgressSection(
-                'Daily Goal Progress',
-                today.minutes,
-                todayTarget,
-                {
-                    emoji: '🎯',
-                    style: 'detailed',
-                    showPercentage: true,
-                    barLength: 15
-                }
-            );
-            
-            // Today's stats with table format for better space utilization
-            const todayStatsData = [
-                ['Active Time', formatTime(today.minutes)],
-                ['Sessions', `${today.sessions} session${today.sessions !== 1 ? 's' : ''}`],
-                ['Points Earned', `${today.points} pts`]
-            ];
-
-            embed.addFields([
-                {
-                    name: '📍 Today\'s Performance',
-                    value: progressSection + '\n\n' + formatDataTable(todayStatsData, [12, 10]),
-                    inline: true
-                },
-                {
-                    name: '📅 This Month',
-                    value: formatDataTable([
-                        ['Total Time', formatHours(thisMonth.hours)],
-                        ['Sessions', `${thisMonth.sessions}`],
-                        ['Points', `${thisMonth.points} pts`],
-                        ['Daily Avg', `${(thisMonth.hours / new Date().getDate()).toFixed(1)}h`]
-                    ], [12, 8]),
-                    inline: true
-                },
-                {
-                    name: '🌟 All-Time Stats',
-                    value: formatDataTable([
-                        ['Lifetime Hours', formatHours(allTime.hours)],
-                        ['Total Sessions', `${allTime.sessions}`],
-                        ['Total Points', `${allTime.points}`],
-                        ['Current Level', `${Math.floor(allTime.points / 100) + 1}`]
-                    ], [15, 8]),
-                    inline: true
-                }
-            ]);
-
-            // Task statistics with enhanced table formatting
-            const taskStatsData = [
-                ['Total Tasks', `${taskStats.total_tasks}`],
-                ['Completed', `${taskStats.completed_tasks}`],
-                ['Pending', `${taskStats.pending_tasks}`],
-                ['Task Points', `${taskStats.total_task_points}`]
-            ];
-
-            embed.addFields([{
-                name: '📊 Task Performance',
-                value: formatDataTable(taskStatsData, [12, 8]),
-                inline: false
-            }]);
-
-            // Points breakdown with enhanced table format
-            const pointsBreakdownData = [
-                ['Voice Points', `${allTime.points - taskStats.total_task_points}`],
-                ['Task Points', `${taskStats.total_task_points}`],
-                ['Total Earned', `${allTime.points}`]
-            ];
-
-            embed.addFields([{
-                name: '💰 Points Breakdown',
-                value: formatDataTable(pointsBreakdownData, [15, 10]),
-                inline: false
-            }]);
-
-            // Enhanced help section
-            embed.addFields([{
-                name: '💡 Points & Rewards System',
-                value: '**Voice Time:** First hour/month = 5pts/hr, additional = 2pts/hr\n**Tasks:** 2 points per completed task\n**Streaks:** Stay in VC 15+ min daily\n\n*Monthly voice totals reset on the 1st*',
-                inline: false
-            }]);
-
-            // Dynamic streak motivation message
-            if (user.current_streak > 0) {
-                const motivation = user.current_streak >= 30 ? 
-                    `🔥 **LEGENDARY STREAK!** You're on fire with **${user.current_streak} days**! Keep dominating! 🏆` :
-                    user.current_streak >= 7 ?
-                    `⚡ **FANTASTIC!** ${user.current_streak} days strong! You're building amazing momentum! 🚀` :
-                    `💪 **Great start!** ${user.current_streak} days and counting! Keep it up! 🌟`;
-
-                embed.addFields([{
-                    name: '🎯 Streak Status',
-                    value: motivation,
-                    inline: false
-                }]);
+                greeting = `💪 Great work ${user.username}! ${user.current_streak} days and counting!`;
             } else {
-                embed.addFields([{
-                    name: '🎯 Start Your Journey',
-                    value: '🌱 Join a voice channel for 15+ minutes today to start your productivity streak! Every great journey begins with a single step! 💪',
-                    inline: false
-                }]);
+                greeting = `👋 Hi ${user.username}! Ready to start your productivity journey?`;
             }
 
-            // Enhanced footer with dynamic tips
-            const tips = [
-                'Complete tasks while in voice channels for maximum points!',
-                'Consistency beats intensity - small daily progress wins!',
-                'Join study sessions with friends to stay motivated!',
-                'Set daily goals and track your amazing progress!'
-            ];
-            const randomTip = tips[Math.floor(Math.random() * tips.length)];
-            
-            embed.setFooter({ 
-                text: `💡 Pro Tip: ${randomTip}` 
-            });
+            embed.setDescription(greeting);
+
+            // 1. Streak Information
+            embed.addFields([
+                {
+                    name: '🔥 Current Streak',
+                    value: `**${user.current_streak}** days`,
+                    inline: true
+                }
+            ]);
+
+            // 2. Voice Channel Hours (today, this month, all-time)
+            const voiceHoursText = [
+                `**Today:** ${formatHours(today.hours)}`,
+                `**This Month:** ${formatHours(thisMonth.hours)}`,
+                `**All-Time:** ${formatHours(allTime.hours)}`
+            ].join('\n');
+
+            embed.addFields([
+                {
+                    name: '🎧 Voice Hours',
+                    value: voiceHoursText,
+                    inline: true
+                }
+            ]);
+
+            // 3. Points Limit (remaining hours with midnight reset awareness)
+            const remainingHours = today.remainingHours || 0;
+            const allowanceRemaining = today.allowanceHoursRemaining || 0;
+            const hoursUntilMidnight = today.hoursUntilMidnight || 0;
+
+            // Use centralized daily limit status formatting
+            const limitInfo = {
+                dailyHours: today.hours,
+                allowanceHoursRemaining: allowanceRemaining,
+                hoursUntilMidnight: hoursUntilMidnight,
+                remainingHours: remainingHours,
+                limitReached: today.limitReached,
+                canEarnPoints: today.canEarnPoints,
+                isLimitedByAllowance: allowanceRemaining <= hoursUntilMidnight,
+                isLimitedByTime: hoursUntilMidnight < allowanceRemaining
+            };
+
+            const limitStatus = formatDailyLimitStatus(limitInfo);
+
+            embed.addFields([
+                {
+                    name: '⏳ Daily Limit (15h)',
+                    value: limitStatus,
+                    inline: true
+                }
+            ]);
+
+            // 4. Points Breakdown (today, this month, all-time)
+            const pointsText = [
+                `**Today:** ${today.points} pts`,
+                `**This Month:** ${thisMonth.points} pts`,
+                `**All-Time:** ${allTime.points} pts`
+            ].join('\n');
+
+            embed.addFields([
+                {
+                    name: '💰 Points Earned',
+                    value: pointsText,
+                    inline: true
+                }
+            ]);
+
+            // 5. Pending Tasks (show actual tasks, not just count)
+            const pendingTasks = userTasks.filter(task => !task.is_complete);
+            let pendingTasksValue;
+
+            if (userTasks.length === 0) {
+                // No tasks at all or failed to fetch
+                pendingTasksValue = taskStats.pending_tasks > 0 ?
+                    `**${taskStats.pending_tasks}** tasks` :
+                    '🎯 **No tasks yet**';
+            } else if (pendingTasks.length === 0) {
+                pendingTasksValue = '🎉 **All caught up!**';
+            } else if (pendingTasks.length <= 3) {
+                // Show all tasks if 3 or fewer
+                const taskList = pendingTasks.map((task, index) =>
+                    `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + '...' : task.title}`
+                ).join('\n');
+                pendingTasksValue = `**${pendingTasks.length}** tasks:\n${taskList}`;
+            } else {
+                // Show first 3 tasks with "and X more"
+                const taskList = pendingTasks.slice(0, 3).map((task, index) =>
+                    `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + '...' : task.title}`
+                ).join('\n');
+                const remainingCount = pendingTasks.length - 3;
+                pendingTasksValue = `**${pendingTasks.length}** tasks:\n${taskList}\n*...and ${remainingCount} more*`;
+            }
+
+            embed.addFields([
+                {
+                    name: '📋 Pending Tasks',
+                    value: pendingTasksValue,
+                    inline: true
+                }
+            ]);
+
+            // Add a simple spacer field to balance the layout
+            embed.addFields([
+                {
+                    name: '\u200b',
+                    value: '\u200b',
+                    inline: true
+                }
+            ]);
 
             await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error in /stats:', error);
-            
+
             const embed = {
                 title: '❌ Stats Load Failed',
                 description: 'An error occurred while fetching your statistics. Please try again in a moment.',
-                color: 0xff0000,
-                footer: { text: 'If this problem persists, contact support' }
+                color: BotColors.ERROR
             };
-            
+
             await safeErrorReply(interaction, embed);
         }
     }

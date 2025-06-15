@@ -23,8 +23,9 @@ class QueryCache {
             default: 1 * 60 * 1000          // 1 minute - default TTL
         };
 
-        // Clean cache every minute
-        setInterval(() => this.cleanup(), 60000);
+        // Clean cache every 3 minutes (optimal for TTL ranges of 30s-3min)
+        // More efficient than every minute since most data lives 1-3 minutes
+        setInterval(() => this.cleanup(), 180000);
     }
 
     /**
@@ -94,6 +95,14 @@ class QueryCache {
         }
 
         return deletedCount;
+    }
+
+    /**
+     * Alias for deletePattern - for backward compatibility
+     * Many services use invalidatePattern instead of deletePattern
+     */
+    invalidatePattern(pattern) {
+        return this.deletePattern(pattern);
     }
 
     /**
@@ -280,11 +289,13 @@ class QueryCache {
      */
     invalidateUserRelatedCache(discordId) {
         const patterns = [
-            `user_stats:${discordId}`,
-            `active_sessions:${discordId}`,
-            `user_tasks:${discordId}:*`,
-            'leaderboard:*',
-            'house_leaderboard:*'
+            `user_stats:${discordId}`,      // Exact match for user stats
+            `active_sessions:${discordId}`, // Exact match for active sessions
+            `user_tasks:${discordId}`,      // Exact match for user tasks (removed unnecessary *)
+            `task_stats:${discordId}`,      // Added missing task stats cache key
+            'leaderboard:*',                // All leaderboards (consider making more specific)
+            'house_leaderboard:*',          // All house leaderboards
+            'house_champions:*'             // Added missing house champions cache keys
         ];
 
         let invalidatedCount = 0;

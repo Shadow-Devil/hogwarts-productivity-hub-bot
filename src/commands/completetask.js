@@ -1,6 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
-const { getUserVoiceChannel } = require('../utils/voiceUtils');
 const { createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
 const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
@@ -24,21 +23,6 @@ module.exports = {
                 return;
             }
 
-            // Check if user is in a voice channel using the same method as timer commands
-            const voiceChannel = await getUserVoiceChannel(interaction);
-            
-            if (!voiceChannel) {
-                const embed = createErrorTemplate(
-                    `${StatusEmojis.ERROR} Voice Channel Required`,
-                    'You must be in a voice channel to complete tasks and earn points.',
-                    { 
-                        helpText: 'Join any voice channel first, then try again',
-                        additionalInfo: 'This requirement ensures active participation in productive voice sessions.'
-                    }
-                );
-                return interaction.editReply({ embeds: [embed] });
-            }
-
             const discordId = interaction.user.id;
             const taskNumber = interaction.options.getInteger('number');
             const member = interaction.member;
@@ -55,27 +39,43 @@ module.exports = {
                         includeEmoji: true,
                         useEnhancedLayout: true,
                         useTableFormat: true,
-                        showBigNumbers: true
+                        showBigNumbers: true,
+                        additionalInfo: `**Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`
                     }
                 );
                 return interaction.editReply({ embeds: [embed] });
             } else {
-                const embed = createErrorTemplate(
-                    `${StatusEmojis.FAILED} Task Completion Failed`,
-                    result.message,
-                    { helpText: 'Use `/viewtasks` to check your task numbers' }
-                );
-                return interaction.editReply({ embeds: [embed] });
+                if (result.limitReached) {
+                    const dayjs = require('dayjs');
+                    const resetTime = Math.floor(dayjs().add(1, 'day').startOf('day').valueOf() / 1000);
+
+                    const embed = createErrorTemplate(
+                        'Daily Task Limit Reached',
+                        result.message,
+                        {
+                            helpText: `Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
+                            additionalInfo: `**Remaining:** ${result.stats.remaining} actions\n**Resets:** <t:${resetTime}:R>`
+                        }
+                    );
+                    return interaction.editReply({ embeds: [embed] });
+                } else {
+                    const embed = createErrorTemplate(
+                        'Task Completion Failed',
+                        result.message,
+                        { helpText: 'Use `/viewtasks` to check your task numbers' }
+                    );
+                    return interaction.editReply({ embeds: [embed] });
+                }
             }
         } catch (error) {
             console.error('Error in /completetask:', error);
-            
+
             const embed = createErrorTemplate(
                 'Task Completion Error',
                 'An unexpected error occurred while completing your task. Please try again in a moment.',
                 { helpText: 'If this problem persists, contact support' }
             );
-            
+
             await safeErrorReply(interaction, embed);
         }
     }

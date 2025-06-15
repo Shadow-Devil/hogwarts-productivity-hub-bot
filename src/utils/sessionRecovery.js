@@ -5,17 +5,19 @@ const dayjs = require('dayjs');
 /**
  * Session Recovery System
  * Handles crash recovery, periodic session saves, and graceful shutdowns
+ * Enhanced with grace period session support for unstable connections
  */
 class SessionRecovery {
     constructor() {
         this.isShuttingDown = false;
         this.periodicSaveInterval = null;
         this.activeVoiceSessions = null; // Will be set from voiceStateUpdate
+        this.gracePeriodSessions = null; // Will be set from voiceStateUpdate
 
         // Configuration
         this.config = {
             saveIntervalMs: 2 * 60 * 1000,      // Save every 2 minutes
-            maxSessionDurationHours: 12,        // Consider sessions over 12h as stale
+            maxSessionDurationHours: 24,        // Consider sessions over 24h as stale (increased for long study sessions)
             recoveryGracePeriodMs: 5 * 60 * 1000 // 5 minutes grace period for recovery
         };
 
@@ -25,8 +27,9 @@ class SessionRecovery {
     /**
      * Initialize the session recovery system
      */
-    async initialize(activeVoiceSessionsMap) {
+    async initialize(activeVoiceSessionsMap, gracePeriodSessionsMap = null) {
         this.activeVoiceSessions = activeVoiceSessionsMap;
+        this.gracePeriodSessions = gracePeriodSessionsMap;
 
         // Recover any incomplete sessions from previous runs
         const recoveredSessions = await this.recoverIncompleteSessions();
@@ -34,47 +37,40 @@ class SessionRecovery {
         // Start periodic session state saving
         this.startPeriodicSaving();
 
-        console.log('🛡️ Session recovery system initialized');
-
-        return {
-            recoveredSessions: recoveredSessions || 0,
-            isInitialized: true
-        };
+        console.log(`✅ Session recovery system initialized. Recovered ${recoveredSessions} sessions.`);
+        return recoveredSessions;
     }
 
     /**
-     * Recover incomplete sessions from database on startup
+     * Recover incomplete sessions from database
      */
     async recoverIncompleteSessions() {
         return measureDatabase('recoverIncompleteSessions', async () => {
             return executeWithResilience(async (client) => {
                 const now = new Date();
-                const maxSessionDuration = new Date(now.getTime() - (this.config.maxSessionDurationHours * 60 * 60 * 1000));
+                const staleThreshold = new Date(now.getTime() - (this.config.maxSessionDurationHours * 60 * 60 * 1000));
 
-                // Find sessions that are still marked as active but were likely interrupted
-                const incompleteSessionsResult = await client.query(`
-                    SELECT id, discord_id, voice_channel_id, voice_channel_name, joined_at, last_heartbeat
-                    FROM vc_sessions
+                // Find incomplete sessions (no left_at timestamp)
+                const result = await client.query(`
+                    SELECT * FROM vc_sessions
                     WHERE left_at IS NULL
                     AND joined_at > $1
-                    ORDER BY joined_at DESC
-                `, [maxSessionDuration]);
+                    ORDER BY joined_at ASC
+                `, [staleThreshold]);
 
-                const incompleteSessions = incompleteSessionsResult.rows;
+                console.log(`🔄 Found ${result.rows.length} incomplete sessions to recover`);
 
-                if (incompleteSessions.length === 0) {
-                    console.log('✅ No incomplete sessions found during recovery');
-                    return 0;
+                let recoveredCount = 0;
+                for (const session of result.rows) {
+                    try {
+                        await this.processIncompleteSession(client, session, now);
+                        recoveredCount++;
+                    } catch (error) {
+                        console.error(`❌ Error recovering session ${session.id}:`, error);
+                    }
                 }
 
-                console.log(`🔄 Found ${incompleteSessions.length} incomplete sessions to recover`);
-
-                for (const session of incompleteSessions) {
-                    await this.processIncompleteSession(client, session, now);
-                }
-
-                console.log(`✅ Session recovery completed for ${incompleteSessions.length} sessions`);
-                return incompleteSessions.length;
+                return recoveredCount;
             });
         })();
     }
@@ -83,16 +79,26 @@ class SessionRecovery {
      * Process a single incomplete session
      */
     async processIncompleteSession(client, session, now) {
-        const joinedAt = new Date(session.joined_at);
-        const lastHeartbeat = session.last_heartbeat ? new Date(session.last_heartbeat) : joinedAt;
+        const sessionStartTime = new Date(session.joined_at);
+        const sessionDurationMs = now.getTime() - sessionStartTime.getTime();
 
-        // Calculate session duration up to last known heartbeat
-        const estimatedEndTime = new Date(lastHeartbeat.getTime() + this.config.recoveryGracePeriodMs);
-        const sessionDurationMs = Math.min(estimatedEndTime.getTime(), now.getTime()) - joinedAt.getTime();
-        const sessionDurationMinutes = Math.max(0, Math.floor(sessionDurationMs / (1000 * 60)));
+        // Use last heartbeat if available, otherwise estimate end time
+        const lastHeartbeat = session.last_heartbeat ? new Date(session.last_heartbeat) : null;
+        let estimatedEndTime;
 
+        if (lastHeartbeat) {
+            // Add grace period to last heartbeat
+            estimatedEndTime = new Date(lastHeartbeat.getTime() + this.config.recoveryGracePeriodMs);
+        } else {
+            // No heartbeat data, estimate based on reasonable session length
+            estimatedEndTime = new Date(sessionStartTime.getTime() + Math.min(sessionDurationMs, 3 * 60 * 60 * 1000)); // Max 3 hours
+        }
+
+        const estimatedDurationMs = estimatedEndTime.getTime() - sessionStartTime.getTime();
+        const sessionDurationMinutes = Math.floor(estimatedDurationMs / (1000 * 60));
+
+        // Don't award points for very short sessions (likely connection issues)
         if (sessionDurationMinutes < 1) {
-            // Session was too short, just mark as completed with 0 duration
             await client.query(`
                 UPDATE vc_sessions
                 SET left_at = $1, duration_minutes = 0, recovery_note = 'Recovered: Session too short'
@@ -113,23 +119,15 @@ class SessionRecovery {
         // Calculate and award points for the recovered session
         const voiceService = require('../services/voiceService');
         try {
-            const pointsEarned = await voiceService.calculateAndAwardPoints(
-                session.discord_id,
-                sessionDurationMinutes
-            );
+            const pointsResult = await voiceService.calculateAndAwardPoints(session.discord_id, sessionDurationMinutes);
+            const pointsEarned = typeof pointsResult === 'object' ? pointsResult.pointsEarned : pointsResult;
 
             // Update daily stats
-            const sessionDate = dayjs(session.joined_at).format('YYYY-MM-DD');
-            await voiceService.updateDailyStats(
-                session.discord_id,
-                sessionDate,
-                sessionDurationMinutes,
-                pointsEarned
-            );
+            await voiceService.updateDailyStats(session.discord_id, session.date, sessionDurationMinutes, pointsEarned);
 
-            console.log(`🔄 Recovered session for ${session.discord_id}: ${sessionDurationMinutes} minutes, ${pointsEarned} points`);
+            console.log(`✅ Recovered session for ${session.discord_id}: ${sessionDurationMinutes} minutes, ${pointsEarned} points`);
         } catch (error) {
-            console.error(`❌ Error awarding points for recovered session ${session.id}:`, error);
+            console.error(`❌ Error calculating points for recovered session ${session.id}:`, error);
         }
     }
 
@@ -142,12 +140,16 @@ class SessionRecovery {
         }
 
         this.periodicSaveInterval = setInterval(async () => {
-            if (!this.isShuttingDown && this.activeVoiceSessions) {
-                await this.saveActiveSessionStates();
+            if (!this.isShuttingDown) {
+                try {
+                    await this.saveActiveSessionStates();
+                } catch (error) {
+                    console.error('❌ Error during periodic session save:', error);
+                }
             }
         }, this.config.saveIntervalMs);
 
-        console.log(`🕐 Started periodic session saving every ${this.config.saveIntervalMs / 1000} seconds`);
+        console.log(`✅ Periodic session saving started (every ${this.config.saveIntervalMs / 1000} seconds)`);
     }
 
     /**
@@ -177,23 +179,22 @@ class SessionRecovery {
                         `, [now, durationMinutes, sessionData.sessionId]);
 
                     } catch (error) {
-                        console.error(`❌ Error updating session heartbeat for user ${userId}:`, error);
+                        console.error(`❌ Error saving session state for user ${userId}:`, error);
                     }
                 }
 
-                console.log(`💓 Updated heartbeat for ${activeSessions.length} active sessions`);
+                console.log(`💾 Heartbeat saved for ${activeSessions.length} active sessions`);
             });
         })();
     }
 
     /**
-     * Handle graceful shutdown - close all active sessions properly
+     * Handle graceful shutdown
      */
     async handleGracefulShutdown() {
-        if (this.isShuttingDown) return;
-
-        console.log('🛑 Graceful shutdown initiated - closing active voice sessions...');
         this.isShuttingDown = true;
+
+        console.log('🛑 Starting graceful shutdown of session recovery system...');
 
         // Stop periodic saving
         if (this.periodicSaveInterval) {
@@ -202,32 +203,35 @@ class SessionRecovery {
         }
 
         // Close all active sessions
-        if (this.activeVoiceSessions && this.activeVoiceSessions.size > 0) {
-            await this.closeAllActiveSessions();
-        }
+        await this.closeAllActiveSessions();
 
-        console.log('✅ Graceful shutdown completed');
+        console.log('✅ Session recovery system shutdown complete');
     }
 
     /**
      * Close all currently active sessions during shutdown
      */
     async closeAllActiveSessions() {
+        if (!this.activeVoiceSessions || this.activeVoiceSessions.size === 0) {
+            console.log('ℹ️ No active sessions to close');
+            return;
+        }
+
         return measureDatabase('closeAllActiveSessions', async () => {
             return executeWithResilience(async (client) => {
                 const now = new Date();
-                const activeSessions = Array.from(this.activeVoiceSessions.entries());
                 const voiceService = require('../services/voiceService');
+                let closedSessions = 0;
 
-                console.log(`🔄 Closing ${activeSessions.length} active sessions during shutdown...`);
+                console.log(`🔄 Closing ${this.activeVoiceSessions.size} active voice sessions...`);
 
-                for (const [userId, sessionData] of activeSessions) {
+                for (const [userId, sessionData] of this.activeVoiceSessions.entries()) {
                     try {
                         // Calculate session duration
                         const durationMs = now.getTime() - sessionData.joinTime.getTime();
                         const durationMinutes = Math.floor(durationMs / (1000 * 60));
 
-                        // Update the session in database
+                        // Update session in database
                         await client.query(`
                             UPDATE vc_sessions
                             SET left_at = $1, duration_minutes = $2, recovery_note = 'Graceful shutdown'
@@ -236,7 +240,8 @@ class SessionRecovery {
 
                         // Award points if session was long enough
                         if (durationMinutes > 0) {
-                            const pointsEarned = await voiceService.calculateAndAwardPoints(userId, durationMinutes);
+                            const pointsResult = await voiceService.calculateAndAwardPoints(userId, durationMinutes);
+                            const pointsEarned = typeof pointsResult === 'object' ? pointsResult.pointsEarned : pointsResult;
 
                             // Update daily stats
                             const sessionDate = dayjs(sessionData.joinTime).format('YYYY-MM-DD');
@@ -245,13 +250,32 @@ class SessionRecovery {
                             console.log(`✅ Closed session for ${userId}: ${durationMinutes} minutes, ${pointsEarned} points`);
                         }
 
+                        closedSessions++;
                     } catch (error) {
                         console.error(`❌ Error closing session for user ${userId}:`, error);
                     }
                 }
 
-                // Clear the active sessions map
+                // Clear both active sessions and grace period sessions maps
                 this.activeVoiceSessions.clear();
+
+                // Also clear grace period sessions and end any pending sessions
+                if (this.gracePeriodSessions && this.gracePeriodSessions.size > 0) {
+                    console.log(`🔄 Processing ${this.gracePeriodSessions.size} grace period sessions...`);
+
+                    for (const [userId, sessionData] of this.gracePeriodSessions.entries()) {
+                        try {
+                            console.log(`⏰ Ending grace period session for ${userId} during shutdown`);
+                            await voiceService.endVoiceSession(userId, sessionData.channelId, null);
+                        } catch (error) {
+                            console.error(`Error ending grace period session for ${userId}:`, error);
+                        }
+                    }
+                    this.gracePeriodSessions.clear();
+                    console.log('✅ Grace period sessions cleared during shutdown');
+                }
+
+                console.log(`✅ Successfully closed ${closedSessions} voice sessions during shutdown`);
             });
         })();
     }
@@ -265,46 +289,53 @@ class SessionRecovery {
 
         // Handle uncaught exceptions
         process.on('uncaughtException', async (error) => {
-            console.error('💥 Uncaught Exception:', error);
+            console.error('💥 Uncaught Exception - attempting session recovery:', error);
             try {
-                await this.handleGracefulShutdown();
-            } catch (shutdownError) {
-                console.error('❌ Error during emergency shutdown:', shutdownError);
+                await this.forceSave();
+            } catch (saveError) {
+                console.error('❌ Failed to save sessions during uncaught exception:', saveError);
             }
             process.exit(1);
         });
 
         // Handle unhandled promise rejections
         process.on('unhandledRejection', async (reason, promise) => {
-            console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+            console.error('💥 Unhandled Rejection - attempting session recovery:', reason);
             try {
-                await this.handleGracefulShutdown();
-            } catch (shutdownError) {
-                console.error('❌ Error during emergency shutdown:', shutdownError);
+                await this.forceSave();
+            } catch (saveError) {
+                console.error('❌ Failed to save sessions during unhandled rejection:', saveError);
             }
-            process.exit(1);
         });
     }
 
     /**
-     * Force save current session states (for manual calls)
+     * Force save all session states (emergency)
      */
     async forceSave() {
-        console.log('🔄 Force saving session states...');
-        await this.saveActiveSessionStates();
-        console.log('✅ Force save completed');
+        if (this.isShuttingDown) return;
+
+        console.log('🚨 Emergency session state save triggered...');
+        try {
+            await this.saveActiveSessionStates();
+            console.log('✅ Emergency save completed');
+        } catch (error) {
+            console.error('❌ Emergency save failed:', error);
+            throw error;
+        }
     }
 
     /**
-     * Get recovery statistics
+     * Get recovery system statistics
      */
     getRecoveryStats() {
         return {
-            isInitialized: this.activeVoiceSessions !== null,
             isShuttingDown: this.isShuttingDown,
+            periodicSavingActive: !!this.periodicSaveInterval,
             activeSessions: this.activeVoiceSessions ? this.activeVoiceSessions.size : 0,
-            saveInterval: this.config.saveIntervalMs / 1000,
-            isPeriodicSavingActive: this.periodicSaveInterval !== null
+            gracePeriodSessions: this.gracePeriodSessions ? this.gracePeriodSessions.size : 0,
+            saveIntervalMs: this.config.saveIntervalMs,
+            maxSessionDurationHours: this.config.maxSessionDurationHours
         };
     }
 }

@@ -164,21 +164,30 @@ class PerformanceMonitor {
         const issues = [];
         const summary = this.getPerformanceSummary();
 
-        // Check for high memory usage
-        if (summary.memory.current.heapUsed > 500) {
+        // Check for high memory usage - more realistic threshold for Discord bots
+        if (summary.memory.current.heapUsed > 200) { // 200MB is more realistic for monitoring
             issues.push({
                 type: 'memory',
-                severity: 'high',
-                message: `High memory usage: ${summary.memory.current.heapUsed}MB heap used`
+                severity: summary.memory.current.heapUsed > 400 ? 'high' : 'medium',
+                message: `Memory usage: ${summary.memory.current.heapUsed}MB heap used`
             });
         }
 
-        // Check for memory leaks (increasing trend)
-        if (summary.memory.trend > 10) {
+        // Check for memory leaks (increasing trend) - more reasonable threshold
+        if (summary.memory.trend > 20) { // 20MB increase per minute is concerning
             issues.push({
                 type: 'memory_leak',
                 severity: 'critical',
                 message: `Potential memory leak: ${summary.memory.trend}MB increase in last minute`
+            });
+        }
+
+        // Check for excessive RSS growth
+        if (summary.memory.current.rss > 300) { // 300MB RSS is getting high for Discord bot
+            issues.push({
+                type: 'rss_memory',
+                severity: summary.memory.current.rss > 500 ? 'high' : 'medium',
+                message: `High process memory: ${summary.memory.current.rss}MB RSS`
             });
         }
 

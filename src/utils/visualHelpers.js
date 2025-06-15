@@ -183,13 +183,238 @@ function formatDataTable(data, columnWidths = null) {
     return tableRows.join('\n');
 }
 
+// 📊 Enhanced Centered Data Table with Better Spacing
+function formatCenteredDataTable(data, options = {}) {
+    const {
+        columnWidths = null,
+        addPadding = true,
+        useBoxFormat = false,
+        centerAlign = true,
+        spacing = 'normal' // 'compact', 'normal', 'spacious'
+    } = options;
+
+    if (!Array.isArray(data) || data.length === 0) return '';
+
+    // Convert array items to key-value pairs if needed
+    const pairs = data.map(item => {
+        if (Array.isArray(item)) {
+            return [item[0], item[1]];
+        } else if (typeof item === 'string' && item.includes(':')) {
+            const [key, ...valueParts] = item.split(':');
+            return [key.trim(), valueParts.join(':').trim()];
+        }
+        return [item, ''];
+    });
+
+    // Calculate column widths for alignment
+    const maxKeyLength = Math.max(...pairs.map(([key]) => key.length));
+    const maxValueLength = Math.max(...pairs.map(([, value]) => value.toString().length));
+
+    const keyWidth = columnWidths ? columnWidths[0] : Math.min(maxKeyLength + 2, 16);
+    const valueWidth = columnWidths ? columnWidths[1] : Math.min(maxValueLength + 2, 12);
+
+    let tableRows;
+
+    if (useBoxFormat) {
+        // Create box-style format with borders
+        const totalWidth = keyWidth + valueWidth + 3;
+        const topBorder = '┌' + '─'.repeat(totalWidth) + '┐';
+        const bottomBorder = '└' + '─'.repeat(totalWidth) + '┘';
+        const separator = '├' + '─'.repeat(totalWidth) + '┤';
+
+        tableRows = [topBorder];
+        pairs.forEach(([key, value], index) => {
+            const paddedKey = centerAlign ? key.padStart((keyWidth + key.length) / 2).padEnd(keyWidth) : key.padEnd(keyWidth);
+            const paddedValue = centerAlign ? value.toString().padStart((valueWidth + value.toString().length) / 2).padEnd(valueWidth) : value.toString().padEnd(valueWidth);
+            tableRows.push(`│ ${paddedKey} │ **${paddedValue}** │`);
+            if (index < pairs.length - 1 && spacing === 'spacious') {
+                tableRows.push(separator);
+            }
+        });
+        tableRows.push(bottomBorder);
+    } else {
+        // Standard format with improved spacing and alignment
+        tableRows = pairs.map(([key, value]) => {
+            const paddedKey = key.padEnd(keyWidth, ' ');
+            const formattedValue = `**${value}**`;
+
+            if (addPadding) {
+                return `\`  ${paddedKey}  \` ${formattedValue}`;
+            } else {
+                return `\`${paddedKey}\` ${formattedValue}`;
+            }
+        });
+    }
+
+    // Add spacing between rows based on spacing option
+    if (spacing === 'spacious' && !useBoxFormat) {
+        return tableRows.join('\n\n');
+    } else if (spacing === 'compact') {
+        return tableRows.join('\n');
+    } else {
+        return tableRows.join('\n');
+    }
+}
+
+// 📋 Create Stats Section with Enhanced Layout and Padding
+function createStatsSection(title, data, options = {}) {
+    const {
+        emoji = '📊',
+        useTable = true,
+        addSpacing = true,
+        centerContent = true,
+        style = 'enhanced', // 'basic', 'enhanced', 'premium'
+        columnWidths = null
+    } = options;
+
+    let content = '';
+
+    if (style === 'premium') {
+        const header = `✨ **${title}** ✨\n${'═'.repeat(Math.min(title.length + 8, 25))}\n`;
+        content = header;
+    } else if (style === 'enhanced') {
+        const header = `${emoji} **${title}**\n${'▬'.repeat(Math.min(title.length + 2, 20))}\n`;
+        content = header;
+    } else {
+        content = `${emoji} **${title}**\n`;
+    }
+
+    if (useTable) {
+        const tableOptions = {
+            columnWidths,
+            addPadding: true,
+            centerAlign: centerContent,
+            spacing: addSpacing ? 'normal' : 'compact'
+        };
+        content += formatCenteredDataTable(data, tableOptions);
+    } else {
+        // Simple list format
+        const items = Array.isArray(data) ? data : Object.entries(data);
+        content += items.map(([key, value]) => `• **${key}:** ${value}`).join('\n');
+    }
+
+    return content;
+}
+
+// 🎯 Create Centered Field Layout for Discord Embeds
+function createCenteredLayout(sections, options = {}) {
+    const {
+        maxColumnsPerRow = 3,
+        addSpacers = true,
+        spacerValue = '\u200b'
+    } = options;
+
+    const fields = [];
+
+    // Process sections into fields with proper inline configuration
+    sections.forEach((section, index) => {
+        fields.push({
+            name: section.name,
+            value: section.value,
+            inline: true
+        });
+    });
+
+    // Add spacer fields to balance the layout if needed
+    if (addSpacers) {
+        const remainder = fields.length % maxColumnsPerRow;
+        if (remainder !== 0) {
+            const spacersNeeded = maxColumnsPerRow - remainder;
+            for (let i = 0; i < spacersNeeded; i++) {
+                fields.push({
+                    name: spacerValue,
+                    value: spacerValue,
+                    inline: true
+                });
+            }
+        }
+    }
+
+    return fields;
+}
+
+// 🎨 Enhanced Embed Builder
+function createStyledEmbed(type = 'default') {
+    const embed = new EmbedBuilder()
+        .setTimestamp()
+        .setColor(BotColors.PRIMARY);
+
+    // Set default styling based on type
+    switch (type) {
+        case 'success':
+            embed.setColor(BotColors.SUCCESS);
+            break;
+        case 'warning':
+            embed.setColor(BotColors.WARNING);
+            break;
+        case 'error':
+            embed.setColor(BotColors.ERROR);
+            break;
+        case 'info':
+            embed.setColor(BotColors.INFO);
+            break;
+        case 'premium':
+            embed.setColor(BotColors.PREMIUM);
+            break;
+    }
+
+    return embed;
+}
+
+// 💫 Loading Animation Text
+function getLoadingText(step = 0) {
+    const animations = ['⏳', '🔄', '⚡', '✨'];
+    const messages = [
+        'Processing request...',
+        'Gathering data...',
+        'Calculating results...',
+        'Finalizing response...'
+    ];
+
+    const emoji = animations[step % animations.length];
+    const message = messages[step % messages.length];
+
+    return `${emoji} ${message}`;
+}
+
+// 🎯 User Status Formatter
+function formatUserStatus(user, status = {}) {
+    const {
+        points = 0,
+        streak = 0,
+        house = null,
+        level = 1,
+        achievements = []
+    } = status;
+
+    const houseEmojis = {
+        'Gryffindor': '🦁',
+        'Hufflepuff': '🦡',
+        'Ravenclaw': '🦅',
+        'Slytherin': '🐍'
+    };
+
+    let statusText = `👤 **${user.username}**`;
+    if (house) {
+        statusText += ` • ${houseEmojis[house] || '🏠'} ${house}`;
+    }
+    statusText += `\n💰 ${points.toLocaleString()} points`;
+    if (streak > 0) {
+        statusText += ` • 🔥 ${streak} day streak`;
+    }
+
+    return statusText;
+}
+
 // 📊 Create Stats Card with Enhanced Typography
 function createStatsCard(title, stats, options = {}) {
     const {
         emoji = '📊',
         style = 'card',
         showProgress = false,
-        highlightMain = false
+        highlightMain = false,
+        showBigNumbers = false,
+        emphasizeFirst = false
     } = options;
 
     let card = '';
@@ -198,22 +423,45 @@ function createStatsCard(title, stats, options = {}) {
         card += `### ${emoji} ${title}\n`;
         card += '```\n';
 
-        Object.entries(stats).forEach(([key, value]) => {
-            const formattedKey = key.padEnd(15, '.');
-            card += `${formattedKey} ${value}\n`;
-        });
+        if (Array.isArray(stats)) {
+            // Handle array format
+            stats.forEach(([key, value]) => {
+                const formattedKey = key.padEnd(15, '.');
+                card += `${formattedKey} ${value}\n`;
+            });
+        } else {
+            // Handle object format
+            Object.entries(stats).forEach(([key, value]) => {
+                const formattedKey = key.padEnd(15, '.');
+                card += `${formattedKey} ${value}\n`;
+            });
+        }
 
         card += '```';
     } else if (style === 'modern') {
         card += `## ${emoji} **${title}**\n\n`;
 
-        Object.entries(stats).forEach(([key, value]) => {
+        const entries = Array.isArray(stats) ? stats : Object.entries(stats);
+        entries.forEach(([key, value], index) => {
             const isMainStat = highlightMain && (key.includes('Total') || key.includes('Points'));
-            if (isMainStat) {
+            const isFirst = emphasizeFirst && index === 0;
+
+            if (isMainStat || isFirst) {
                 card += `**${key}:** # ${value}\n`;
             } else {
                 card += `**${key}:** ${value}\n`;
             }
+        });
+    } else if (style === 'inline') {
+        // Compact inline format
+        const entries = Array.isArray(stats) ? stats : Object.entries(stats);
+        card = entries.map(([key, value]) => `**${key}:** ${value}`).join(' • ');
+    } else if (style === 'table') {
+        // Table format using our enhanced data table
+        const entries = Array.isArray(stats) ? stats : Object.entries(stats);
+        card = formatCenteredDataTable(entries, {
+            addPadding: true,
+            spacing: 'normal'
         });
     }
 
@@ -224,11 +472,11 @@ function createStatsCard(title, stats, options = {}) {
 function createAchievementBadge(title, value, emoji = '🏆', style = 'default') {
     const badges = {
         default: `${emoji} **${title}:** ${value}`,
-        highlighted: `✨ ${emoji} **${title}** ✨\n▓▓▓ ${value} ▓▓▓`,
-        celebration: `🎉 ${emoji} **${title}** 🎉\n🌟 ${value} 🌟`,
+        highlighted: `✨ ${emoji} **${title}:** ▓▓▓ ${value} ▓▓▓`,
+        celebration: `🎉 ${emoji} **${title}:** 🌟 ${value} 🌟`,
         minimal: `${emoji} ${value}`,
-        large: `# ${emoji} ${value}\n### ${title}`,
-        card: `\`\`\`\n${emoji} ${title}\n${value}\n\`\`\``
+        large: `# ${emoji} **${title}:** ${value}`,
+        card: `\`\`\`\n${emoji} ${title}: ${value}\n\`\`\``
     };
 
     return badges[style] || badges.default;
@@ -315,79 +563,6 @@ function getTrendEmoji(trend) {
     return trends[trend.toLowerCase()] || '➡️';
 }
 
-// 🎨 Enhanced Embed Builder
-function createStyledEmbed(type = 'default') {
-    const embed = new EmbedBuilder()
-        .setTimestamp()
-        .setColor(BotColors.PRIMARY);
-
-    // Set default styling based on type
-    switch (type) {
-        case 'success':
-            embed.setColor(BotColors.SUCCESS);
-            break;
-        case 'warning':
-            embed.setColor(BotColors.WARNING);
-            break;
-        case 'error':
-            embed.setColor(BotColors.ERROR);
-            break;
-        case 'info':
-            embed.setColor(BotColors.INFO);
-            break;
-        case 'premium':
-            embed.setColor(BotColors.PREMIUM);
-            break;
-    }
-
-    return embed;
-}
-
-// 💫 Loading Animation Text
-function getLoadingText(step = 0) {
-    const animations = ['⏳', '🔄', '⚡', '✨'];
-    const messages = [
-        'Processing request...',
-        'Gathering data...',
-        'Calculating results...',
-        'Finalizing response...'
-    ];
-
-    const emoji = animations[step % animations.length];
-    const message = messages[step % messages.length];
-
-    return `${emoji} ${message}`;
-}
-
-// 🎯 User Status Formatter
-function formatUserStatus(user, status = {}) {
-    const {
-        points = 0,
-        streak = 0,
-        house = null,
-        level = 1,
-        achievements = []
-    } = status;
-
-    const houseEmojis = {
-        'Gryffindor': '🦁',
-        'Hufflepuff': '🦡',
-        'Ravenclaw': '🦅',
-        'Slytherin': '🐍'
-    };
-
-    let statusText = `👤 **${user.username}**`;
-    if (house) {
-        statusText += ` • ${houseEmojis[house] || '🏠'} ${house}`;
-    }
-    statusText += `\n💰 ${points.toLocaleString()} points`;
-    if (streak > 0) {
-        statusText += ` • 🔥 ${streak} day streak`;
-    }
-
-    return statusText;
-}
-
 module.exports = {
     BotColors,
     StatusEmojis,
@@ -404,5 +579,8 @@ module.exports = {
     getTrendEmoji,
     createStyledEmbed,
     getLoadingText,
-    formatUserStatus
+    formatUserStatus,
+    formatCenteredDataTable,
+    createStatsSection,
+    createCenteredLayout
 };

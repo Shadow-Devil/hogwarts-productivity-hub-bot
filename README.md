@@ -217,6 +217,7 @@ npm run dev
 | `/health [type]` | 💚 Advanced health diagnostics | Admin only |
 | `/voicescan` | 🔍 Scan & auto-track voice users | Admin only |
 | `/recovery [action]` | 🛡️ Session recovery management | Admin only |
+| `/graceperiod [action]` | ⏰ View grace period sessions | Admin only |
 | `/debug` | 🐛 System information | All users |
 
 ---
@@ -283,6 +284,13 @@ Users are automatically assigned to one of four houses:
 - `/voicescan` - Automatically detect users in voice
 - Instant tracking activation for existing sessions
 - Perfect for bot restarts and maintenance
+
+#### **⏰ Grace Period System**
+- **5-minute grace period** for users leaving voice channels
+- Handles unstable internet connections seamlessly
+- Session resumes automatically if user returns
+- No interruption to point earning or streak tracking
+- `/graceperiod status` - View current grace period sessions
 
 ---
 

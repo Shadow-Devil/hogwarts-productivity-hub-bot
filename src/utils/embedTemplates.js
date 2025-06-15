@@ -2,7 +2,21 @@
 // Provides pre-built templates for common response types
 
 const { EmbedBuilder } = require('discord.js');
-const { BotColors, StatusEmojis, createHeader, createProgressBar, formatDataGrid, formatDataTable, createStatsCard, createInfoSection, createProgressSection, createStyledEmbed } = require('./visualHelpers');
+const {
+    BotColors,
+    StatusEmojis,
+    createHeader,
+    createProgressBar,
+    formatDataGrid,
+    formatDataTable,
+    formatCenteredDataTable,
+    createStatsSection,
+    createCenteredLayout,
+    createStatsCard,
+    createInfoSection,
+    createProgressSection,
+    createStyledEmbed
+} = require('./visualHelpers');
 
 // 📊 Enhanced Statistics Dashboard Template
 function createStatsTemplate(user, stats, options = {}) {
@@ -47,7 +61,8 @@ function createTaskTemplate(user, tasks, options = {}) {
         helpText = '',
         style = 'dashboard',
         useEnhancedLayout = true,
-        useTableFormat = true
+        useTableFormat = true,
+        showDailyLimit = false
     } = options;
 
     const embed = createStyledEmbed('primary');
@@ -62,7 +77,7 @@ function createTaskTemplate(user, tasks, options = {}) {
 
     if (emptyState || (Array.isArray(tasks) && tasks.length === 0)) {
         embed.setDescription(
-            createHeader('No Tasks Found', 'Ready to get productive?', '🌟', 'large') +
+            'Ready to get productive?' +
             (emptyStateMessage ? `\n\n${emptyStateMessage}` : '\n\n### 💡 Getting Started\nUse `/addtask <description>` to create your first task!')
         );
         embed.setColor(BotColors.INFO);
@@ -101,6 +116,34 @@ function createTaskTemplate(user, tasks, options = {}) {
         embed.addFields([{
             name: '📊 Progress Tracking',
             value: progressSection + extraInfo,
+            inline: false
+        }]);
+    }
+
+    // Add daily limit information if requested
+    if (showDailyLimit && tasks.dailyStats) {
+        const dailyStats = tasks.dailyStats;
+        const limitProgress = createProgressSection(
+            'Daily Task Limit',
+            dailyStats.total_task_actions,
+            dailyStats.limit,
+            {
+                emoji: dailyStats.limitReached ? '🚫' : '📅',
+                style: 'detailed',
+                showPercentage: true,
+                showNumbers: true,
+                warningThreshold: 80, // Show warning at 8/10
+                dangerThreshold: 95   // Show danger at 10/10
+            }
+        );
+
+        const dayjs = require('dayjs');
+        const resetTime = Math.floor(dayjs().add(1, 'day').startOf('day').valueOf() / 1000);
+        const limitInfo = `\n**Actions Used:** ${dailyStats.total_task_actions}/${dailyStats.limit} • **Remaining:** ${dailyStats.remaining} • **Resets:** <t:${resetTime}:R>`;
+
+        embed.addFields([{
+            name: '📅 Daily Task Limit',
+            value: limitProgress + limitInfo,
             inline: false
         }]);
     }
@@ -603,7 +646,7 @@ function createHealthTemplate(title, healthData, options = {}) {
         );
 
     if (useEnhancedLayout) {
-        embed.setDescription(createHeader('System Status', `${finalStatusEmoji} ${status.toUpperCase()}`, '🩺', 'large'));
+        embed.setDescription(`${finalStatusEmoji} ${status.toUpperCase()}`);
     } else {
         embed.setDescription(`**Status:** ${finalStatusEmoji} ${status.toUpperCase()}`);
     }
@@ -771,7 +814,7 @@ function createSuccessTemplate(title, message, options = {}) {
 
     if (useEnhancedLayout) {
         embed.setTitle(`${includeEmoji ? emoji + ' ' : ''}${title}`)
-             .setDescription(createHeader('Success', message, emoji, 'large'));
+             .setDescription(message);
     } else {
         embed.setTitle(`${includeEmoji ? emoji + ' ' : ''}${title}`)
              .setDescription(message);
@@ -998,7 +1041,8 @@ function createChampionTemplate(monthlyChampions, allTimeChampions, currentUser,
         .setTimestamp();
 
     if (useEnhancedLayout) {
-        embed.setTitle(createHeader('House Champions', 'Top contributors from each house', '👑', 'large'));
+        embed.setTitle('👑 House Champions')
+             .setDescription('Top contributors from each house');
     } else {
         embed.setTitle('👑 House Champions')
              .setDescription('Top contributing members from each house');

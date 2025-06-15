@@ -37,6 +37,9 @@ class VoiceStateScanner {
         const startTime = Date.now();
 
         try {
+            // Get grace period sessions if available
+            const { gracePeriodSessions } = require('../events/voiceStateUpdate');
+
             // Get all guilds (should be only one for this bot)
             const guilds = client.guilds.cache;
 
@@ -47,7 +50,7 @@ class VoiceStateScanner {
 
             for (const [guildId, guild] of guilds) {
                 console.log(`🏰 Scanning guild: ${guild.name} (${guild.id})`);
-                await this.scanGuildVoiceStates(guild, activeVoiceSessions);
+                await this.scanGuildVoiceStates(guild, activeVoiceSessions, gracePeriodSessions);
             }
 
             const scanDuration = Date.now() - startTime;
@@ -92,8 +95,9 @@ class VoiceStateScanner {
      * Scan voice states for a specific guild
      * @param {Guild} guild - Discord guild
      * @param {Map} activeVoiceSessions - Active voice sessions map
+     * @param {Map} gracePeriodSessions - Grace period sessions map
      */
-    async scanGuildVoiceStates(guild, activeVoiceSessions) {
+    async scanGuildVoiceStates(guild, activeVoiceSessions, gracePeriodSessions = null) {
         try {
             // Get all voice channels in the guild
             const voiceChannels = guild.channels.cache.filter(channel =>
@@ -104,7 +108,7 @@ class VoiceStateScanner {
             console.log(`🎤 Found ${voiceChannels.size} voice channels with users`);
 
             for (const [channelId, channel] of voiceChannels) {
-                await this.scanVoiceChannel(channel, activeVoiceSessions);
+                await this.scanVoiceChannel(channel, activeVoiceSessions, gracePeriodSessions);
             }
 
         } catch (error) {
@@ -117,8 +121,9 @@ class VoiceStateScanner {
      * Scan a specific voice channel and start tracking for users
      * @param {VoiceChannel} channel - Discord voice channel
      * @param {Map} activeVoiceSessions - Active voice sessions map
+     * @param {Map} gracePeriodSessions - Grace period sessions map
      */
-    async scanVoiceChannel(channel, activeVoiceSessions) {
+    async scanVoiceChannel(channel, activeVoiceSessions, gracePeriodSessions = null) {
         try {
             const members = channel.members;
 
@@ -146,9 +151,30 @@ class VoiceStateScanner {
 
                     this.scanResults.totalUsersFound++;
 
-                    // Check if user already has an active session (from previous scan or existing tracking)
+                    // Check if user already has an active session or is in grace period
                     if (activeVoiceSessions.has(memberId)) {
                         console.log(`⏭️  User ${member.user.username} already being tracked, skipping...`);
+                        continue;
+                    }
+
+                    // Check if user is in grace period - if so, resume their session
+                    if (gracePeriodSessions && gracePeriodSessions.has(memberId)) {
+                        console.log(`🔄 User ${member.user.username} found in voice during grace period - resuming session`);
+
+                        const sessionData = gracePeriodSessions.get(memberId);
+                        sessionData.lastSeen = new Date();
+                        sessionData.channelId = channel.id; // Update channel in case they switched
+                        delete sessionData.gracePeriodStart;
+
+                        // Remove from grace period and ensure they're in active sessions
+                        gracePeriodSessions.delete(memberId);
+                        if (!activeVoiceSessions.has(memberId)) {
+                            activeVoiceSessions.set(memberId, sessionData);
+                        }
+
+                        this.scanResults.trackingStarted++;
+                        usersStarted.push(member.user.username);
+                        console.log(`✅ Session resumed for ${member.user.username} in ${channel.name}`);
                         continue;
                     }
 
@@ -160,11 +186,12 @@ class VoiceStateScanner {
                         channel.name
                     );
 
-                    // Add to active sessions tracking
+                    // Add to active sessions tracking with last seen timestamp
                     activeVoiceSessions.set(memberId, {
                         channelId: channel.id,
                         joinTime: new Date(), // Use current time as join time for scanning
-                        sessionId: session.id
+                        sessionId: session.id,
+                        lastSeen: new Date() // Track when user was last confirmed in voice
                     });
 
                     this.scanResults.trackingStarted++;

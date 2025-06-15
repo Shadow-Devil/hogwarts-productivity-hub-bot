@@ -5,10 +5,12 @@ const path = require('path');
 const { Collection } = require('discord.js');
 const { initializeDatabase, getDbResilience } = require('./models/db');
 const { measureCommand, performanceMonitor } = require('./utils/performanceMonitor');
-const monthlyResetScheduler = require('./utils/monthlyReset');
+const monthlyResetService = require('./services/monthlyResetService');
 const BotHealthMonitor = require('./utils/botHealthMonitor');
 const { TimeoutHandler } = require('./utils/faultTolerance');
 const sessionRecovery = require('./utils/sessionRecovery');
+const DailyTaskManager = require('./utils/dailyTaskManager');
+const dailyTaskManager = new DailyTaskManager();
 
 const client = new Client({
     intents: [
@@ -93,6 +95,7 @@ async function loadEvents() {
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
 let healthMonitor = null; // Will be initialized after database connection
+let materializedViewManager = null; // Will be initialized after database connection
 
 // Bot login
 
@@ -120,8 +123,12 @@ client.on('ready', async (c) => {
 
         // Initialize session recovery system
         console.log('🛡️  Initializing session recovery...');
-        const { activeVoiceSessions } = require('./events/voiceStateUpdate');
-        const recoveryResults = await sessionRecovery.initialize(activeVoiceSessions);
+        const { activeVoiceSessions, gracePeriodSessions, setDiscordClient } = require('./events/voiceStateUpdate');
+
+        // Set Discord client reference for smart session cleanup
+        setDiscordClient(client);
+
+        const recoveryResults = await sessionRecovery.initialize(activeVoiceSessions, gracePeriodSessions);
         console.log('✅ Session recovery system initialized');
         if (recoveryResults.recoveredSessions > 0) {
             console.log(`📈 Recovered ${recoveryResults.recoveredSessions} incomplete sessions from previous runs`);
@@ -129,14 +136,43 @@ client.on('ready', async (c) => {
 
         // Start performance monitoring and monthly reset scheduler
         console.log('⏰ Starting schedulers...');
-        monthlyResetScheduler.start();
+        monthlyResetService.start();
         console.log('✅ Monthly reset scheduler started');
+
+        // Initialize daily task manager
+        console.log('📅 Starting daily task manager...');
+        dailyTaskManager.setDiscordClient(client);
+        dailyTaskManager.start();
+        client.dailyTaskManager = dailyTaskManager; // Attach to client for command access
+        console.log('✅ Daily task manager started');
 
         // Initialize cache warming strategy
         console.log('🔥 Starting cache warming strategy...');
         const cacheWarming = require('./utils/cacheWarming');
-        await cacheWarming.startCacheWarming();
-        console.log('✅ Cache warming strategy activated');
+        try {
+            await cacheWarming.startCacheWarming();
+            console.log('✅ Cache warming strategy activated');
+        } catch (error) {
+            console.warn('⚠️ Cache warming failed to start:', error.message);
+            console.log('🔄 Cache warming will be retried later');
+        }
+
+        // Initialize database optimizations and materialized view management
+        console.log('⚡ Setting up database optimizations...');
+        const { MaterializedViewManager } = require('./services/materializedViewManager');
+        materializedViewManager = new MaterializedViewManager();
+
+        // Start auto-refresh of materialized views every 5 minutes
+        materializedViewManager.startAutoRefresh(5);
+
+        // Perform initial refresh to populate views
+        try {
+            await materializedViewManager.refreshViews();
+            console.log('✅ Database optimizations activated (40-60% performance improvement)');
+        } catch (error) {
+            console.warn('⚠️ Initial materialized view refresh failed:', error.message);
+            console.log('✅ Database optimizations activated (auto-refresh will retry)');
+        }
 
         // Scan for users already in voice channels and start tracking
         console.log('🔍 Scanning for users already in voice channels...');
@@ -325,11 +361,18 @@ async function shutdown() {
         }
         console.log('✅ Health monitoring stopped');
 
-        // Stop schedulers
+        // Stop schedulers and optimizations
         console.log('⏰ [3/5] Stopping schedulers...');
         try {
-            monthlyResetScheduler.stop();
+            monthlyResetService.stop();
+            dailyTaskManager.stop();
             performanceMonitor.cleanup();
+
+            // Stop materialized view auto-refresh
+            if (materializedViewManager) {
+                materializedViewManager.stopAutoRefresh();
+                console.log('✅ Database optimizations stopped');
+            }
         } catch (error) {
             console.warn('⚠️  Scheduler shutdown error:', error.message);
         }

@@ -10,20 +10,25 @@ module.exports = {
         try {
             // Defer reply immediately to prevent timeout issues
             await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-            
+
             console.log(`Debug command triggered by ${interaction.user.tag}`);
-            
+
+            // Get session tracking information
+            const { activeVoiceSessions, gracePeriodSessions } = require('../events/voiceStateUpdate');
+            const userSession = activeVoiceSessions.get(interaction.user.id);
+            const userInGracePeriod = gracePeriodSessions.get(interaction.user.id);
+
             // Test voice channel detection
             const voiceChannel = await getUserVoiceChannel(interaction);
-            
+
             if (voiceChannel) {
                 console.log(`Voice channel found via cached member: ${voiceChannel.name} (${voiceChannel.id})`);
-                
+
                 // Check if there's an active timer in this voice channel
                 let timerStatus = 'No active timer';
                 let timerPhase = 'N/A';
                 let timeRemaining = 0;
-                
+
                 if (activeVoiceTimers.has(voiceChannel.id)) {
                     const timer = activeVoiceTimers.get(voiceChannel.id);
                     timeRemaining = Math.ceil((timer.endTime - new Date()) / 60000);
@@ -36,10 +41,29 @@ module.exports = {
                     .setColor(0x00ff00)
                     .setTimestamp();
 
-                // Debug overview with big numbers
+                // Debug overview with enhanced grace period info
+                let sessionTracked = '❌ Not Tracked';
+                let sessionAge = 0;
+                let gracePeriodInfo = 'N/A';
+
+                if (userSession) {
+                    sessionTracked = '✅ Tracked';
+                    sessionAge = Math.floor((Date.now() - userSession.joinTime.getTime()) / (1000 * 60));
+                }
+
+                if (userInGracePeriod) {
+                    const gracePeriodElapsed = Math.floor((Date.now() - userInGracePeriod.gracePeriodStart) / (1000 * 60));
+                    const gracePeriodRemaining = Math.max(0, 5 - gracePeriodElapsed);
+                    sessionTracked = '⏸️ Grace Period';
+                    gracePeriodInfo = `${gracePeriodRemaining} min remaining`;
+                }
+
                 const debugStats = createStatsCard('Debug Status', {
                     'Detection': '✅ Working',
                     'Channel Members': `${voiceChannel.members.size}`,
+                    'Session Tracking': sessionTracked,
+                    'Session Age': userSession ? `${sessionAge} min` : 'N/A',
+                    'Grace Period': gracePeriodInfo,
                     'Timer Status': timerStatus,
                     'Phase': timerPhase
                 }, {
@@ -90,7 +114,13 @@ module.exports = {
                 await interaction.editReply({ embeds: [embed] });
             } else {
                 console.log(`User ${interaction.user.tag} is not in any voice channel`);
-                
+
+                // Get global session statistics with grace period info
+                const totalActiveSessions = activeVoiceSessions.size;
+                const totalGracePeriodSessions = gracePeriodSessions ? gracePeriodSessions.size : 0;
+                const sessionsOlderThanHour = Array.from(activeVoiceSessions.values())
+                    .filter(session => (Date.now() - session.joinTime.getTime()) > (60 * 60 * 1000)).length;
+
                 const embed = new EmbedBuilder()
                     .setTitle(createHeader('Voice Channel Debug', 'No Channel Detected', '🔍', 'large'))
                     .setColor(0xff0000)
@@ -99,6 +129,9 @@ module.exports = {
                 const debugStats = createStatsCard('Debug Status', {
                     'Detection': '❌ No Channel',
                     'User Status': 'Not in Voice',
+                    'Active Sessions': `${totalActiveSessions}`,
+                    'Grace Period': `${totalGracePeriodSessions}`,
+                    'Long Sessions': `${sessionsOlderThanHour}`,
                     'Recommendation': 'Join Voice Channel',
                     'Commands Available': 'Limited'
                 }, {
@@ -130,7 +163,7 @@ module.exports = {
             }
         } catch (error) {
             console.error('Error in /debug:', error);
-            
+
             const errorMessage = '❌ Debug check failed. Please try again later.';
             try {
                 if (interaction.deferred) {

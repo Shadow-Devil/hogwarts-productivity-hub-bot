@@ -46,27 +46,52 @@ module.exports = {
             }
 
             // Add the task
-            const task = await taskService.addTask(discordId, title.trim());
+            const result = await taskService.addTask(discordId, title.trim());
+
+            if (!result.success) {
+                if (result.limitReached) {
+                    const dayjs = require('dayjs');
+                    const resetTime = Math.floor(dayjs().add(1, 'day').startOf('day').valueOf() / 1000);
+
+                    const embed = createErrorTemplate(
+                        'Daily Task Limit Reached',
+                        result.message,
+                        {
+                            helpText: `Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
+                            additionalInfo: `**Remaining:** ${result.stats.remaining} actions • **Resets:** <t:${resetTime}:R>`
+                        }
+                    );
+                    return interaction.editReply({ embeds: [embed] });
+                } else {
+                    const embed = createErrorTemplate(
+                        'Task Creation Failed',
+                        result.message,
+                        { helpText: 'Please try again' }
+                    );
+                    return interaction.editReply({ embeds: [embed] });
+                }
+            }
 
             const embed = createSuccessTemplate(
-                `${StatusEmojis.COMPLETED} Task Added Successfully!`,
-                `**${task.title}**\n\nYour task has been added to your personal to-do list and is ready for completion.`,
+                'Task Added Successfully!',
+                `**${result.task.title}**\n\nYour task has been added to your personal to-do list and is ready for completion.`,
                 {
                     helpText: 'Use `/viewtasks` to see all your tasks',
-                    rewards: 'Complete this task to earn **2 points**!'
+                    rewards: 'Complete this task to earn **2 points**!',
+                    additionalInfo: `**Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`
                 }
             );
 
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error in /addtask:', error);
-            
+
             const embed = createErrorTemplate(
                 'Task Creation Failed',
                 'An unexpected error occurred while adding your task. Please try again in a moment.',
                 { helpText: 'If this problem persists, contact support' }
             );
-            
+
             await safeErrorReply(interaction, embed);
         }
     }

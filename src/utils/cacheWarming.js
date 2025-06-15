@@ -23,7 +23,16 @@ class CacheWarming {
         }
 
         console.log('🔥 Starting cache warming strategy...');
-        await this.performWarmUp();
+
+        // Wait a bit for database and services to be ready
+        setTimeout(async () => {
+            try {
+                await this.performWarmUp();
+            } catch (error) {
+                console.warn('⚠️ Initial cache warming failed:', error.message);
+                console.log('🔄 Will retry with next scheduled warming');
+            }
+        }, 3000); // Wait 3 seconds for services to be ready
 
         // Set up periodic warming every 30 minutes
         this.warmingInterval = setInterval(async () => {
@@ -34,7 +43,7 @@ class CacheWarming {
             }
         }, 30 * 60 * 1000); // 30 minutes
 
-        console.log('✅ Cache warming strategy activated');
+        console.log('✅ Cache warming strategy activated (initial warm-up scheduled)');
     }
 
     /**
@@ -59,6 +68,13 @@ class CacheWarming {
         let warmedEntries = 0;
 
         try {
+            // Check if database and services are ready
+            const { pool } = require('../models/db');
+            if (!pool) {
+                console.log('🔄 Database not ready, skipping cache warming');
+                return;
+            }
+
             console.log('🔥 Warming cache with frequently accessed data...');
 
             // 1. Warm leaderboard data (accessed by many users)
@@ -70,7 +86,7 @@ class CacheWarming {
             for (const { type, key } of leaderboardData) {
                 if (!queryCache.get(key)) {
                     try {
-                        const data = await voiceService.getLeaderboard(type);
+                        const data = await voiceService.getLeaderboardOptimized(type);
                         if (data && data.length > 0) {
                             queryCache.set(key, data, 'leaderboard');
                             warmedEntries++;
@@ -91,7 +107,7 @@ class CacheWarming {
             for (const { type, key } of houseData) {
                 if (!queryCache.get(key)) {
                     try {
-                        const data = await voiceService.getHouseLeaderboard(type);
+                        const data = await voiceService.getHouseLeaderboardOptimized(type);
                         if (data && data.length > 0) {
                             queryCache.set(key, data, 'houseLeaderboard');
                             warmedEntries++;
@@ -172,14 +188,14 @@ class CacheWarming {
             if (!queryCache.get(userStatsKey)) {
                 // Pre-load user stats if not cached
                 const voiceService = require('../services/voiceService');
-                await voiceService.getUserStats(discordId);
+                await voiceService.getUserStatsOptimized(discordId);
                 console.log(`🔥 Pre-warmed user stats for ${discordId}`);
             }
 
             if (!queryCache.get(userTasksKey)) {
                 // Pre-load user tasks if not cached
                 const taskService = require('../services/taskService');
-                await taskService.getUserTasks(discordId);
+                await taskService.getUserTasksOptimized(discordId);
                 console.log(`🔥 Pre-warmed user tasks for ${discordId}`);
             }
         } catch (error) {

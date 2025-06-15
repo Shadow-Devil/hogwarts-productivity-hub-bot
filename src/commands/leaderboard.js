@@ -27,13 +27,13 @@ module.exports = {
             }
 
             const leaderboardType = interaction.options.getString('type');
-            const leaderboard = await voiceService.getLeaderboard(leaderboardType);
+            const leaderboard = await voiceService.getLeaderboardOptimized(leaderboardType);
 
             if (!leaderboard || leaderboard.length === 0) {
                 const embed = createErrorTemplate(
                     `${StatusEmojis.INFO} No Leaderboard Data`,
                     'No data is available for the leaderboard yet. Be the first to start tracking your voice time!',
-                    { 
+                    {
                         helpText: 'Join a voice channel to start accumulating hours',
                         additionalInfo: 'Your time in voice channels automatically contributes to both monthly and all-time rankings.'
                     }
@@ -62,13 +62,13 @@ module.exports = {
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error in /leaderboard:', error);
-            
+
             const embed = createErrorTemplate(
                 'Leaderboard Load Failed',
                 'An error occurred while fetching the leaderboard data. Please try again in a moment.',
                 { helpText: 'If this problem persists, contact support' }
             );
-            
+
             await safeErrorReply(interaction, embed);
         }
     }
