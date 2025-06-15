@@ -6,6 +6,7 @@ const { calculateDailyLimitInfo, formatDailyLimitStatus, generateDailyLimitMessa
 const { roundHoursFor55MinRule, formatHours, minutesToHours, hoursToMinutes, calculateSessionDuration } = require('../utils/timeUtils');
 const CacheInvalidationService = require('../utils/cacheInvalidationService');
 const BaseService = require('../utils/baseService');
+const timezoneService = require('./timezoneService');
 
 class VoiceService extends BaseService {
     constructor() {
@@ -67,13 +68,15 @@ class VoiceService extends BaseService {
         })();
     }
 
-    // Start a voice session when user joins VC
+    // Start a voice session when user joins VC (timezone-aware)
     async startVoiceSession(discordId, username, voiceChannelId, voiceChannelName) {
         return measureDatabase('startVoiceSession', async () => {
             return executeWithResilience(async (client) => {
                 const user = await this.getOrCreateUser(discordId, username);
                 const now = new Date();
-                const today = dayjs().format('YYYY-MM-DD');
+                
+                // Use user's timezone for accurate date calculation
+                const today = await timezoneService.getTodayInUserTimezone(discordId);
 
                 // Insert new session
                 const session = await client.query(
@@ -83,7 +86,7 @@ class VoiceService extends BaseService {
                     [user.id, discordId, voiceChannelId, voiceChannelName, now, today]
                 );
 
-                console.log(`👥 Voice session started for ${username} in ${voiceChannelName}`);
+                console.log(`👥 Voice session started for ${username} in ${voiceChannelName} (date: ${today})`);
                 return session.rows[0];
             });
         })();
@@ -128,9 +131,11 @@ class VoiceService extends BaseService {
                 // Update daily stats
                 await this.updateDailyStats(discordId, session.date, durationMinutes, pointsEarned);
 
-                // Update streak if user spent at least 15 minutes
+                // Update streak if user spent at least 15 minutes (timezone-aware)
                 if (durationMinutes >= 15) {
-                    await this.updateStreak(discordId, session.date);
+                    // Get user's timezone for streak calculation
+                    const userTimezone = await timezoneService.getUserTimezone(discordId);
+                    await this.updateStreak(discordId, session.date, userTimezone);
                 }
 
                 console.log(`👋 Voice session ended for ${discordId}. Duration: ${durationMinutes} minutes, Points earned: ${pointsEarned}`);
@@ -158,8 +163,8 @@ class VoiceService extends BaseService {
                 const user = userResult.rows[0];
                 const currentMonthlyHours = parseFloat(user.monthly_hours) || 0;
 
-                // Get daily stats for voice time points calculation
-                const today = dayjs().format('YYYY-MM-DD');
+                // Get daily stats for voice time points calculation (timezone-aware)
+                const today = await timezoneService.getTodayInUserTimezone(discordId);
                 const dailyStats = await client.query(
                     'SELECT total_minutes, points_earned FROM daily_voice_stats WHERE discord_id = $1 AND date = $2',
                     [discordId, today]
@@ -337,13 +342,16 @@ class VoiceService extends BaseService {
         })();
     }
 
-    // Handle session that crosses midnight - split into separate daily sessions
+    // Handle session that crosses midnight - split into separate daily sessions (timezone-aware)
     async handleMidnightCrossover(discordId, voiceChannelId, member = null) {
         return measureDatabase('handleMidnightCrossover', async () => {
             return executeWithResilience(async (client) => {
                 const now = new Date();
-                const today = dayjs().format('YYYY-MM-DD');
-                const startOfToday = dayjs().startOf('day').toDate();
+                
+                // Use user's timezone for accurate midnight calculation
+                const userTime = await timezoneService.getCurrentTimeInUserTimezone(discordId);
+                const today = userTime.format('YYYY-MM-DD');
+                const startOfToday = userTime.startOf('day').toDate();
 
                 // Find active session that started yesterday
                 const result = await client.query(
@@ -407,12 +415,13 @@ class VoiceService extends BaseService {
         })();
     }
 
-    // Get user's daily voice time for limit checking
+    // Get user's daily voice time for limit checking (timezone-aware)
     async getUserDailyTime(discordId, date = null) {
         return measureDatabase('getUserDailyTime', async () => {
             const client = await pool.connect();
             try {
-                const targetDate = date || dayjs().format('YYYY-MM-DD');
+                // Use user's timezone for accurate date calculation
+                const targetDate = date || await timezoneService.getTodayInUserTimezone(discordId);
 
                 // COMPATIBLE WITH DAILY CUMULATIVE POINTS SYSTEM:
                 // Query both current and archived daily stats to get accurate daily totals
@@ -447,8 +456,8 @@ class VoiceService extends BaseService {
         })();
     }
 
-    // Update user streak (only increment once per day)
-    async updateStreak(discordId, sessionDate) {
+    // Update user streak (only increment once per day) - timezone-aware
+    async updateStreak(discordId, sessionDate, userTimezone = null) {
         const client = await pool.connect();
         try {
             const user = await client.query(
@@ -459,8 +468,13 @@ class VoiceService extends BaseService {
             if (user.rows.length === 0) return;
 
             const userData = user.rows[0];
-            const today = dayjs(sessionDate);
-            const lastVcDate = userData.last_vc_date ? dayjs(userData.last_vc_date) : null;
+            
+            // Get user's timezone if not provided
+            const timezone = userTimezone || userData.timezone || 'UTC';
+            
+            // Use timezone-aware date comparisons
+            const today = dayjs(sessionDate).tz(timezone);
+            const lastVcDate = userData.last_vc_date ? dayjs(userData.last_vc_date).tz(timezone) : null;
 
             let newStreak = userData.current_streak;
             let shouldUpdateLastVcDate = false;
@@ -482,7 +496,7 @@ class VoiceService extends BaseService {
                     shouldUpdateLastVcDate = true;
                 } else if (daysDiff === 0) {
                     // Same day - don't change streak or date
-                    console.log(`🔥 Streak maintained for ${discordId}: ${newStreak} days (same day session)`);
+                    console.log(`🔥 Streak maintained for ${discordId}: ${newStreak} days (same day session in ${timezone})`);
                     return; // No database update needed
                 }
             }
@@ -498,7 +512,7 @@ class VoiceService extends BaseService {
                     [newStreak, newLongestStreak, sessionDate, discordId]
                 );
 
-                console.log(`🔥 Streak updated for ${discordId}: ${newStreak} days`);
+                console.log(`🔥 Streak updated for ${discordId}: ${newStreak} days (timezone: ${timezone})`);
             }
         } catch (error) {
             console.error('Error updating streak:', error);
@@ -735,9 +749,11 @@ class VoiceService extends BaseService {
     }
 
     // Check and update streaks for all users (run daily)
+    // NOTE: This method uses global timezone and will be deprecated in favor of CentralResetService
     async checkAllStreaks() {
         const client = await pool.connect();
         try {
+            console.log('⚠️ Using legacy global timezone streak check - migrating to CentralResetService...');
             const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
 
             // Get all users who didn't join VC yesterday and have current streaks

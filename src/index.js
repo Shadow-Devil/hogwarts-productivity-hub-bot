@@ -10,6 +10,7 @@ const BotHealthMonitor = require('./utils/botHealthMonitor');
 const { TimeoutHandler } = require('./utils/faultTolerance');
 const sessionRecovery = require('./utils/sessionRecovery');
 const DailyTaskManager = require('./utils/dailyTaskManager');
+const CentralResetService = require('./services/centralResetService');
 const dailyTaskManager = new DailyTaskManager();
 
 const client = new Client({
@@ -96,6 +97,7 @@ async function loadEvents() {
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
 let healthMonitor = null; // Will be initialized after database connection
 let materializedViewManager = null; // Will be initialized after database connection
+let centralResetService = null; // Will be initialized after database connection
 
 // Bot login
 
@@ -136,6 +138,14 @@ client.on('ready', async (c) => {
 
         // Start performance monitoring and monthly reset scheduler
         console.log('⏰ Starting schedulers...');
+        
+        // Initialize Central Reset Service for timezone-aware resets
+        console.log('🌍 Starting timezone-aware reset service...');
+        centralResetService = CentralResetService;
+        await centralResetService.start();
+        client.centralResetService = centralResetService; // Attach to client for command access
+        console.log('✅ Central reset service started');
+        
         monthlyResetService.start();
         console.log('✅ Monthly reset scheduler started');
 
@@ -364,6 +374,12 @@ async function shutdown() {
         // Stop schedulers and optimizations
         console.log('⏰ [3/5] Stopping schedulers...');
         try {
+            // Stop Central Reset Service first
+            if (centralResetService) {
+                await centralResetService.stop();
+                console.log('✅ Central reset service stopped');
+            }
+            
             monthlyResetService.stop();
             dailyTaskManager.stop();
             performanceMonitor.cleanup();

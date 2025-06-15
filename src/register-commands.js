@@ -109,6 +109,31 @@ const commands = [
                 .setMinValue(1)),
 
     new SlashCommandBuilder()
+        .setName('timezone')
+        .setDescription('Manage your timezone settings for accurate daily/monthly resets')
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('view')
+                .setDescription('View your current timezone settings')
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('set')
+                .setDescription('Set your timezone')
+                .addStringOption(option =>
+                    option
+                        .setName('timezone')
+                        .setDescription('Your timezone (e.g., America/New_York, Europe/London)')
+                        .setRequired(true)
+                )
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('list')
+                .setDescription('View common timezone options')
+        ),
+
+    new SlashCommandBuilder()
         .setName('recovery')
         .setDescription('View session recovery system status and force operations')
         .addSubcommand(subcommand =>
