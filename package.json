@@ -13,7 +13,13 @@
     "lint:fix": "eslint src/ --fix",
     "build": "echo 'Build step placeholder - add if needed'",
     "validate": "npm run lint && npm run test",
-    "precommit": "npm run validate"
+    "precommit": "npm run validate",
+    "bot-health": "node scripts/bot-health/functional-health-check.js",
+    "roadmap-sync": "node scripts/roadmap/github-sync.js",
+    "roadmap-status": "node scripts/roadmap/progress-tracker.js status",
+    "roadmap-report": "node scripts/roadmap/progress-tracker.js report",
+    "validate-phase": "node scripts/roadmap/milestone-validator.js",
+    "roadmap-health": "node scripts/roadmap/milestone-validator.js health-check"
   },
   "keywords": [
     "discord",
@@ -26,9 +32,14 @@
   "license": "ISC",
   "description": "Discord Productivity Bot with task management, Pomodoro timers, and gamified points system",
   "dependencies": {
+    "@inquirer/prompts": "^7.5.3",
+    "@octokit/rest": "^22.0.0",
+    "chalk": "^4.1.2",
+    "commander": "^14.0.0",
     "dayjs": "^1.11.13",
     "discord.js": "^14.19.3",
     "dotenv": "^16.5.0",
+    "marked": "^15.0.12",
     "node-cron": "^4.1.0",
     "pg": "^8.16.0",
     "winston": "^3.17.0"
