@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
 const { createTimerTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { StatusEmojis } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/constants');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 const timezoneService = require('../services/timezoneService');
 const dayjs = require('dayjs');

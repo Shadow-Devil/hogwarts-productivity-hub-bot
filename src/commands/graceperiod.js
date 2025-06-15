@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const { createHeader, formatDataTable, createStatsCard } = require('../utils/visualHelpers');
-const { BotColors } = require('../utils/visualHelpers');
+const { BotColors } = require('../utils/constants');
 
 module.exports = {
     data: new SlashCommandBuilder()

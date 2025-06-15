@@ -5,7 +5,7 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const { createLeaderboardTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { StatusEmojis } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/constants');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 // Extend dayjs with timezone support

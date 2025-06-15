@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const timezoneService = require('../services/timezoneService');
-const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { BotColors, StatusEmojis } = require('../utils/constants');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');

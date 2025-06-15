@@ -1,9 +1,8 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
 
+const { BotColors, StatusEmojis } = require('./constants');
 const {
-    BotColors,
-    StatusEmojis,
     createHeader,
     createProgressBar,
     formatDataGrid,

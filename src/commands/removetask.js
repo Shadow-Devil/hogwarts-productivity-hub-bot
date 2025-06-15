@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
 const { createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { StatusEmojis } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/constants');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {

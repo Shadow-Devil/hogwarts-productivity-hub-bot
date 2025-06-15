@@ -282,7 +282,7 @@ class DatabaseOptimizer {
             // Covering index for user lookups with stats
             {
                 name: 'idx_users_discord_id_stats',
-                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_discord_id_stats 
+                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_discord_id_stats
                        ON users(discord_id) INCLUDE (monthly_points, monthly_hours, current_streak)`,
                 description: 'Covering index for user stats lookups'
             },
@@ -290,7 +290,7 @@ class DatabaseOptimizer {
             // Composite index for active voice sessions
             {
                 name: 'idx_vc_sessions_active_user',
-                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_vc_sessions_active_user 
+                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_vc_sessions_active_user
                        ON vc_sessions(discord_id, joined_at) WHERE left_at IS NULL`,
                 description: 'Partial index for active voice sessions'
             },
@@ -298,7 +298,7 @@ class DatabaseOptimizer {
             // BRIN index for time-series data
             {
                 name: 'idx_vc_sessions_date_brin',
-                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_vc_sessions_date_brin 
+                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_vc_sessions_date_brin
                        ON vc_sessions USING BRIN(date)`,
                 description: 'BRIN index for efficient date range queries'
             },
@@ -306,7 +306,7 @@ class DatabaseOptimizer {
             // Composite index for daily stats queries
             {
                 name: 'idx_daily_stats_user_date_points',
-                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_daily_stats_user_date_points 
+                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_daily_stats_user_date_points
                        ON daily_voice_stats(discord_id, date DESC) INCLUDE (points_earned)`,
                 description: 'Optimized index for daily statistics queries'
             },
@@ -314,7 +314,7 @@ class DatabaseOptimizer {
             // Task completion performance index
             {
                 name: 'idx_tasks_user_completion',
-                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tasks_user_completion 
+                query: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tasks_user_completion
                        ON tasks(discord_id, is_complete, created_at DESC)`,
                 description: 'Index for task completion queries'
             }

@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const voiceService = require('../services/voiceService');
 const { createHouseTemplate, createChampionTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { StatusEmojis } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/constants');
 const { safeDeferReply, safeErrorReply, fastMemberFetch } = require('../utils/interactionUtils');
 
 module.exports = {

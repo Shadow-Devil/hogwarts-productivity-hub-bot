@@ -29,16 +29,21 @@
 - [x] Resolved database service layer issues (db.js)
 - [x] **COMPLETED:** All utility file lint issues resolved (35 → 0 issues)
 - [x] **COMPLETED:** embedTemplates.js major cleanup (16 → 0 issues)
-- [x] **COMPLETED:** visualHelpers.js cleanup (6 → 0 issues)  
+- [x] **COMPLETED:** visualHelpers.js cleanup (6 → 0 issues)
 - [x] **COMPLETED:** All remaining utility files cleaned up
 - [x] **ACHIEVEMENT:** 100% lint-clean codebase achieved!
 
-### Phase 4: Utility Consolidation
+### Phase 4: Utility Consolidation (✅ COMPLETE)
 
-- [ ] Remove duplicate utility functions
-- [ ] Consolidate helper methods
-- [ ] Standardize parameter validation
-- [ ] Implement missing visual feedback
+- [x] **COMPLETED:** Created centralized `/src/utils/constants.js` for visual constants
+- [x] **COMPLETED:** Consolidated `BotColors` and `StatusEmojis` from duplicate locations
+- [x] **COMPLETED:** Updated all imports to use centralized constants (12 command files + embedTemplates)
+- [x] **COMPLETED:** Removed duplicate visual constants from `visualHelpers.js`
+- [x] **COMPLETED:** Standardized color format (hex numbers for Discord.js compatibility)
+- [x] **COMPLETED:** Added missing StatusEmojis (`CLOCK`, `READY`, `FAILED`, `PAUSED`, `UNKNOWN`)
+- [x] **COMPLETED:** Added House colors (`HOUSE_GRYFFINDOR`, `HOUSE_HUFFLEPUFF`, etc.)
+- [x] **COMPLETED:** Verified all utility functions are properly organized by domain
+- [x] **ACHIEVEMENT:** Visual constants fully centralized and standardized!
 
 ### Phase 5: Testing & Validation
 

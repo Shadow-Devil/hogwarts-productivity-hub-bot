@@ -2,35 +2,7 @@
 // Provides consistent visual formatting across all commands
 
 const { EmbedBuilder } = require('discord.js');
-
-// 🎨 Unified Color Palette
-const BotColors = {
-    PRIMARY: 0x5865F2,      // Discord Blurple
-    SUCCESS: 0x57F287,      // Green
-    WARNING: 0xFEE75C,      // Yellow
-    ERROR: 0xED4245,        // Red
-    INFO: 0x3498DB,         // Blue
-    SECONDARY: 0x99AAB5,    // Gray
-    PREMIUM: 0xFFD700,      // Gold
-    HOUSE_GRYFFINDOR: 0x7C0A02,
-    HOUSE_HUFFLEPUFF: 0xFFDB00,
-    HOUSE_RAVENCLAW: 0x0E1A40,
-    HOUSE_SLYTHERIN: 0x1A472A
-};
-
-// 🎯 Status Indicators
-const StatusEmojis = {
-    HEALTHY: '🟢',
-    WARNING: '🟡',
-    ERROR: '🔴',
-    INFO: 'ℹ️',
-    UNKNOWN: '⚪',
-    COMPLETED: '✅',
-    FAILED: '❌',
-    IN_PROGRESS: '🔄',
-    PAUSED: '⏸️',
-    READY: '🚀'
-};
+const { BotColors, StatusEmojis } = require('./constants');
 
 // 📊 Progress Bar Generator
 function createProgressBar(current, max, length = 10, fillChar = '▓', emptyChar = '░') {
