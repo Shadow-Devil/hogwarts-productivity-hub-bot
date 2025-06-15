@@ -53,7 +53,6 @@ function createTaskTemplate(user, tasks, options = {}) {
         includeRecentCompleted = false,
         maxRecentCompleted = 5,
         helpText = '',
-        style = 'dashboard',
         useEnhancedLayout = true,
         useTableFormat = true,
         showDailyLimit = false
@@ -88,7 +87,6 @@ function createTaskTemplate(user, tasks, options = {}) {
     const completedTasks = tasks.completedTasks || tasks.filter?.(t => t.is_complete) || [];
     const stats = tasks.stats || {};
 
-    const statusText = `**${incompleteTasks.length}** pending • **${completedTasks.length}** completed`;
     embed.setDescription(createHeader('Task Overview', `Progress tracking for **${user.username}**`, '📋', 'emphasis'));
 
     // Add completion progress bar with enhanced layout
@@ -524,7 +522,6 @@ function createHouseTemplate(houses, type, options = {}) {
 // 🩺 Enhanced Health Report Template
 function createHealthTemplate(title, healthData, options = {}) {
     const {
-        showDetails = true,
         includeMetrics = true,
         useEnhancedLayout = true,
         useTableFormat = true,
@@ -560,8 +557,6 @@ function createHealthTemplate(title, healthData, options = {}) {
         activeSessions,
         autoSave,
         issues = [],
-        checks,
-        metrics,
         message,
         troubleshooting = [],
         initializationNote,
@@ -807,8 +802,7 @@ function createSuccessTemplate(title, message, options = {}) {
 function createTimerTemplate(action, data, options = {}) {
     const {
         showProgress = true,
-        includeMotivation = true,
-        style = 'pomodoro'
+        includeMotivation = true
     } = options;
 
     const { workTime, breakTime, voiceChannel, phase, timeRemaining } = data;
