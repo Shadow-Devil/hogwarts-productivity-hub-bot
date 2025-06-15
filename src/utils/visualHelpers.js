@@ -2,7 +2,7 @@
 // Provides consistent visual formatting across all commands
 
 const { EmbedBuilder } = require('discord.js');
-const { BotColors, StatusEmojis } = require('./constants');
+const { BotColors } = require('./constants');
 
 // 📊 Progress Bar Generator
 function createProgressBar(current, max, length = 10, fillChar = '▓', emptyChar = '░') {
@@ -531,8 +531,6 @@ function getTrendEmoji(trend) {
 }
 
 module.exports = {
-    BotColors,
-    StatusEmojis,
     createProgressBar,
     getStatusColor,
     createHeader,
