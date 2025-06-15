@@ -37,6 +37,13 @@ class MilestoneValidator {
             warnings: []
         };
 
+        // Validate phase exists
+        const phase = this.tracker.progressData.phases[phaseId];
+        if (!phase) {
+            results.blockers.push(`Phase '${phaseId}' not found`);
+            return results;
+        }
+
         // Check phase dependencies
         const dependencyCheck = await this.tracker.checkPhaseDependencies(phaseId);
         results.checks.dependencies = {
@@ -60,7 +67,6 @@ class MilestoneValidator {
         }
 
         // Check if phase is already started or completed
-        const phase = this.tracker.progressData.phases[phaseId];
         if (phase.status === 'in-progress') {
             results.warnings.push('Phase is already in progress');
         } else if (phase.status === 'completed') {
@@ -120,6 +126,15 @@ class MilestoneValidator {
 
         if (!globalValidation.passed) {
             results.warnings.push('Global validation issues detected');
+        }
+
+        // Run audit compliance validation
+        const auditCompliance = await this.validateAuditCompliance(phaseId);
+        results.checks.auditCompliance = auditCompliance;
+
+        if (!auditCompliance.passed) {
+            results.failures.push('Audit compliance validation failed');
+            results.failures.push(...auditCompliance.failures);
         }
 
         results.canComplete = results.failures.length === 0;
@@ -289,6 +304,11 @@ class MilestoneValidator {
             phaseHealth.issues.push(`${blockedTasks.length} tasks are blocked`);
         }
 
+        // Check for phase-level blockers
+        if (phase.blockers && phase.blockers.length > 0) {
+            phaseHealth.issues.push(`${phase.blockers.length} phase blockers active`);
+        }
+
         // Check for overdue tasks
         const overdueTasks = tasks.filter(task => {
             if (!task.dueDate || task.status === 'completed') return false;
@@ -368,6 +388,41 @@ class MilestoneValidator {
 
         console.log(`✅ Phase ${phaseId} is approved for completion`);
         return validation;
+    }
+
+    async validateAuditCompliance(phaseId) {
+        try {
+            console.log(`🔍 Running audit compliance validation for phase: ${phaseId}`);
+
+            // Run audit compliance check using the tracker's built-in method
+            const auditComplianceConfig = {
+                minimumComplianceScore: 80,
+                strictCompliance: false,
+                checkVisualCompliance: true,
+                checkServiceCompliance: true
+            };
+
+            const auditResult = await this.tracker.runAuditComplianceValidator(auditComplianceConfig);
+
+            return {
+                passed: auditResult.passed,
+                complianceScore: auditResult.complianceScore,
+                failures: auditResult.failures || [],
+                details: auditResult.details,
+                message: auditResult.passed ?
+                    `Audit compliance passed with ${auditResult.complianceScore}% score` :
+                    `Audit compliance failed with ${auditResult.complianceScore || 0}% score`
+            };
+        } catch (error) {
+            console.warn(`⚠️  Audit compliance validation failed: ${error.message}`);
+            return {
+                passed: false,
+                complianceScore: 0,
+                failures: [`Audit compliance check failed: ${error.message}`],
+                details: {},
+                message: 'Audit compliance validation encountered an error'
+            };
+        }
     }
 }
 

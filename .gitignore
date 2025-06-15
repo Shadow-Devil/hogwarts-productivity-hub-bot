@@ -44,6 +44,11 @@ logs/
 *.log
 winston.log
 
+# Validation reports - keep sample reports, ignore bulk generated ones
+reports/validations/*-2025-*.json
+!reports/validations/sample-*.json
+!reports/validations/README.md
+
 # Database
 *.db
 *.sqlite

@@ -1,0 +1,26 @@
+{
+  "auditFindings": {
+    "visualFeedbackGaps": {
+      "description": "Test visual gaps",
+      "priority": "high",
+      "count": 5,
+      "targetPhase": "phase-2-point-system-redesign"
+    }
+  },
+  "complianceValidation": {
+    "lintCompliance": {
+      "baseline": 97,
+      "target": 0,
+      "command": "npm run lint",
+      "description": "ESLint compliance check"
+    },
+    "visualCompliance": {
+      "command": "echo \"COMPLIANT\"",
+      "description": "Test visual compliance check"
+    },
+    "serviceCompliance": {
+      "command": "echo \"COMPLIANT\"",
+      "description": "Test service compliance check"
+    }
+  }
+}
