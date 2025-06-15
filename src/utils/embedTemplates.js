@@ -574,11 +574,11 @@ function createHouseTemplate(houses, type, options = {}) {
     if (currentUser && currentUser.house && houses && houses.length > 0) {
         const userHouseName = currentUser.house;
         const userHouseData = houses.find(house => house.name === userHouseName);
-        
+
         if (userHouseData) {
             const userPosition = houses.findIndex(house => house.name === userHouseName) + 1;
             const emoji = houseEmojis[userHouseName] || '🏠';
-            
+
             embed.addFields([{
                 name: `${emoji} Your House: ${userHouseName}`,
                 value: `**Rank:** #${userPosition} of ${houses.length}\n**Points:** ${userHouseData.points}\n**Status:** ${userPosition === 1 ? 'Leading the competition! 🏆' : `${houses[0].points - userHouseData.points} points behind first place`}`,

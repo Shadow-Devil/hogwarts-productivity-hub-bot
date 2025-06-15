@@ -289,24 +289,15 @@ class CentralResetService extends BaseService {
         const userStartTime = Date.now();
 
         try {
-            // Reset daily voice stats and limits
+            // Reset daily voice stats and limits using voiceService
             await this.executeWithFallback(async() => {
-                const result = await pool.query(`
-                    UPDATE users
-                    SET
-                        daily_hours = 0,
-                        daily_limit_reached = false,
-                        last_daily_reset_tz = NOW()
-                    WHERE discord_id = $1
-                `, [user.discord_id]);
-
-                if (result.rowCount === 0) {
-                    throw new Error('User not found for daily reset');
+                const success = await voiceService.resetDailyStats(user.discord_id);
+                if (!success) {
+                    throw new Error('Voice service daily reset failed');
                 }
-
-                return result;
+                return { success: true };
             }, async() => {
-                this.logger.warn('Fallback: Could not reset daily stats for user', {
+                this.logger.warn('Fallback: Could not reset daily voice stats for user', {
                     userId: user.discord_id
                 });
             });

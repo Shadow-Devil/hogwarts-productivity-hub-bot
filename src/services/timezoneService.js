@@ -187,7 +187,7 @@ class TimezoneService extends BaseService {
                 operation: 'getUserTimezone'
             });
 
-            const timezone = result.rows[0]?.timezone || 'UTC';
+            let timezone = result.rows[0]?.timezone || 'UTC';
 
             // Validate timezone before caching
             if (!this.isValidTimezone(timezone)) {

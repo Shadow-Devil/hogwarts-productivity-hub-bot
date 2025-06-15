@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { performanceMonitor } = require('../utils/performanceMonitor');
 const queryCache = require('../utils/queryCache');
 const databaseOptimizer = require('../utils/databaseOptimizer');
@@ -88,7 +88,7 @@ module.exports = {
 /**
  * Create comprehensive overview embed (default view)
  */
-function createOverviewEmbed(summary, bottlenecks, wsLatency, apiLatency, cacheStats, optimizationReport, healthReport) {
+function createOverviewEmbed(summary, bottlenecks, wsLatency, apiLatency, cacheStats, _optimizationReport, _healthReport) {
     const uptimeHours = Math.floor(summary.uptime / 3600);
     const uptimeMinutes = Math.floor((summary.uptime % 3600) / 60);
 

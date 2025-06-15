@@ -1,7 +1,7 @@
 // Materialized View Manager Service
 // Handles periodic refresh of materialized views for optimal performance
 
-const { pool, executeWithResilience } = require('../models/db');
+const { executeWithResilience } = require('../models/db');
 const { measureDatabase } = require('../utils/performanceMonitor');
 const queryCache = require('../utils/queryCache');
 

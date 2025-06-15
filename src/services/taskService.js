@@ -1,4 +1,4 @@
-const { pool, executeWithResilience } = require('../models/db');
+const { executeWithResilience } = require('../models/db');
 const { measureDatabase } = require('../utils/performanceMonitor');
 const queryCache = require('../utils/queryCache');
 const voiceService = require('./voiceService');

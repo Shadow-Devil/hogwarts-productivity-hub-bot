@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const sessionRecovery = require('../utils/sessionRecovery');
 const { createHeader, formatDataTable, createStatsCard } = require('../utils/visualHelpers');
-const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
+const { safeDeferReply } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()

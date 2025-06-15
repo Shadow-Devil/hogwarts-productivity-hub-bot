@@ -2,8 +2,8 @@ const { pool, getCachedUser, setCachedUser, clearUserCache, calculatePointsForHo
 const dayjs = require('dayjs');
 const { measureDatabase } = require('../utils/performanceMonitor');
 const queryCache = require('../utils/queryCache');
-const { calculateDailyLimitInfo, formatDailyLimitStatus, generateDailyLimitMessage } = require('../utils/dailyLimitUtils');
-const { roundHoursFor55MinRule, formatHours, minutesToHours, hoursToMinutes, calculateSessionDuration } = require('../utils/timeUtils');
+const { calculateDailyLimitInfo, generateDailyLimitMessage } = require('../utils/dailyLimitUtils');
+const { roundHoursFor55MinRule, minutesToHours } = require('../utils/timeUtils');
 const CacheInvalidationService = require('../utils/cacheInvalidationService');
 const BaseService = require('../utils/baseService');
 const timezoneService = require('./timezoneService');
@@ -172,11 +172,12 @@ class VoiceService extends BaseService {
 
                 const currentDailyMinutes = dailyStats.rows[0]?.total_minutes || 0;
                 const currentDailyHours = currentDailyMinutes / 60;
-                const currentDailyPoints = dailyStats.rows[0]?.points_earned || 0;
 
                 // NEW DAILY CUMULATIVE POINTS SYSTEM:
-                // Always record actual session hours (no rounding for recording)
-                const actualSessionHours = durationMinutes / 60;
+                // Record actual session hours (apply rounding based on parameter)
+                const actualSessionHours = applyRounding ?
+                    roundHoursFor55MinRule(durationMinutes / 60) :
+                    durationMinutes / 60;
                 const newDailyHours = currentDailyHours + actualSessionHours;
                 const newMonthlyHours = currentMonthlyHours + actualSessionHours;
 
@@ -290,7 +291,7 @@ class VoiceService extends BaseService {
     }
 
     // Update daily voice stats
-    async updateDailyStats(discordId, date, additionalMinutes, pointsEarned = 0) {
+    async updateDailyStats(discordId, date, additionalMinutes, _pointsEarned = 0) {
         return measureDatabase('updateDailyStats', async() => {
             const client = await pool.connect();
             try {
@@ -346,11 +347,8 @@ class VoiceService extends BaseService {
     async handleMidnightCrossover(discordId, voiceChannelId, member = null) {
         return measureDatabase('handleMidnightCrossover', async() => {
             return executeWithResilience(async(client) => {
-                const now = new Date();
-
                 // Use user's timezone for accurate midnight calculation
                 const userTime = await timezoneService.getCurrentTimeInUserTimezone(discordId);
-                const today = userTime.format('YYYY-MM-DD');
                 const startOfToday = userTime.startOf('day').toDate();
 
                 // Find active session that started yesterday
@@ -975,6 +973,45 @@ class VoiceService extends BaseService {
                 client.release();
             }
         })();
+    }
+
+    /**
+     * Reset daily voice statistics for a user
+     * Called by centralResetService for timezone-aware daily resets
+     * @param {string} discordId - Discord user ID
+     * @returns {Promise<boolean>} Success status
+     */
+    async resetDailyStats(discordId) {
+        return measureDatabase('resetDailyStats', async() => {
+            return executeWithResilience(async(client) => {
+                // Reset daily voice stats and limits
+                const result = await client.query(`
+                    UPDATE users
+                    SET
+                        daily_hours = 0,
+                        daily_limit_reached = false,
+                        last_daily_reset_tz = NOW()
+                    WHERE discord_id = $1
+                    RETURNING discord_id
+                `, [discordId]);
+
+                if (result.rowCount === 0) {
+                    throw new Error(`User ${discordId} not found for daily reset`);
+                }
+
+                // Clear cache for the user to ensure fresh data
+                clearUserCache(discordId);
+                // Invalidate related caches
+                CacheInvalidationService.invalidateUserCaches(discordId);
+
+                this.logger.debug('Daily voice stats reset successfully', {
+                    userId: discordId,
+                    timestamp: new Date().toISOString()
+                });
+
+                return true;
+            });
+        });
     }
 
     // Fallback method for house leaderboard (used only if optimized version fails)

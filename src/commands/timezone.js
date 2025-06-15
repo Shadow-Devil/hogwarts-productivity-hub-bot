@@ -198,10 +198,11 @@ module.exports = {
             case 'view':
                 await module.exports.handleViewTimezone(interaction, discordId);
                 break;
-            case 'set':
+            case 'set': {
                 const timezone = interaction.options.getString('timezone');
                 await module.exports.handleSetTimezone(interaction, discordId, timezone);
                 break;
+            }
             case 'list':
                 await module.exports.handleListTimezones(interaction);
                 break;
@@ -303,7 +304,6 @@ module.exports = {
             const userTimezone = await timezoneService.getUserTimezone(discordId);
 
             const localTime = dayjs(nextResetTime).tz(userTimezone);
-            const now = dayjs().tz(userTimezone);
 
             const relativeTime = localTime.fromNow();
             const exactTime = localTime.format('MMM D [at] h:mm A');

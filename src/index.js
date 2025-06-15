@@ -7,7 +7,6 @@ const { initializeDatabase, getDbResilience } = require('./models/db');
 const { measureCommand, performanceMonitor } = require('./utils/performanceMonitor');
 const monthlyResetService = require('./services/monthlyResetService');
 const BotHealthMonitor = require('./utils/botHealthMonitor');
-const { TimeoutHandler } = require('./utils/faultTolerance');
 const sessionRecovery = require('./utils/sessionRecovery');
 const DailyTaskManager = require('./utils/dailyTaskManager');
 const CentralResetService = require('./services/centralResetService');
