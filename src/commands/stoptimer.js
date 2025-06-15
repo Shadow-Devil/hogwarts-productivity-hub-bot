@@ -3,6 +3,14 @@ const { getUserVoiceChannel } = require('../utils/voiceUtils');
 const { createTimerTemplate, createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
 const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply, safeReply } = require('../utils/interactionUtils');
+const timezoneService = require('../services/timezoneService');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+// Extend dayjs with timezone support
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -57,6 +65,18 @@ module.exports = {
                     additionalInfo: 'Remember: Consistency is key to building productive habits.'
                 }
             );
+
+            // Add timezone context showing when timer was stopped
+            try {
+                const userTimezone = await timezoneService.getUserTimezone(interaction.user.id);
+                const stopTime = dayjs().tz(userTimezone);
+                const timerFooter = `🌍 Timer stopped at: ${stopTime.format('h:mm A')} (${userTimezone}) | Use /timer to start a new session`;
+
+                embed.setFooter({ text: timerFooter });
+            } catch (error) {
+                console.warn('Could not add timezone info to timer stop:', error.message);
+                embed.setFooter({ text: 'Use /timer to start a new session when ready' });
+            }
 
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {

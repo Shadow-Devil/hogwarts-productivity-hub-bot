@@ -8,10 +8,11 @@ const queryCache = require('./queryCache');
 class CacheInvalidationService {
 
     /**
-     * Invalidate all user-related cache entries
+     * Invalidate all user-related cache entries with timezone awareness
      * @param {string} discordId - User's Discord ID
+     * @param {string} userTimezone - User's timezone (optional)
      */
-    static invalidateUserCache(discordId) {
+    static invalidateUserCache(discordId, userTimezone = null) {
         const keysToInvalidate = [
             `user_stats:${discordId}`,
             `user_stats_optimized:${discordId}`,
@@ -23,6 +24,16 @@ class CacheInvalidationService {
             `user_daily_time:${discordId}`
         ];
 
+        // Add timezone-aware cache keys if timezone is provided
+        if (userTimezone) {
+            keysToInvalidate.push(
+                `user_stats:${discordId}:${userTimezone}`,
+                `user_daily_time:${discordId}:${userTimezone}`,
+                `daily_limit:${discordId}:${userTimezone}`,
+                `reset_schedule:${discordId}:${userTimezone}`
+            );
+        }
+
         keysToInvalidate.forEach(key => {
             queryCache.delete(key);
         });
@@ -30,7 +41,7 @@ class CacheInvalidationService {
         // Use smart cache invalidation for user-related data
         queryCache.invalidateUserRelatedCache(discordId);
 
-        console.log(`🧹 Cache invalidated for user ${discordId}`);
+        console.log(`🧹 Cache invalidated for user ${discordId}${userTimezone ? ` (${userTimezone})` : ''}`);
     }
 
     /**
@@ -116,9 +127,10 @@ class CacheInvalidationService {
      * Invalidate cache after voice session operations
      * @param {string} discordId - User's Discord ID
      * @param {string} houseName - User's house name (optional)
+     * @param {string} userTimezone - User's timezone (optional)
      */
-    static invalidateAfterVoiceOperation(discordId, houseName = null) {
-        this.invalidateUserCache(discordId);
+    static invalidateAfterVoiceOperation(discordId, houseName = null, userTimezone = null) {
+        this.invalidateUserCache(discordId, userTimezone);
         this.invalidateLeaderboardCache();
         this.invalidateDailyStatsCache();
 
@@ -143,6 +155,32 @@ class CacheInvalidationService {
 
         this.invalidateLeaderboardCache();
         this.invalidateHouseCache();
+    }
+
+    /**
+     * Invalidate cache after timezone change
+     * @param {string} discordId - User's Discord ID
+     * @param {string} oldTimezone - Previous timezone
+     * @param {string} newTimezone - New timezone
+     */
+    static invalidateAfterTimezoneChange(discordId, oldTimezone, newTimezone) {
+        // Invalidate both old and new timezone cache patterns
+        this.invalidateUserCache(discordId, oldTimezone);
+        this.invalidateUserCache(discordId, newTimezone);
+
+        // Also invalidate timezone-specific patterns
+        const timezonePatterns = [
+            `*:${discordId}:${oldTimezone}`,
+            `*:${discordId}:${newTimezone}`,
+            `reset_*:${discordId}:*`,
+            `daily_*:${discordId}:*`
+        ];
+
+        timezonePatterns.forEach(pattern => {
+            queryCache.invalidatePattern(pattern);
+        });
+
+        console.log(`🧹 Timezone cache invalidated for user ${discordId}: ${oldTimezone} → ${newTimezone}`);
     }
 
     /**

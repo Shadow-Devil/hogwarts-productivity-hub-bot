@@ -222,6 +222,42 @@ async function runMigrations(client) {
             console.log('ℹ️  daily_task_stats table already exists or other issue:', error.message);
         }
 
+        // Migration 6: Add timezone support columns to users table
+        const timezoneColumnsToAdd = [
+            { name: 'timezone', type: 'VARCHAR(50) DEFAULT \'UTC\'' },
+            { name: 'timezone_set_at', type: 'TIMESTAMP' },
+            { name: 'last_daily_reset_tz', type: 'TIMESTAMP' },
+            { name: 'last_monthly_reset_tz', type: 'TIMESTAMP' }
+        ];
+
+        for (const column of timezoneColumnsToAdd) {
+            try {
+                await client.query(`
+                    ALTER TABLE users
+                    ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
+                `);
+                console.log(`✅ Added timezone column ${column.name} to users table`);
+            } catch (error) {
+                // Column might already exist, that's okay
+                if (error.code !== '42701') { // duplicate_column error
+                    console.log(`ℹ️  Timezone column ${column.name} already exists or other issue:`, error.message);
+                }
+            }
+        }
+
+        // Migration 7: Create timezone-specific indexes for performance
+        try {
+            await client.query(`
+                CREATE INDEX IF NOT EXISTS idx_users_timezone ON users(timezone);
+                CREATE INDEX IF NOT EXISTS idx_users_daily_reset_tz ON users(last_daily_reset_tz);
+                CREATE INDEX IF NOT EXISTS idx_users_timezone_daily ON users(timezone, last_daily_reset_tz);
+                CREATE INDEX IF NOT EXISTS idx_users_timezone_monthly ON users(timezone, last_monthly_reset_tz);
+            `);
+            console.log('✅ Created timezone-specific indexes for users table');
+        } catch (error) {
+            console.log('ℹ️  Timezone indexes already exist or other issue:', error.message);
+        }
+
         console.log('✅ Database migrations completed');
     } catch (error) {
         console.error('❌ Error running migrations:', error);

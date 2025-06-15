@@ -1,11 +1,18 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const voiceService = require('../services/voiceService');
 const taskService = require('../services/taskService');
+const timezoneService = require('../services/timezoneService');
 const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
 const { BotColors } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 const { formatDailyLimitStatus } = require('../utils/dailyLimitUtils');
 const { formatHours } = require('../utils/timeUtils');
+
+// Extend dayjs with timezone support
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -168,6 +175,21 @@ module.exports = {
                     inline: true
                 }
             ]);
+
+            // Add timezone context to footer for user awareness
+            try {
+                const userTimezone = await timezoneService.getUserTimezone(discordId);
+                const userLocalTime = dayjs().tz(userTimezone);
+                const nextMidnight = dayjs().tz(userTimezone).add(1, 'day').startOf('day');
+                const hoursUntilReset = nextMidnight.diff(userLocalTime, 'hour', true);
+
+                embed.setFooter({
+                    text: `🌍 Your timezone: ${userTimezone} | Local time: ${userLocalTime.format('h:mm A')} | Daily reset in ${hoursUntilReset.toFixed(1)}h`
+                });
+            } catch (error) {
+                console.warn('Could not add timezone info to stats:', error.message);
+                embed.setFooter({ text: '⏰ Daily limit resets at midnight your local time' });
+            }
 
             await interaction.editReply({ embeds: [embed] });
         } catch (error) {

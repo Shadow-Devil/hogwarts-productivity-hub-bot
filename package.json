@@ -7,7 +7,13 @@
     "dev": "nodemon src/index.js",
     "register": "node src/register-commands.js"
   },
-  "keywords": ["discord", "bot", "productivity", "pomodoro", "timer"],
+  "keywords": [
+    "discord",
+    "bot",
+    "productivity",
+    "pomodoro",
+    "timer"
+  ],
   "author": "",
   "license": "ISC",
   "description": "Discord Productivity Bot with task management, Pomodoro timers, and gamified points system",
@@ -15,7 +21,9 @@
     "dayjs": "^1.11.13",
     "discord.js": "^14.19.3",
     "dotenv": "^16.5.0",
-    "pg": "^8.16.0"
+    "node-cron": "^4.1.0",
+    "pg": "^8.16.0",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
