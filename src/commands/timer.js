@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
 const { createTimerTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply, safeReply } = require('../utils/interactionUtils');
 const timezoneService = require('../services/timezoneService');
 const dayjs = require('dayjs');
@@ -41,12 +41,12 @@ module.exports = {
                     `${StatusEmojis.ERROR} Voice Channel Required`,
                     'You must be in a voice channel to start a Pomodoro timer and track your productivity.',
                     {
-                        helpText: 'Join any voice channel first, then try again',
+                        helpText: `${StatusEmojis.INFO} Join any voice channel first, then try again`,
                         additionalInfo: 'Timers help you maintain focus during productive voice sessions.'
                     }
                 );
 
-                return safeReply(interaction, { embeds: [embed] });
+                return safeReply(interaction, { embeds: [embed], flags: MessageFlags.Ephemeral });
             }
             const voiceChannelId = voiceChannel.id;
             // Enforce: only one timer per voice channel
@@ -69,16 +69,16 @@ module.exports = {
                     } else {
                         // Timer is valid and active, reject the new timer request
                         const embed = createErrorTemplate(
-                            'Timer Already Running',
+                            `${StatusEmojis.WARNING} Timer Already Running`,
                             `A Pomodoro timer is already active in <#${voiceChannelId}>! Only one timer per voice channel is allowed.`,
                             {
-                                helpText: 'Use `/stoptimer` to stop the current timer first',
+                                helpText: `${StatusEmojis.INFO} Use \`/stoptimer\` to stop the current timer first`,
                                 additionalInfo: `**Current Phase:** ${existingTimer.phase.toUpperCase()}\n**Time Remaining:** ${timeRemaining} minutes`
                             }
                         );
 
                         if (!interaction.replied && !interaction.deferred) {
-                            return safeReply(interaction, { embeds: [embed] });
+                            return safeReply(interaction, { embeds: [embed], flags: MessageFlags.Ephemeral });
                         }
                         return;
                     }
@@ -88,15 +88,15 @@ module.exports = {
             const breakTime = interaction.options.getInteger('break') || 0;
             if (work < 20 || (breakTime > 0 && breakTime < 5)) {
                 const embed = createErrorTemplate(
-                    'Invalid Timer Values',
+                    `${StatusEmojis.WARNING} Invalid Timer Values`,
                     'Please ensure your timer values meet the minimum requirements for effective productivity sessions.',
                     {
-                        helpText: 'Try again with valid values',
+                        helpText: `${StatusEmojis.INFO} Try again with valid values`,
                         additionalInfo: '**Minimum Requirements:** Work Time: **20 minutes** • Break Time: **5 minutes** (if specified)'
                     }
                 );
 
-                return safeReply(interaction, { embeds: [embed] });
+                return safeReply(interaction, { embeds: [embed], flags: MessageFlags.Ephemeral });
             }
             const userTimezone = await timezoneService.getUserTimezone(interaction.user.id);
             const now = dayjs().tz(userTimezone);

@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
 const { createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
@@ -31,8 +31,8 @@ module.exports = {
 
             if (result.success) {
                 const embed = createSuccessTemplate(
-                    'Task Completed Successfully!',
-                    `**${result.message}**\n\nGreat job on completing your task! Keep up the momentum and continue building your productivity streak.`,
+                    `${StatusEmojis.COMPLETED} Task Completed Successfully!`,
+                    `**${result.message}**\n\n${StatusEmojis.READY} Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
                     {
                         celebration: true,
                         points: 2,
@@ -40,7 +40,7 @@ module.exports = {
                         useEnhancedLayout: true,
                         useTableFormat: true,
                         showBigNumbers: true,
-                        additionalInfo: `**Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`
+                        additionalInfo: `${StatusEmojis.IN_PROGRESS} **Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`
                     }
                 );
                 return interaction.editReply({ embeds: [embed] });
@@ -50,19 +50,19 @@ module.exports = {
                     const resetTime = Math.floor(dayjs().add(1, 'day').startOf('day').valueOf() / 1000);
 
                     const embed = createErrorTemplate(
-                        'Daily Task Limit Reached',
+                        `${StatusEmojis.WARNING} Daily Task Limit Reached`,
                         result.message,
                         {
-                            helpText: `Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
+                            helpText: `${StatusEmojis.INFO} Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
                             additionalInfo: `**Remaining:** ${result.stats.remaining} actions\n**Resets:** <t:${resetTime}:R>`
                         }
                     );
                     return interaction.editReply({ embeds: [embed] });
                 } else {
                     const embed = createErrorTemplate(
-                        'Task Completion Failed',
+                        `${StatusEmojis.ERROR} Task Completion Failed`,
                         result.message,
-                        { helpText: 'Use `/viewtasks` to check your task numbers' }
+                        { helpText: `${StatusEmojis.INFO} Use \`/viewtasks\` to check your task numbers` }
                     );
                     return interaction.editReply({ embeds: [embed] });
                 }
@@ -71,9 +71,9 @@ module.exports = {
             console.error('Error in /completetask:', error);
 
             const embed = createErrorTemplate(
-                'Task Completion Error',
+                `${StatusEmojis.ERROR} Task Completion Error`,
                 'An unexpected error occurred while completing your task. Please try again in a moment.',
-                { helpText: 'If this problem persists, contact support' }
+                { helpText: `${StatusEmojis.INFO} If this problem persists, contact support` }
             );
 
             await safeErrorReply(interaction, embed);

@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
-const { createTimerTemplate, createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
+const { StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply, safeReply } = require('../utils/interactionUtils');
 const timezoneService = require('../services/timezoneService');
 const dayjs = require('dayjs');
@@ -30,10 +30,10 @@ module.exports = {
 
             if (!voiceChannel) {
                 const embed = createErrorTemplate(
-                    'Voice Channel Required',
+                    `${StatusEmojis.ERROR} Voice Channel Required`,
                     'You must be in a voice channel to stop a timer and manage your productivity sessions.',
                     {
-                        helpText: 'Join the voice channel with an active timer',
+                        helpText: `${StatusEmojis.INFO} Join the voice channel with an active timer`,
                         additionalInfo: 'Timer controls are tied to your current voice channel location.'
                     }
                 );
@@ -43,10 +43,10 @@ module.exports = {
             const voiceChannelId = voiceChannel.id;
             if (!activeVoiceTimers.has(voiceChannelId)) {
                 const embed = createErrorTemplate(
-                    'No Active Timer Found',
+                    `${StatusEmojis.WARNING} No Active Timer Found`,
                     `No Pomodoro timer is currently running in <#${voiceChannelId}>. There's nothing to stop!`,
                     {
-                        helpText: 'Use `/timer <work_minutes>` to start a new Pomodoro session',
+                        helpText: `${StatusEmojis.INFO} Use \`/timer <work_minutes>\` to start a new Pomodoro session`,
                         additionalInfo: 'Check `/time` to see if there are any active timers in your current voice channel.'
                     }
                 );
@@ -58,10 +58,10 @@ module.exports = {
             activeVoiceTimers.delete(voiceChannelId);
 
             const embed = createSuccessTemplate(
-                'Timer Stopped Successfully',
-                `Your Pomodoro timer in <#${voiceChannelId}> has been stopped. No worries - every session counts towards building your productivity habits!`,
+                `${StatusEmojis.COMPLETED} Timer Stopped Successfully`,
+                `Your Pomodoro timer in <#${voiceChannelId}> has been stopped. ${StatusEmojis.READY} No worries - every session counts towards building your productivity habits!`,
                 {
-                    helpText: 'Use `/timer <work_minutes>` when you\'re ready for another session',
+                    helpText: `${StatusEmojis.INFO} Use \`/timer <work_minutes>\` when you're ready for another session`,
                     additionalInfo: 'Remember: Consistency is key to building productive habits.'
                 }
             );
@@ -83,9 +83,9 @@ module.exports = {
             console.error('Error in /stoptimer:', error);
 
             const embed = createErrorTemplate(
-                'Timer Stop Failed',
+                `${StatusEmojis.ERROR} Timer Stop Failed`,
                 'An error occurred while stopping your timer. Please try again in a moment.',
-                { helpText: 'If this problem persists, contact support' }
+                { helpText: `${StatusEmojis.INFO} If this problem persists, contact support` }
             );
 
             await safeErrorReply(interaction, embed);

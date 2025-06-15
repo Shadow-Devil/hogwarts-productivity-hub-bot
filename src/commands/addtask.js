@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
 const { createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
@@ -29,18 +29,18 @@ module.exports = {
             // Validate title length and content
             if (title.trim().length === 0) {
                 const embed = createErrorTemplate(
-                    'Invalid Task Title',
+                    `${StatusEmojis.ERROR} Invalid Task Title`,
                     'Task title cannot be empty. Please provide a meaningful description for your task.',
-                    { helpText: 'Try: `/addtask Write project proposal`' }
+                    { helpText: `${StatusEmojis.INFO} Try: \`/addtask Write project proposal\`` }
                 );
                 return interaction.editReply({ embeds: [embed] });
             }
 
             if (title.length > 500) {
                 const embed = createErrorTemplate(
-                    'Task Title Too Long',
+                    `${StatusEmojis.WARNING} Task Title Too Long`,
                     'Task title must be 500 characters or less for optimal readability.',
-                    { helpText: `Current length: ${title.length}/500 characters` }
+                    { helpText: `${StatusEmojis.INFO} Current length: ${title.length}/500 characters` }
                 );
                 return interaction.editReply({ embeds: [embed] });
             }
@@ -54,31 +54,33 @@ module.exports = {
                     const resetTime = Math.floor(dayjs().add(1, 'day').startOf('day').valueOf() / 1000);
 
                     const embed = createErrorTemplate(
-                        'Daily Task Limit Reached',
+                        `${StatusEmojis.WARNING} Daily Task Limit Reached`,
                         result.message,
                         {
-                            helpText: `Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
+                            helpText: `${StatusEmojis.INFO} Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
                             additionalInfo: `**Remaining:** ${result.stats.remaining} actions • **Resets:** <t:${resetTime}:R>`
                         }
                     );
                     return interaction.editReply({ embeds: [embed] });
                 } else {
                     const embed = createErrorTemplate(
-                        'Task Creation Failed',
+                        `${StatusEmojis.ERROR} Task Creation Failed`,
                         result.message,
-                        { helpText: 'Please try again' }
+                        { helpText: `${StatusEmojis.INFO} Please try again` }
                     );
                     return interaction.editReply({ embeds: [embed] });
                 }
             }
 
             const embed = createSuccessTemplate(
-                'Task Added Successfully!',
-                `**${result.task.title}**\n\nYour task has been added to your personal to-do list and is ready for completion.`,
+                `${StatusEmojis.COMPLETED} Task Added Successfully!`,
+                `**${result.task.title}**\n\n${StatusEmojis.READY} Your task has been added to your personal to-do list and is ready for completion.`,
                 {
-                    helpText: 'Use `/viewtasks` to see all your tasks',
-                    rewards: 'Complete this task to earn **2 points**!',
-                    additionalInfo: `**Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`
+                    helpText: `Use \`/viewtasks\` to see all your tasks ${StatusEmojis.INFO}`,
+                    rewards: `Complete this task to earn **2 points**! ${StatusEmojis.IN_PROGRESS}`,
+                    additionalInfo: `**Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`,
+                    celebration: true,
+                    points: 2
                 }
             );
 
@@ -87,9 +89,9 @@ module.exports = {
             console.error('Error in /addtask:', error);
 
             const embed = createErrorTemplate(
-                'Task Creation Failed',
+                `${StatusEmojis.ERROR} Task Creation Failed`,
                 'An unexpected error occurred while adding your task. Please try again in a moment.',
-                { helpText: 'If this problem persists, contact support' }
+                { helpText: `${StatusEmojis.INFO} If this problem persists, contact support` }
             );
 
             await safeErrorReply(interaction, embed);

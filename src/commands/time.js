@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { getUserVoiceChannel } = require('../utils/voiceUtils');
 const { createTimerTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 const timezoneService = require('../services/timezoneService');
 const dayjs = require('dayjs');
@@ -87,9 +87,9 @@ module.exports = {
             console.error('Error in /time command:', error);
 
             const embed = createErrorTemplate(
-                'Timer Status Check Failed',
+                `${StatusEmojis.ERROR} Timer Status Check Failed`,
                 'An error occurred while checking your timer status. Please try again in a moment.',
-                { helpText: 'If this problem persists, contact support' }
+                { helpText: `${StatusEmojis.INFO} If this problem persists, contact support` }
             );
 
             await safeErrorReply(interaction, embed);

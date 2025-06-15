@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
 const { createSuccessTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
@@ -55,19 +55,19 @@ module.exports = {
                 }
 
                 const embed = createSuccessTemplate(
-                    'Task Removed Successfully',
-                    `**${result.message}**\n\nThe task has been permanently removed from your to-do list.${slotInfo}`,
+                    `${StatusEmojis.COMPLETED} Task Removed Successfully`,
+                    `**${result.message}**\n\n${StatusEmojis.INFO} The task has been permanently removed from your to-do list.${slotInfo}`,
                     {
-                        helpText: 'Use `/viewtasks` to see your updated task list',
+                        helpText: `${StatusEmojis.INFO} Use \`/viewtasks\` to see your updated task list`,
                         additionalInfo: additionalInfo
                     }
                 );
                 return interaction.editReply({ embeds: [embed] });
             } else {
                 const embed = createErrorTemplate(
-                    'Task Removal Failed',
+                    `${StatusEmojis.ERROR} Task Removal Failed`,
                     result.message,
-                    { helpText: 'Use `/viewtasks` to check your task numbers' }
+                    { helpText: `${StatusEmojis.INFO} Use \`/viewtasks\` to check your task numbers` }
                 );
                 return interaction.editReply({ embeds: [embed] });
             }
@@ -75,9 +75,9 @@ module.exports = {
             console.error('Error in /removetask:', error);
 
             const embed = createErrorTemplate(
-                'Task Removal Error',
+                `${StatusEmojis.ERROR} Task Removal Error`,
                 'An unexpected error occurred while removing your task. Please try again in a moment.',
-                { helpText: 'If this problem persists, contact support' }
+                { helpText: `${StatusEmojis.INFO} If this problem persists, contact support` }
             );
 
             await safeErrorReply(interaction, embed);

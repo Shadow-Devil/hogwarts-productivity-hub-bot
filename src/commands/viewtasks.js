@@ -1,8 +1,7 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const taskService = require('../services/taskService');
-const dayjs = require('dayjs');
 const { createTaskTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { BotColors, StatusEmojis, createProgressBar, formatDataGrid, formatDataTable } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 module.exports = {
@@ -71,9 +70,9 @@ module.exports = {
             console.error('Error in /viewtasks:', error);
 
             const embed = createErrorTemplate(
-                'Failed to Load Tasks',
+                `${StatusEmojis.ERROR} Failed to Load Tasks`,
                 'An error occurred while fetching your tasks. Please try again in a moment.',
-                { helpText: 'If this problem persists, contact support' }
+                { helpText: `${StatusEmojis.INFO} If this problem persists, contact support` }
             );
 
             await safeErrorReply(interaction, embed);
