@@ -1,7 +1,6 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
 
-const { EmbedBuilder } = require('discord.js');
 const {
     BotColors,
     StatusEmojis,
@@ -9,11 +8,7 @@ const {
     createProgressBar,
     formatDataGrid,
     formatDataTable,
-    formatCenteredDataTable,
-    createStatsSection,
-    createCenteredLayout,
     createStatsCard,
-    createInfoSection,
     createProgressSection,
     createStyledEmbed
 } = require('./visualHelpers');
@@ -23,7 +18,6 @@ function createStatsTemplate(user, stats, options = {}) {
     const {
         showThumbnail = true,
         includeFooter = true,
-        style = 'comprehensive',
         useEnhancedLayout = true
     } = options;
 
@@ -397,75 +391,6 @@ function createLeaderboardTemplate(type, data, currentUser, options = {}) {
 }
 
 // ⏱️ Enhanced Timer Status Template
-function createTimerTemplate(timerData, options = {}) {
-    const {
-        showProgress = true,
-        animated = false,
-        useEnhancedLayout = true,
-        useTableFormat = true
-    } = options;
-
-    const { phase, timeRemaining, totalTime, isActive } = timerData;
-    const isWorkPhase = phase === 'work' || phase === 'study';
-
-    const phaseEmoji = isWorkPhase ? '📚' : '☕';
-    const phaseText = isWorkPhase ? 'FOCUS TIME' : 'BREAK TIME';
-    const statusColor = isWorkPhase ? BotColors.INFO : BotColors.SUCCESS;
-
-    const embed = createStyledEmbed()
-        .setColor(statusColor)
-        .setTitle(`${phaseEmoji} ${phaseText}`);
-
-    if (useEnhancedLayout) {
-        embed.setDescription(createHeader('Timer Status', 'Stay focused and productive!', '⏰', 'emphasis'));
-    } else {
-        embed.setDescription(createHeader('Timer Status', 'Stay focused and productive!', '⏰'));
-    }
-
-    if (showProgress && totalTime > 0) {
-        const progressSection = createProgressSection(
-            'Session Progress',
-            totalTime - timeRemaining,
-            totalTime,
-            {
-                emoji: '📊',
-                style: 'detailed',
-                showPercentage: true,
-                barLength: 15
-            }
-        );
-
-        embed.addFields([{
-            name: '📊 Progress Tracking',
-            value: progressSection,
-            inline: false
-        }]);
-    }
-
-    // Add session details with table format
-    if (useTableFormat) {
-        const sessionDetails = [
-            ['Phase', isWorkPhase ? 'Work Session' : 'Break Time'],
-            ['Time Left', `${timeRemaining} minutes`],
-            ['Status', isActive ? '🔴 Active' : '⏸️ Paused']
-        ];
-
-        embed.addFields([{
-            name: '📋 Session Details',
-            value: formatDataTable(sessionDetails, [12, 10]),
-            inline: false
-        }]);
-    }
-
-    embed.setFooter({
-        text: isWorkPhase ?
-            'Focus time! Minimize distractions and stay productive' :
-            'Break time! Relax and recharge for the next session'
-    });
-
-    return embed;
-}
-
 // 🏠 Enhanced House Points Template
 function createHouseTemplate(houses, type, options = {}) {
     const {
@@ -891,7 +816,7 @@ function createTimerTemplate(action, data, options = {}) {
     let embed;
 
     switch (action) {
-    case 'start':
+    case 'start': {
         embed = createStyledEmbed('primary')
             .setTitle('⏱️ Pomodoro Timer Started')
             .setDescription(createHeader('Focus Session Active', 'Time to boost your productivity!', '🎯'));
@@ -928,6 +853,7 @@ function createTimerTemplate(action, data, options = {}) {
 
         embed.setFooter({ text: 'Use /stoptimer if you need to stop early • /time to check remaining time' });
         break;
+    }
 
     case 'work_complete':
         embed = createStyledEmbed('success')
@@ -961,7 +887,7 @@ function createTimerTemplate(action, data, options = {}) {
         }]);
         break;
 
-    case 'status':
+    case 'status': {
         const isBreak = phase === 'break';
         embed = createStyledEmbed(isBreak ? 'warning' : 'primary')
             .setTitle(`⏰ Timer Status - ${phase.charAt(0).toUpperCase() + phase.slice(1)} Phase`)
@@ -985,6 +911,7 @@ function createTimerTemplate(action, data, options = {}) {
             inline: false
         }]);
         break;
+    }
 
     case 'no_timer':
         embed = createStyledEmbed('secondary')
