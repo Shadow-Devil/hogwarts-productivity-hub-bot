@@ -48,6 +48,10 @@
 | src/commands/timer.js | ✅ COMPLETE | Enhanced with StatusEmojis and MessageFlags for ephemeral errors | LOW | Pending |
 | src/commands/stoptimer.js | ✅ COMPLETE | Enhanced with StatusEmojis, removed unused imports | LOW | Pending |
 | src/commands/time.js | ✅ COMPLETE | Enhanced with StatusEmojis, removed unused BotColors | LOW | Pending |
+| src/commands/housepoints.js | ✅ COMPLETE | Added user personalization feature, enhanced with StatusEmojis | MEDIUM | Pending |
+| src/commands/leaderboard.js | ✅ COMPLETE | Cleaned up redundant userPosition calc, added StatusEmojis | LOW | Pending |
+| src/commands/stats.js | ✅ COMPLETE | Enhanced error handling with templates and StatusEmojis | LOW | Pending |
+| src/utils/embedTemplates.js | ✅ PARTIAL | Added currentUser support to createHouseTemplate | LOW | Pending |
 
 ## Risk Assessment
 

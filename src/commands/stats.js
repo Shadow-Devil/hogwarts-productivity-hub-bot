@@ -1,11 +1,12 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const voiceService = require('../services/voiceService');
 const taskService = require('../services/taskService');
 const timezoneService = require('../services/timezoneService');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
-const { BotColors } = require('../utils/visualHelpers');
+const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { createErrorTemplate } = require('../utils/embedTemplates');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 const { formatDailyLimitStatus } = require('../utils/dailyLimitUtils');
 const { formatHours } = require('../utils/timeUtils');
@@ -195,11 +196,11 @@ module.exports = {
         } catch (error) {
             console.error('Error in /stats:', error);
 
-            const embed = {
-                title: '❌ Stats Load Failed',
-                description: 'An error occurred while fetching your statistics. Please try again in a moment.',
-                color: BotColors.ERROR
-            };
+            const embed = createErrorTemplate(
+                `${StatusEmojis.ERROR} Stats Load Failed`,
+                'An error occurred while fetching your statistics. Please try again in a moment.',
+                { helpText: `${StatusEmojis.INFO} If this problem persists, contact support` }
+            );
 
             await safeErrorReply(interaction, embed);
         }

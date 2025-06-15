@@ -1,11 +1,11 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const voiceService = require('../services/voiceService');
 const timezoneService = require('../services/timezoneService');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const { createLeaderboardTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
+const { StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
 
 // Extend dayjs with timezone support
@@ -50,9 +50,8 @@ module.exports = {
                 return;
             }
 
-            // Get current user's position
+            // Get current user information for the template
             const currentUserId = interaction.user.id;
-            const userPosition = leaderboard.findIndex(entry => entry.discord_id === currentUserId) + 1;
 
             // Create enhanced leaderboard using our template with new features
             const embed = createLeaderboardTemplate(leaderboardType, leaderboard, {
@@ -71,7 +70,6 @@ module.exports = {
             if (leaderboardType === 'monthly') {
                 try {
                     const userTimezone = await timezoneService.getUserTimezone(currentUserId);
-                    const userLocalTime = dayjs().tz(userTimezone);
                     const monthStart = dayjs().tz(userTimezone).startOf('month');
                     const monthEnd = dayjs().tz(userTimezone).endOf('month');
 
@@ -90,9 +88,9 @@ module.exports = {
             console.error('Error in /leaderboard:', error);
 
             const embed = createErrorTemplate(
-                'Leaderboard Load Failed',
+                `${StatusEmojis.ERROR} Leaderboard Load Failed`,
                 'An error occurred while fetching the leaderboard data. Please try again in a moment.',
-                { helpText: 'If this problem persists, contact support' }
+                { helpText: `${StatusEmojis.INFO} If this problem persists, contact support` }
             );
 
             await safeErrorReply(interaction, embed);

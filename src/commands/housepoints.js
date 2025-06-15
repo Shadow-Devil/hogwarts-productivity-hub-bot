@@ -1,8 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
 const voiceService = require('../services/voiceService');
 const { createHouseTemplate, createChampionTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
-const { safeDeferReply, safeReply, safeErrorReply, fastMemberFetch } = require('../utils/interactionUtils');
+const { StatusEmojis } = require('../utils/visualHelpers');
+const { safeDeferReply, safeErrorReply, fastMemberFetch } = require('../utils/interactionUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -39,9 +39,9 @@ module.exports = {
             console.error('Error in housepoints command:', error);
 
             const embed = createErrorTemplate(
-                'House Points Load Failed',
+                `${StatusEmojis.ERROR} House Points Load Failed`,
                 'An error occurred while fetching house leaderboard data. Please try again in a moment.',
-                { helpText: 'If this problem persists, contact support' }
+                { helpText: `${StatusEmojis.INFO} If this problem persists, contact support` }
             );
 
             await safeErrorReply(interaction, embed);
@@ -76,7 +76,8 @@ async function showHouseLeaderboard(interaction, type) {
     const embed = createHouseTemplate(houseLeaderboard, type, {
         includeStats: true,
         useEnhancedLayout: true,
-        useTableFormat: true
+        useTableFormat: true,
+        currentUser: userHouse ? { house: userHouse } : null
     });
 
     await interaction.editReply({ embeds: [embed] });
