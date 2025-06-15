@@ -1,8 +1,16 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const voiceService = require('../services/voiceService');
+const timezoneService = require('../services/timezoneService');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
 const { createLeaderboardTemplate, createErrorTemplate } = require('../utils/embedTemplates');
 const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
+
+// Extend dayjs with timezone support
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -58,6 +66,24 @@ module.exports = {
                 useEnhancedLayout: true,
                 useTableFormat: true
             });
+
+            // Add timezone context to footer for monthly leaderboards
+            if (leaderboardType === 'monthly') {
+                try {
+                    const userTimezone = await timezoneService.getUserTimezone(currentUserId);
+                    const userLocalTime = dayjs().tz(userTimezone);
+                    const monthStart = dayjs().tz(userTimezone).startOf('month');
+                    const monthEnd = dayjs().tz(userTimezone).endOf('month');
+
+                    const footerText = `🗓️ Monthly period: ${monthStart.format('MMM D')} - ${monthEnd.format('MMM D, YYYY')} (${userTimezone}) | Global rankings update hourly`;
+                    embed.setFooter({ text: footerText });
+                } catch (error) {
+                    console.warn('Could not add timezone info to leaderboard:', error.message);
+                    embed.setFooter({ text: '🗓️ Monthly rankings reset on 1st of each month | Global rankings update hourly' });
+                }
+            } else {
+                embed.setFooter({ text: '🏆 All-time rankings since bot launch | Updated in real-time' });
+            }
 
             return interaction.editReply({ embeds: [embed] });
         } catch (error) {

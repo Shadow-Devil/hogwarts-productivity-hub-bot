@@ -196,14 +196,14 @@ module.exports = {
 
             switch (subcommand) {
                 case 'view':
-                    await this.handleViewTimezone(interaction, discordId);
+                    await module.exports.handleViewTimezone(interaction, discordId);
                     break;
                 case 'set':
                     const timezone = interaction.options.getString('timezone');
-                    await this.handleSetTimezone(interaction, discordId, timezone);
+                    await module.exports.handleSetTimezone(interaction, discordId, timezone);
                     break;
                 case 'list':
-                    await this.handleListTimezones(interaction);
+                    await module.exports.handleListTimezones(interaction);
                     break;
                 default:
                     await safeErrorReply(interaction, 'Unknown subcommand');
@@ -222,8 +222,8 @@ module.exports = {
 
             // Get next reset times
             const nextResets = {
-                daily: await this.getNextResetDisplay(discordId, 'daily'),
-                monthly: await this.getNextResetDisplay(discordId, 'monthly')
+                daily: await module.exports.getNextResetDisplay(discordId, 'daily'),
+                monthly: await module.exports.getNextResetDisplay(discordId, 'monthly')
             };
 
             const embed = createTimezoneEmbed(userTimezone, userLocalTime, nextResets);
@@ -261,7 +261,7 @@ module.exports = {
             const oldTimezone = await timezoneService.getUserTimezone(discordId);
 
             // Handle timezone change with impact analysis
-            const changeResult = await timezoneService.handleTimezoneChange(discordId, newTimezone);
+            const changeResult = await timezoneService.handleTimezoneChange(discordId, oldTimezone, newTimezone);
 
             const userLocalTime = dayjs().tz(newTimezone).format('dddd, MMMM D, YYYY [at] h:mm A');
 

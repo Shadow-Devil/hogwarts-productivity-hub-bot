@@ -3,6 +3,14 @@ const { getUserVoiceChannel } = require('../utils/voiceUtils');
 const { createTimerTemplate, createErrorTemplate } = require('../utils/embedTemplates');
 const { BotColors, StatusEmojis } = require('../utils/visualHelpers');
 const { safeDeferReply, safeErrorReply, safeReply } = require('../utils/interactionUtils');
+const timezoneService = require('../services/timezoneService');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+// Extend dayjs with timezone support for timer displays
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -90,11 +98,20 @@ module.exports = {
 
                 return safeReply(interaction, { embeds: [embed] });
             }
+            const userTimezone = await timezoneService.getUserTimezone(interaction.user.id);
+            const now = dayjs().tz(userTimezone);
+            const startTime = now.format('HH:mm');
+            const endTime = now.add(work, 'minutes').format('HH:mm');
+            const breakEndTime = breakTime > 0 ? now.add(work + breakTime, 'minutes').format('HH:mm') : null;
+
             const embed = createTimerTemplate('start', {
                 workTime: work,
                 breakTime: breakTime,
                 voiceChannel: voiceChannel,
-                phase: 'work'
+                phase: 'work',
+                startTime: startTime,
+                endTime: endTime,
+                breakEndTime: breakEndTime
             }, {
                 showProgress: true,
                 includeMotivation: true,
@@ -102,6 +119,30 @@ module.exports = {
             });
 
             await safeReply(interaction, { embeds: [embed] });
+
+            // Add timezone context to timer start message
+            try {
+                const sessionEndTime = dayjs().tz(userTimezone).add(work, 'minute');
+                const timerFooter = `🌍 Session ends at: ${sessionEndTime.format('h:mm A')} (${userTimezone})`;
+
+                // Update the embed footer with timezone info
+                const updatedEmbed = createTimerTemplate('start', {
+                    workTime: work,
+                    breakTime: breakTime,
+                    voiceChannel: voiceChannel,
+                    phase: 'work'
+                }, {
+                    showProgress: true,
+                    includeMotivation: true,
+                    style: 'pomodoro',
+                    customFooter: timerFooter
+                });
+
+                await interaction.editReply({ embeds: [updatedEmbed] });
+            } catch (error) {
+                console.warn('Could not add timezone info to timer:', error.message);
+                // Timer already started, timezone display is optional
+            }
             const workTimeout = setTimeout(async () => {
                 try {
                     const workCompleteEmbed = createTimerTemplate('work_complete', {

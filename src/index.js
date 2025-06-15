@@ -138,14 +138,14 @@ client.on('ready', async (c) => {
 
         // Start performance monitoring and monthly reset scheduler
         console.log('⏰ Starting schedulers...');
-        
+
         // Initialize Central Reset Service for timezone-aware resets
         console.log('🌍 Starting timezone-aware reset service...');
         centralResetService = CentralResetService;
         await centralResetService.start();
         client.centralResetService = centralResetService; // Attach to client for command access
         console.log('✅ Central reset service started');
-        
+
         monthlyResetService.start();
         console.log('✅ Monthly reset scheduler started');
 
@@ -379,7 +379,7 @@ async function shutdown() {
                 await centralResetService.stop();
                 console.log('✅ Central reset service stopped');
             }
-            
+
             monthlyResetService.stop();
             dailyTaskManager.stop();
             performanceMonitor.cleanup();

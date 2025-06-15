@@ -74,7 +74,7 @@ class VoiceService extends BaseService {
             return executeWithResilience(async (client) => {
                 const user = await this.getOrCreateUser(discordId, username);
                 const now = new Date();
-                
+
                 // Use user's timezone for accurate date calculation
                 const today = await timezoneService.getTodayInUserTimezone(discordId);
 
@@ -347,7 +347,7 @@ class VoiceService extends BaseService {
         return measureDatabase('handleMidnightCrossover', async () => {
             return executeWithResilience(async (client) => {
                 const now = new Date();
-                
+
                 // Use user's timezone for accurate midnight calculation
                 const userTime = await timezoneService.getCurrentTimeInUserTimezone(discordId);
                 const today = userTime.format('YYYY-MM-DD');
@@ -422,6 +422,8 @@ class VoiceService extends BaseService {
             try {
                 // Use user's timezone for accurate date calculation
                 const targetDate = date || await timezoneService.getTodayInUserTimezone(discordId);
+                // Get user's timezone for accurate limit calculations
+                const userTimezone = await timezoneService.getUserTimezone(discordId);
 
                 // COMPATIBLE WITH DAILY CUMULATIVE POINTS SYSTEM:
                 // Query both current and archived daily stats to get accurate daily totals
@@ -435,8 +437,8 @@ class VoiceService extends BaseService {
                 const dailyMinutes = result.rows[0]?.total_minutes || 0;
                 const dailyHours = minutesToHours(dailyMinutes);
 
-                // Use centralized daily limit calculation
-                const limitInfo = calculateDailyLimitInfo(dailyHours);
+                // Use centralized daily limit calculation with timezone awareness
+                const limitInfo = calculateDailyLimitInfo(dailyHours, 15, userTimezone);
 
                 return {
                     dailyMinutes,
@@ -468,10 +470,10 @@ class VoiceService extends BaseService {
             if (user.rows.length === 0) return;
 
             const userData = user.rows[0];
-            
+
             // Get user's timezone if not provided
             const timezone = userTimezone || userData.timezone || 'UTC';
-            
+
             // Use timezone-aware date comparisons
             const today = dayjs(sessionDate).tz(timezone);
             const lastVcDate = userData.last_vc_date ? dayjs(userData.last_vc_date).tz(timezone) : null;
@@ -749,51 +751,16 @@ class VoiceService extends BaseService {
     }
 
     // Check and update streaks for all users (run daily)
-    // NOTE: This method uses global timezone and will be deprecated in favor of CentralResetService
+    // DEPRECATED: This method is now handled by CentralResetService with timezone awareness
     async checkAllStreaks() {
-        const client = await pool.connect();
-        try {
-            console.log('⚠️ Using legacy global timezone streak check - migrating to CentralResetService...');
-            const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
-
-            // Get all users who didn't join VC yesterday and have current streaks
-            const usersToReset = await client.query(
-                `SELECT DISTINCT u.discord_id, u.current_streak
-                 FROM users u
-                 WHERE u.current_streak > 0
-                 AND NOT EXISTS (
-                     SELECT 1 FROM daily_voice_stats dvs
-                     WHERE dvs.discord_id = u.discord_id
-                     AND dvs.date = $1
-                     AND dvs.total_minutes >= 15
-                 )`,
-                [yesterday]
-            );
-
-            for (const user of usersToReset.rows) {
-                console.log(`💔 Streak reset for ${user.discord_id} (was ${user.current_streak})`);
-            }
-
-            // Use batch processing for streak resets (more efficient for multiple users)
-            if (usersToReset.rows.length > 0) {
-                const { executeBatchQueries } = require('../models/db');
-
-                const batchUpdates = usersToReset.rows.map(user => ({
-                    query: 'UPDATE users SET current_streak = 0, updated_at = CURRENT_TIMESTAMP WHERE discord_id = $1',
-                    params: [user.discord_id]
-                }));
-
-                await executeBatchQueries('resetStreaksBatch', batchUpdates, 25);
-                console.log(`🔄 Batch processed ${usersToReset.rows.length} streak resets`);
-            }
-
-            return usersToReset.rows.length;
-        } catch (error) {
-            console.error('Error checking streaks:', error);
-            throw error;
-        } finally {
-            client.release();
-        }
+        // Legacy method - CentralResetService now handles timezone-aware streak checks
+        console.log('⚠️ Legacy streak check called - streak management now handled by CentralResetService');
+        console.log('📋 CentralResetService provides timezone-aware streak resets every hour');
+        return {
+            message: 'Streak checking is now handled by CentralResetService',
+            usersReset: 0,
+            migrated: true
+        };
     }
 
     // Get leaderboard data (using optimized/fallback pattern)

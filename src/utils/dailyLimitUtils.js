@@ -4,20 +4,28 @@
  */
 
 const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+// Extend dayjs with timezone support
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 /**
  * Calculate daily limit information for a user
  * @param {number} dailyHours - Current hours spent today
  * @param {number} dailyLimitHours - Daily limit (default 15)
+ * @param {string} userTimezone - User's timezone (IANA identifier, e.g., 'America/New_York')
  * @returns {Object} Daily limit information
  */
-function calculateDailyLimitInfo(dailyHours, dailyLimitHours = 15) {
+function calculateDailyLimitInfo(dailyHours, dailyLimitHours = 15, userTimezone = null) {
     // Calculate hours remaining in the daily allowance
     const allowanceHoursRemaining = Math.max(0, dailyLimitHours - dailyHours);
 
     // Calculate hours remaining until midnight (when daily limit resets)
-    const now = dayjs();
-    const endOfDay = dayjs().endOf('day');
+    // CRITICAL FIX: Use user's timezone for accurate midnight calculation
+    const now = userTimezone ? dayjs().tz(userTimezone) : dayjs();
+    const endOfDay = userTimezone ? dayjs().tz(userTimezone).endOf('day') : dayjs().endOf('day');
     const hoursUntilMidnight = endOfDay.diff(now, 'hour', true); // true for decimal precision
 
     // CRITICAL FIX: The actual remaining hours is the MINIMUM of:
