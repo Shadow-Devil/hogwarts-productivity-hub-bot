@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: "postgres:latest"
+    environment:
+      POSTGRES_USER: "botd_user"
+      POSTGRES_PASSWORD: "your_secure_password"
+      POSTGRES_DB: "botd_production"
+    ports:
+      - "5432:5432"
