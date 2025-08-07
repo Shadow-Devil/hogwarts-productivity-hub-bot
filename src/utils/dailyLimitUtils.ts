@@ -19,10 +19,10 @@ dayjs.extend(timezone);
  * @returns {Object} Daily limit information
  */
 function calculateDailyLimitInfo(
-  dailyHours,
-  dailyLimitHours = 15,
-  userTimezone = null,
-) {
+  dailyHours: number,
+  dailyLimitHours: number = 15,
+  userTimezone: string = null
+): object {
   // Calculate hours remaining in the daily allowance
   const allowanceHoursRemaining = Math.max(0, dailyLimitHours - dailyHours);
 
@@ -39,7 +39,7 @@ function calculateDailyLimitInfo(
   // 2. Hours until midnight reset (when a fresh 15 hours becomes available)
   const remainingHours = Math.max(
     0,
-    Math.min(allowanceHoursRemaining, hoursUntilMidnight),
+    Math.min(allowanceHoursRemaining, hoursUntilMidnight)
   );
 
   return {

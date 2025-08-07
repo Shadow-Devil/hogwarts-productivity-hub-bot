@@ -1188,14 +1188,14 @@ function createTimerTemplate(
 
 // ❌ Error Template
 function createErrorTemplate(
-  title,
-  message,
+  title: string,
+  message: string,
   {
     includeHelp = true,
     helpText = "Please try again or contact support if the issue persists.",
     additionalInfo = null,
     showEmoji = true,
-  } = {},
+  } = {}
 ) {
   const embed = createStyledEmbed("error")
     .setTitle(`${showEmoji ? "❌ " : ""}${title}`)
@@ -1221,10 +1221,10 @@ function createErrorTemplate(
 
 // 👑 Enhanced House Champions Template
 function createChampionTemplate(
-  monthlyChampions,
-  allTimeChampions,
-  currentUser,
-  { useEnhancedLayout = true, useTableFormat = true, showUserInfo = true } = {},
+  monthlyChampions: any[],
+  allTimeChampions: any[],
+  currentUser: { house: any },
+  { useEnhancedLayout = true, useTableFormat = true, showUserInfo = true } = {}
 ) {
   const houseEmojis = {
     Gryffindor: "🦁",

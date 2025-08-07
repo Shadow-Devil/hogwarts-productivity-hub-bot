@@ -37,9 +37,6 @@ client.on(Events.ClientReady, async (c) => {
   console.log(`Commands Loaded: ${commands.size}`);
 
   try {
-    console.log("Initializing database connection...");
-    await initializeDatabase();
-
     const recoveryResults = await sessionRecovery.initialize(
       activeVoiceSessions,
       gracePeriodSessions
@@ -49,9 +46,6 @@ client.on(Events.ClientReady, async (c) => {
         `📈 Recovered ${recoveryResults} incomplete sessions from previous runs`
       );
     }
-
-    await CentralResetService.start();
-    DailyTaskManager.start();
 
     const scanResults = await voiceStateScanner.scanAndStartTracking(
       client,
@@ -71,21 +65,6 @@ client.on(Events.ClientReady, async (c) => {
     console.error("🔍 Full error:", error);
     console.log("═".repeat(50));
     process.exit(1);
-  }
-});
-
-// Add voice state update logging for debugging (only when significant changes occur)
-client.on(Events.VoiceStateUpdate, (oldState, newState) => {
-  const user =
-    newState.member?.user?.tag || oldState.member?.user?.tag || "Unknown User";
-  const oldChannel = oldState.channel?.name || null;
-  const newChannel = newState.channel?.name || null;
-
-  if (oldChannel !== newChannel && (oldChannel || newChannel)) {
-    const action = !oldChannel ? "joined" : !newChannel ? "left" : "moved to";
-    const channel = newChannel || oldChannel;
-    const timestamp = new Date().toLocaleTimeString();
-    console.log(`🎤 [${timestamp}] ${user} ${action} "${channel}"`);
   }
 });
 
@@ -155,6 +134,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 // Start the bot
 try {
   loadEvents();
+  console.log("Initializing database connection...");
+  await initializeDatabase();
+  await CentralResetService.start();
+  DailyTaskManager.start();
 
   await client.login(process.env.DISCORD_TOKEN);
 } catch (error) {
