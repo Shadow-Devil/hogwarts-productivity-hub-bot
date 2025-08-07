@@ -6,6 +6,7 @@ import {
 } from "../utils/embedTemplates.ts";
 import { StatusEmojis } from "../utils/constants.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
+          import dayjs from "dayjs";
 
 export default {
   data: new SlashCommandBuilder()
@@ -41,7 +42,6 @@ export default {
 
       if (result.success === false) {
           if ("limitReached" in result && result.limitReached) {
-          const dayjs = require("dayjs");
           const resetTime = Math.floor(
             dayjs().add(1, "day").startOf("day").valueOf() / 1000,
           );

@@ -14,6 +14,8 @@ import {
 } from "../utils/visualHelpers.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
 import type { HealthReport } from "../utils/botHealthMonitor.ts";
+// Get Node.js memory limits
+import v8 from "v8";
 
 export default {
   data: new SlashCommandBuilder()
@@ -244,8 +246,6 @@ function createOverviewEmbed(
 function createMemoryView(summary) {
   const memUsage = summary.memory.current;
 
-  // Get Node.js memory limits
-  const v8 = require("v8");
   const heapStats = v8.getHeapStatistics();
   const maxHeapMB = Math.round(heapStats.heap_size_limit / 1024 / 1024);
   const availableHeapMB = Math.round(

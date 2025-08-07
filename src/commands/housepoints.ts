@@ -11,6 +11,8 @@ import {
   safeErrorReply,
   fastMemberFetch,
 } from "../utils/interactionUtils.ts";
+import { getUserHouse } from "../models/db.ts";
+import queryCache from "../utils/queryCache.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -24,8 +26,8 @@ export default {
         .addChoices(
           { name: "🏆 Monthly House Rankings", value: "monthly" },
           { name: "⭐ All Time House Rankings", value: "alltime" },
-          { name: "👑 House Champions", value: "housechampion" },
-        ),
+          { name: "👑 House Champions", value: "housechampion" }
+        )
     ),
   async execute(interaction) {
     try {
@@ -51,7 +53,7 @@ export default {
         "An error occurred while fetching house leaderboard data. Please try again in a moment.",
         {
           helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
-        },
+        }
       );
 
       await safeErrorReply(interaction, embed);
@@ -70,7 +72,7 @@ async function showHouseLeaderboard(interaction, type) {
       {
         helpText:
           "Join a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.",
-      },
+      }
     );
     return interaction.editReply({ embeds: [embed] });
   }
@@ -80,12 +82,11 @@ async function showHouseLeaderboard(interaction, type) {
   const userMember = await fastMemberFetch(
     interaction.guild,
     currentUserId,
-    true,
+    true
   );
   let userHouse = null;
 
   if (userMember) {
-    const { getUserHouse } = require("../models/db");
     userHouse = await getUserHouse(userMember);
   }
 
@@ -101,7 +102,6 @@ async function showHouseLeaderboard(interaction, type) {
 
 async function showHouseChampions(interaction) {
   // Use batch cache operations for efficiency
-  const queryCache = require("../utils/queryCache");
   const cacheKeys = ["house_champions:monthly", "house_champions:alltime"];
 
   const cacheResults = await queryCache.batchGet(cacheKeys);
@@ -125,12 +125,11 @@ async function showHouseChampions(interaction) {
   const userMember = await fastMemberFetch(
     interaction.guild,
     currentUserId,
-    true,
+    true
   );
   let userHouse = null;
 
   if (userMember) {
-    const { getUserHouse } = require("../models/db");
     userHouse = await getUserHouse(userMember);
   }
 
@@ -144,7 +143,7 @@ async function showHouseChampions(interaction) {
       useEnhancedLayout: true,
       useTableFormat: true,
       showUserInfo: true,
-    },
+    }
   );
 
   await interaction.editReply({ embeds: [embed] });

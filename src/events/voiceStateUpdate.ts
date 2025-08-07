@@ -1,3 +1,4 @@
+import { Events, type VoiceState } from "discord.js";
 import voiceService from "../services/voiceService.ts";
 import dayjs from "dayjs";
 
@@ -36,7 +37,7 @@ setInterval(async () => {
     return;
 
   console.log(
-    `🔍 Running enhanced session cleanup check (${activeVoiceSessions.size} active, ${gracePeriodSessions.size} grace period)...`,
+    `🔍 Running enhanced session cleanup check (${activeVoiceSessions.size} active, ${gracePeriodSessions.size} grace period)...`
   );
 
   try {
@@ -53,16 +54,14 @@ setInterval(async () => {
       if (gracePeriodElapsed >= GRACE_PERIOD_MS) {
         // Grace period expired - truly end the session
         console.log(
-          `⏰ Grace period expired for user ${userId} (${Math.floor(gracePeriodElapsed / 1000 / 60)} minutes)`,
+          `⏰ Grace period expired for user ${userId} (${Math.floor(gracePeriodElapsed / 1000 / 60)} minutes)`
         );
 
         try {
-          // End the session in database
-          const voiceService = require("../services/voiceService");
           await voiceService.endVoiceSession(
             userId,
             sessionData.channelId,
-            null,
+            null
           );
 
           // Remove from both maps
@@ -72,7 +71,7 @@ setInterval(async () => {
         } catch (error) {
           console.error(
             `Error ending grace period session for ${userId}:`,
-            error,
+            error
           );
         }
       } else {
@@ -82,7 +81,7 @@ setInterval(async () => {
             const voiceState = guild.voiceStates.cache.get(userId);
             if (voiceState?.channel) {
               console.log(
-                `🔄 User ${userId} returned during grace period - resuming session`,
+                `🔄 User ${userId} returned during grace period - resuming session`
               );
 
               // Update session data and remove from grace period
@@ -103,7 +102,7 @@ setInterval(async () => {
           } catch (error) {
             console.warn(
               `Error checking voice state during grace period for user ${userId}:`,
-              error.message,
+              error.message
             );
           }
         }
@@ -132,7 +131,7 @@ setInterval(async () => {
               // Update the session data with current channel if it changed
               if (sessionData.channelId !== voiceState.channel.id) {
                 console.log(
-                  `🔄 User ${userId} moved channels - updating tracking`,
+                  `🔄 User ${userId} moved channels - updating tracking`
                 );
                 sessionData.channelId = voiceState.channel.id;
               }
@@ -143,14 +142,14 @@ setInterval(async () => {
           } catch (error) {
             console.warn(
               `Error checking voice state for user ${userId} in guild ${guild.name}:`,
-              error.message,
+              error.message
             );
           }
         }
 
         if (!userStillInVoice) {
           const sessionAge = Math.floor(
-            (Date.now() - sessionData.joinTime.getTime()) / (1000 * 60),
+            (Date.now() - sessionData.joinTime.getTime()) / (1000 * 60)
           );
           cleanupCandidates.push({ userId, sessionAge });
         }
@@ -160,7 +159,7 @@ setInterval(async () => {
     // Clean up only truly abandoned sessions (not in grace period)
     for (const { userId, sessionAge } of cleanupCandidates) {
       console.log(
-        `🧹 Cleaning up abandoned session for user ${userId} (${sessionAge} minutes old, not in any voice channel)`,
+        `🧹 Cleaning up abandoned session for user ${userId} (${sessionAge} minutes old, not in any voice channel)`
       );
       activeVoiceSessions.delete(userId);
       gracePeriodSessions.delete(userId); // Safety cleanup
@@ -168,14 +167,14 @@ setInterval(async () => {
 
     if (cleanupCandidates.length > 0 || gracePeriodExpired > 0) {
       console.log(
-        `✅ Enhanced cleanup completed: ${cleanupCandidates.length} abandoned sessions removed, ${gracePeriodExpired} grace periods expired`,
+        `✅ Enhanced cleanup completed: ${cleanupCandidates.length} abandoned sessions removed, ${gracePeriodExpired} grace periods expired`
       );
       console.log(
-        `📊 Cleanup stats: ${sessionsChecked} active sessions checked, ${longSessions} long sessions verified, ${gracePeriodSessions.size} in grace period`,
+        `📊 Cleanup stats: ${sessionsChecked} active sessions checked, ${longSessions} long sessions verified, ${gracePeriodSessions.size} in grace period`
       );
     } else if (longSessions > 0 || gracePeriodSessions.size > 0) {
       console.log(
-        `✅ Enhanced cleanup completed: All ${longSessions} long sessions are legitimate, ${gracePeriodSessions.size} users in grace period`,
+        `✅ Enhanced cleanup completed: All ${longSessions} long sessions are legitimate, ${gracePeriodSessions.size} users in grace period`
       );
     }
   } catch (error) {
@@ -193,18 +192,17 @@ setInterval(async () => {
   if (!isJustAfterMidnight) return; // Only run in the first hour after midnight
 
   console.log(
-    `🌅 Checking for midnight crossover sessions (${activeVoiceSessions.size} active sessions)...`,
+    `🌅 Checking for midnight crossover sessions (${activeVoiceSessions.size} active sessions)...`
   );
 
   try {
-    const voiceService = require("../services/voiceService");
     let crossoversHandled = 0;
 
     for (const [userId, sessionData] of activeVoiceSessions.entries()) {
       try {
         // Check if session started yesterday (before midnight)
         const sessionStartDay = dayjs(sessionData.joinTime).format(
-          "YYYY-MM-DD",
+          "YYYY-MM-DD"
         );
         const today = dayjs().format("YYYY-MM-DD");
 
@@ -227,7 +225,7 @@ setInterval(async () => {
           const result = await voiceService.handleMidnightCrossover(
             userId,
             sessionData.channelId,
-            member,
+            member
           );
 
           if (result && result.todaySession) {
@@ -243,14 +241,14 @@ setInterval(async () => {
       } catch (error) {
         console.error(
           `Error handling midnight crossover for user ${userId}:`,
-          error,
+          error
         );
       }
     }
 
     if (crossoversHandled > 0) {
       console.log(
-        `✅ Midnight crossover completed: ${crossoversHandled} sessions processed`,
+        `✅ Midnight crossover completed: ${crossoversHandled} sessions processed`
       );
     }
   } catch (error) {
@@ -289,11 +287,10 @@ export async function manualCleanup() {
 
     if (gracePeriodElapsed >= GRACE_PERIOD_MS) {
       console.log(
-        `🧹 Manual cleanup: Grace period expired for user ${userId} (${Math.floor(gracePeriodElapsed / 1000 / 60)} minutes)`,
+        `🧹 Manual cleanup: Grace period expired for user ${userId} (${Math.floor(gracePeriodElapsed / 1000 / 60)} minutes)`
       );
 
       try {
-        const voiceService = require("../services/voiceService");
         await voiceService.endVoiceSession(userId, sessionData.channelId, null);
 
         gracePeriodSessions.delete(userId);
@@ -302,7 +299,7 @@ export async function manualCleanup() {
       } catch (error) {
         console.error(
           `Error ending grace period session for ${userId}:`,
-          error,
+          error
         );
         results.errors++;
       }
@@ -329,7 +326,7 @@ export async function manualCleanup() {
 
       if (!userStillInVoice) {
         const sessionAge = Math.floor(
-          (Date.now() - sessionData.joinTime.getTime()) / (1000 * 60),
+          (Date.now() - sessionData.joinTime.getTime()) / (1000 * 60)
         );
         cleanupCandidates.push({ userId, sessionAge });
       }
@@ -342,7 +339,7 @@ export async function manualCleanup() {
   // Clean up abandoned sessions
   for (const { userId, sessionAge } of cleanupCandidates) {
     console.log(
-      `🧹 Manual cleanup: Removing abandoned session for user ${userId} (${sessionAge} minutes old)`,
+      `🧹 Manual cleanup: Removing abandoned session for user ${userId} (${sessionAge} minutes old)`
     );
     activeVoiceSessions.delete(userId);
     gracePeriodSessions.delete(userId); // Safety cleanup
@@ -350,115 +347,110 @@ export async function manualCleanup() {
   }
 
   console.log(
-    `✅ Manual cleanup completed: ${results.cleanedUp}/${results.checkedSessions} sessions cleaned up, ${results.gracePeriodExpired} grace periods expired`,
+    `✅ Manual cleanup completed: ${results.cleanedUp}/${results.checkedSessions} sessions cleaned up, ${results.gracePeriodExpired} grace periods expired`
   );
   return results;
 }
 
-export default {
-  name: "voiceStateUpdate",
-  async execute(oldState, newState) {
-    try {
-      const user = newState.member || oldState.member;
-      if (!user || user.user.bot) return; // Ignore bots
+export async function execute(oldState: VoiceState, newState: VoiceState) {
+  try {
+    const user = newState.member || oldState.member;
+    if (!user || user.user.bot) return; // Ignore bots
 
-      const userId = user.id;
-      const username = user.user.username;
-      const oldChannel = oldState.channel;
-      const newChannel = newState.channel;
+    const userId = user.id;
+    const username = user.user.username;
+    const oldChannel = oldState.channel;
+    const newChannel = newState.channel;
 
-      // User joined a voice channel
-      if (!oldChannel && newChannel) {
-        // Check if user is returning from grace period
-        if (gracePeriodSessions.has(userId)) {
-          console.log(
-            `🔄 ${username} returned during grace period to: ${newChannel.name}`,
-          );
-
-          // Resume the existing session
-          const sessionData = activeVoiceSessions.get(userId);
-          if (sessionData) {
-            sessionData.lastSeen = new Date();
-            sessionData.channelId = newChannel.id; // Update channel in case they switched
-            delete sessionData.gracePeriodStart;
-          }
-          gracePeriodSessions.delete(userId);
-
-          console.log(
-            `✅ Session resumed for ${username} - no interruption to voice tracking`,
-          );
-        } else {
-          console.log(
-            `👥 ${username} joined voice channel: ${newChannel.name}`,
-          );
-
-          // Start new voice session in database
-          const session = await voiceService.startVoiceSession(
-            userId,
-            username,
-            newChannel.id,
-            newChannel.name,
-          );
-
-          // Track in memory for cleanup
-          activeVoiceSessions.set(userId, {
-            channelId: newChannel.id,
-            joinTime: new Date(),
-            sessionId: session.id,
-            lastSeen: new Date(),
-          });
-        }
-      } else if (oldChannel && !newChannel) {
-        // User left a voice channel
-        const sessionData = activeVoiceSessions.get(userId);
-
-        if (sessionData) {
-          // Start grace period instead of immediately ending session
-          console.log(
-            `⏸️ ${username} left voice channel: ${oldChannel.name} - starting 5-minute grace period`,
-          );
-
-          sessionData.gracePeriodStart = Date.now();
-          gracePeriodSessions.set(userId, sessionData);
-
-          console.log(
-            `🕐 Grace period started for ${username} - session will end if not back within 5 minutes`,
-          );
-        } else {
-          console.log(
-            `⚠️ ${username} left ${oldChannel.name} but no active session found`,
-          );
-        }
-      } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
-        // User switched voice channels
+    // User joined a voice channel
+    if (!oldChannel && newChannel) {
+      // Check if user is returning from grace period
+      if (gracePeriodSessions.has(userId)) {
         console.log(
-          `🔄 ${username} switched from ${oldChannel.name} to ${newChannel.name}`,
+          `🔄 ${username} returned during grace period to: ${newChannel.name}`
         );
 
-        // For channel switches, end the old session and start new one immediately (no grace period needed)
-        await voiceService.endVoiceSession(userId, oldChannel.id, user);
+        // Resume the existing session
+        const sessionData = activeVoiceSessions.get(userId);
+        if (sessionData) {
+          sessionData.lastSeen = new Date();
+          sessionData.channelId = newChannel.id; // Update channel in case they switched
+          delete sessionData.gracePeriodStart;
+        }
+        gracePeriodSessions.delete(userId);
 
-        // Start session in new channel
+        console.log(
+          `✅ Session resumed for ${username} - no interruption to voice tracking`
+        );
+      } else {
+        console.log(`👥 ${username} joined voice channel: ${newChannel.name}`);
+
+        // Start new voice session in database
         const session = await voiceService.startVoiceSession(
           userId,
           username,
           newChannel.id,
-          newChannel.name,
+          newChannel.name
         );
 
-        // Update memory tracking
+        // Track in memory for cleanup
         activeVoiceSessions.set(userId, {
           channelId: newChannel.id,
           joinTime: new Date(),
           sessionId: session.id,
           lastSeen: new Date(),
         });
-
-        // Remove from grace period if they were in one
-        gracePeriodSessions.delete(userId);
       }
-    } catch (error) {
-      console.error("Error in voiceStateUpdate:", error);
+    } else if (oldChannel && !newChannel) {
+      // User left a voice channel
+      const sessionData = activeVoiceSessions.get(userId);
+
+      if (sessionData) {
+        // Start grace period instead of immediately ending session
+        console.log(
+          `⏸️ ${username} left voice channel: ${oldChannel.name} - starting 5-minute grace period`
+        );
+
+        sessionData.gracePeriodStart = Date.now();
+        gracePeriodSessions.set(userId, sessionData);
+
+        console.log(
+          `🕐 Grace period started for ${username} - session will end if not back within 5 minutes`
+        );
+      } else {
+        console.log(
+          `⚠️ ${username} left ${oldChannel.name} but no active session found`
+        );
+      }
+    } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
+      // User switched voice channels
+      console.log(
+        `🔄 ${username} switched from ${oldChannel.name} to ${newChannel.name}`
+      );
+
+      // For channel switches, end the old session and start new one immediately (no grace period needed)
+      await voiceService.endVoiceSession(userId, oldChannel.id, user);
+
+      // Start session in new channel
+      const session = await voiceService.startVoiceSession(
+        userId,
+        username,
+        newChannel.id,
+        newChannel.name
+      );
+
+      // Update memory tracking
+      activeVoiceSessions.set(userId, {
+        channelId: newChannel.id,
+        joinTime: new Date(),
+        sessionId: session.id,
+        lastSeen: new Date(),
+      });
+
+      // Remove from grace period if they were in one
+      gracePeriodSessions.delete(userId);
     }
-  },
-};
+  } catch (error) {
+    console.error("Error in voiceStateUpdate:", error);
+  }
+}

@@ -21,7 +21,6 @@ class TimezoneService extends BaseService {
   public timezoneCache: Map<string, any>;
   public validTimezones: Set<string>;
 
-
   constructor() {
     super("TimezoneService");
 
@@ -34,7 +33,7 @@ class TimezoneService extends BaseService {
         }),
         winston.format.errors({ stack: true }),
         winston.format.json(),
-        winston.format.colorize({ all: true }),
+        winston.format.colorize({ all: true })
       ),
       defaultMeta: { service: "TimezoneService" },
       transports: [
@@ -48,8 +47,8 @@ class TimezoneService extends BaseService {
                   ? JSON.stringify(meta, null, 2)
                   : "";
                 return `${timestamp} [${service}] ${level}: ${message} ${metaStr}`;
-              },
-            ),
+              }
+            )
           ),
         }),
         new winston.transports.File({
@@ -80,93 +79,73 @@ class TimezoneService extends BaseService {
    * Uses dayjs.tz.names() which provides comprehensive timezone support
    */
   async initializeValidTimezones() {
-    try {
-      // Get all available timezone names from dayjs
-      // This provides comprehensive IANA timezone support
-      this.validTimezones = new Set([
-        // Major timezone regions that users commonly need
-        "UTC",
-        "America/New_York",
-        "America/Chicago",
-        "America/Denver",
-        "America/Los_Angeles",
-        "America/Toronto",
-        "America/Vancouver",
-        "America/Mexico_City",
-        "America/Sao_Paulo",
-        "Europe/London",
-        "Europe/Paris",
-        "Europe/Berlin",
-        "Europe/Rome",
-        "Europe/Madrid",
-        "Europe/Amsterdam",
-        "Europe/Brussels",
-        "Europe/Vienna",
-        "Europe/Prague",
-        "Europe/Stockholm",
-        "Europe/Oslo",
-        "Europe/Helsinki",
-        "Europe/Warsaw",
-        "Europe/Budapest",
-        "Europe/Bucharest",
-        "Europe/Athens",
-        "Europe/Istanbul",
-        "Europe/Moscow",
-        "Europe/Kiev",
-        "Europe/Zurich",
-        "Europe/Dublin",
-        "Asia/Tokyo",
-        "Asia/Shanghai",
-        "Asia/Hong_Kong",
-        "Asia/Singapore",
-        "Asia/Seoul",
-        "Asia/Bangkok",
-        "Asia/Manila",
-        "Asia/Jakarta",
-        "Asia/Kolkata",
-        "Asia/Dubai",
-        "Asia/Karachi",
-        "Asia/Tehran",
-        "Asia/Baghdad",
-        "Asia/Jerusalem",
-        "Asia/Riyadh",
-        "Asia/Kuwait",
-        "Australia/Sydney",
-        "Australia/Melbourne",
-        "Australia/Brisbane",
-        "Australia/Perth",
-        "Australia/Adelaide",
-        "Australia/Darwin",
-        "Pacific/Auckland",
-        "Pacific/Fiji",
-        "Pacific/Honolulu",
-        "Africa/Cairo",
-        "Africa/Lagos",
-        "Africa/Johannesburg",
-        "Africa/Nairobi",
-        "America/Argentina/Buenos_Aires",
-        "America/Lima",
-        "America/Santiago",
-      ]);
-
-      this.logger.info(
-        "Timezone service initialized with supported timezones",
-        {
-          timezoneCount: this.validTimezones.size,
-        },
-      );
-    } catch (error) {
-      this.logger.error("Failed to initialize timezone service", {
-        error: error?.message || String(error),
-      });
-      // Fallback to basic timezone support
-      this.validTimezones = new Set([
-        "UTC",
-        "America/New_York",
-        "Europe/London",
-        "Asia/Tokyo",
-      ]);
-    }
+    // Get all available timezone names from dayjs
+    // This provides comprehensive IANA timezone support
+    this.validTimezones = new Set([
+      // Major timezone regions that users commonly need
+      "UTC",
+      "America/New_York",
+      "America/Chicago",
+      "America/Denver",
+      "America/Los_Angeles",
+      "America/Toronto",
+      "America/Vancouver",
+      "America/Mexico_City",
+      "America/Sao_Paulo",
+      "Europe/London",
+      "Europe/Paris",
+      "Europe/Berlin",
+      "Europe/Rome",
+      "Europe/Madrid",
+      "Europe/Amsterdam",
+      "Europe/Brussels",
+      "Europe/Vienna",
+      "Europe/Prague",
+      "Europe/Stockholm",
+      "Europe/Oslo",
+      "Europe/Helsinki",
+      "Europe/Warsaw",
+      "Europe/Budapest",
+      "Europe/Bucharest",
+      "Europe/Athens",
+      "Europe/Istanbul",
+      "Europe/Moscow",
+      "Europe/Kiev",
+      "Europe/Zurich",
+      "Europe/Dublin",
+      "Asia/Tokyo",
+      "Asia/Shanghai",
+      "Asia/Hong_Kong",
+      "Asia/Singapore",
+      "Asia/Seoul",
+      "Asia/Bangkok",
+      "Asia/Manila",
+      "Asia/Jakarta",
+      "Asia/Kolkata",
+      "Asia/Dubai",
+      "Asia/Karachi",
+      "Asia/Tehran",
+      "Asia/Baghdad",
+      "Asia/Jerusalem",
+      "Asia/Riyadh",
+      "Asia/Kuwait",
+      "Australia/Sydney",
+      "Australia/Melbourne",
+      "Australia/Brisbane",
+      "Australia/Perth",
+      "Australia/Adelaide",
+      "Australia/Darwin",
+      "Pacific/Auckland",
+      "Pacific/Fiji",
+      "Pacific/Honolulu",
+      "Africa/Cairo",
+      "Africa/Lagos",
+      "Africa/Johannesburg",
+      "Africa/Nairobi",
+      "America/Argentina/Buenos_Aires",
+      "America/Lima",
+      "America/Santiago",
+    ]);
   }
 
   /**
@@ -186,7 +165,7 @@ class TimezoneService extends BaseService {
         `UPDATE users
                  SET timezone = $1, timezone_set_at = CURRENT_TIMESTAMP
                  WHERE discord_id = $2`,
-        [timezone, userId],
+        [timezone, userId]
       );
 
       if (result.rowCount === 0) {
@@ -245,7 +224,7 @@ class TimezoneService extends BaseService {
       const queryStartTime = Date.now();
       const result = await pool.query(
         "SELECT timezone FROM users WHERE discord_id = $1",
-        [userId],
+        [userId]
       );
       const queryDuration = Date.now() - queryStartTime;
 
@@ -352,7 +331,7 @@ class TimezoneService extends BaseService {
           stack: error.stack,
           duration: Date.now() - startTime,
           fallbackUsed: "UTC",
-        },
+        }
       );
 
       // Graceful fallback to UTC
@@ -471,7 +450,7 @@ class TimezoneService extends BaseService {
       if (uncachedUserIds.length > 0) {
         const result = await pool.query(
           "SELECT discord_id, timezone, timezone_set_at, last_daily_reset_tz, last_monthly_reset_tz FROM users WHERE discord_id = ANY($1)",
-          [uncachedUserIds],
+          [uncachedUserIds]
         );
 
         // Update cache and add to results
@@ -533,7 +512,7 @@ class TimezoneService extends BaseService {
     try {
       const result = await pool.query(
         "SELECT discord_id, username, timezone_set_at, last_daily_reset_tz, last_monthly_reset_tz FROM users WHERE timezone = $1",
-        [timezone],
+        [timezone]
       );
 
       return result.rows;
@@ -655,7 +634,7 @@ class TimezoneService extends BaseService {
         `UPDATE users
                  SET timezone = $1, timezone_set_at = $2
                  WHERE discord_id = $3`,
-        [newTimezone, now, userId],
+        [newTimezone, now, userId]
       );
 
       if (result.rowCount === 0) {
@@ -670,7 +649,7 @@ class TimezoneService extends BaseService {
         userId,
         oldTimezone,
         newTimezone,
-        now,
+        now
       );
 
       this.logger.info("User timezone changed", {
@@ -814,7 +793,7 @@ class TimezoneService extends BaseService {
     userId,
     oldTimezone,
     newTimezone,
-    changeTime,
+    changeTime
   ) {
     try {
       const changeInOldTz = dayjs(changeTime).tz(oldTimezone);
@@ -823,7 +802,7 @@ class TimezoneService extends BaseService {
       // Get user's last VC date
       const result = await pool.query(
         "SELECT last_vc_date FROM users WHERE discord_id = $1",
-        [userId],
+        [userId]
       );
 
       if (!result.rows[0]?.last_vc_date) {
@@ -873,7 +852,7 @@ class TimezoneService extends BaseService {
 
       const result = await pool.query(
         `UPDATE users SET ${column} = $1 WHERE discord_id = $2`,
-        [now, userId],
+        [now, userId]
       );
 
       if (result.rowCount === 0) {
@@ -906,7 +885,7 @@ class TimezoneService extends BaseService {
       // Test if dayjs can parse the timezone
       const testTime = dayjs().tz(timezone);
       return testTime.isValid();
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

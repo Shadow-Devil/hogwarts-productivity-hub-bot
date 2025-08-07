@@ -1,7 +1,8 @@
+import { config } from "dotenv";
+config();
 import addtask from "./commands/addtask.ts";
 
 import { REST, Routes, SlashCommandBuilder } from "discord.js";
-require("dotenv").config();
 
 const commands = [
   addtask.data,
@@ -13,14 +14,14 @@ const commands = [
         .setName("work")
         .setDescription("Work time in minutes (min 20)")
         .setRequired(true)
-        .setMinValue(20),
+        .setMinValue(20)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("break")
         .setDescription("Break time in minutes (optional, min 5)")
         .setRequired(false)
-        .setMinValue(5),
+        .setMinValue(5)
     ),
 
   new SlashCommandBuilder()
@@ -52,8 +53,8 @@ const commands = [
           { name: "Memory Details", value: "memory" },
           { name: "Cache Analysis", value: "cache" },
           { name: "Database Health", value: "database" },
-          { name: "System Health", value: "health" },
-        ),
+          { name: "System Health", value: "health" }
+        )
     ),
 
   new SlashCommandBuilder()
@@ -66,8 +67,8 @@ const commands = [
         .setRequired(true)
         .addChoices(
           { name: "📅 Monthly", value: "monthly" },
-          { name: "🌟 All Time", value: "alltime" },
-        ),
+          { name: "🌟 All Time", value: "alltime" }
+        )
     ),
 
   new SlashCommandBuilder()
@@ -81,8 +82,8 @@ const commands = [
         .addChoices(
           { name: "🏆 Monthly House Rankings", value: "monthly" },
           { name: "⭐ All Time House Rankings", value: "alltime" },
-          { name: "👑 House Champions", value: "housechampion" },
-        ),
+          { name: "👑 House Champions", value: "housechampion" }
+        )
     ),
 
   new SlashCommandBuilder()
@@ -93,7 +94,7 @@ const commands = [
         .setName("title")
         .setDescription("The task description")
         .setRequired(true)
-        .setMaxLength(500),
+        .setMaxLength(500)
     ),
 
   new SlashCommandBuilder()
@@ -103,10 +104,10 @@ const commands = [
       option
         .setName("number")
         .setDescription(
-          "The task number to remove (use /viewtasks to see numbers)",
+          "The task number to remove (use /viewtasks to see numbers)"
         )
         .setRequired(true)
-        .setMinValue(1),
+        .setMinValue(1)
     ),
 
   new SlashCommandBuilder()
@@ -120,21 +121,21 @@ const commands = [
       option
         .setName("number")
         .setDescription(
-          "The task number to complete (use /viewtasks to see numbers)",
+          "The task number to complete (use /viewtasks to see numbers)"
         )
         .setRequired(true)
-        .setMinValue(1),
+        .setMinValue(1)
     ),
 
   new SlashCommandBuilder()
     .setName("timezone")
     .setDescription(
-      "Manage your timezone settings for accurate daily/monthly resets",
+      "Manage your timezone settings for accurate daily/monthly resets"
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName("view")
-        .setDescription("View your current timezone settings"),
+        .setDescription("View your current timezone settings")
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -144,13 +145,13 @@ const commands = [
           option
             .setName("timezone")
             .setDescription(
-              "Your timezone (e.g., America/New_York, Europe/London)",
+              "Your timezone (e.g., America/New_York, Europe/London)"
             )
-            .setRequired(true),
-        ),
+            .setRequired(true)
+        )
     )
     .addSubcommand((subcommand) =>
-      subcommand.setName("list").setDescription("View common timezone options"),
+      subcommand.setName("list").setDescription("View common timezone options")
     ),
 
   new SlashCommandBuilder()
@@ -159,18 +160,18 @@ const commands = [
     .addSubcommand((subcommand) =>
       subcommand
         .setName("status")
-        .setDescription("View session recovery system status"),
+        .setDescription("View session recovery system status")
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName("save")
-        .setDescription("Force save current session states"),
+        .setDescription("Force save current session states")
     ),
 
   new SlashCommandBuilder()
     .setName("voicescan")
     .setDescription(
-      "Scan voice channels and start tracking for users already in voice",
+      "Scan voice channels and start tracking for users already in voice"
     ),
 ].map((command) => command.toJSON());
 
@@ -189,7 +190,7 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
     console.log("📋 Commands to register:");
     commands.forEach((cmd, index) => {
       console.log(
-        `   ${(index + 1).toString().padStart(2, "0")}. /${cmd.name} - ${cmd.description}`,
+        `   ${(index + 1).toString().padStart(2, "0")}. /${cmd.name} - ${cmd.description}`
       );
     });
     console.log("");
@@ -198,9 +199,9 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
     await rest.put(
       Routes.applicationGuildCommands(
         process.env.CLIENT_ID,
-        process.env.GUILD_ID,
+        process.env.GUILD_ID
       ),
-      { body: commands },
+      { body: commands }
     );
 
     console.log("✅ Successfully registered all slash commands!");
@@ -212,7 +213,7 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
     console.error("💥 Error details:", error.message);
     console.error("🔍 Full error:", error);
     console.log(
-      "🔧 Check your bot token, client ID, and guild ID in .env file",
+      "🔧 Check your bot token, client ID, and guild ID in .env file"
     );
     console.log("═".repeat(50));
     process.exit(1);

@@ -6,6 +6,7 @@
 import { pool, checkAndPerformMonthlyReset } from "../models/db.ts";
 import CacheInvalidationService from "../utils/cacheInvalidationService.ts";
 import dayjs from "dayjs";
+import voiceService from "../services/voiceService.ts";
 
 class MonthlyResetService {
   public isRunning: boolean;
@@ -30,7 +31,7 @@ class MonthlyResetService {
       async () => {
         await this.checkAllUsersForReset();
       },
-      60 * 60 * 1000,
+      60 * 60 * 1000
     ); // Every hour
 
     // Also run an initial check when starting
@@ -70,11 +71,11 @@ class MonthlyResetService {
                 WHERE last_monthly_reset IS NULL
                    OR last_monthly_reset < $1
             `,
-        [currentMonth.format("YYYY-MM-DD")],
+        [currentMonth.format("YYYY-MM-DD")]
       );
 
       console.log(
-        `📅 Checking ${usersNeedingReset.rows.length} users for monthly reset`,
+        `📅 Checking ${usersNeedingReset.rows.length} users for monthly reset`
       );
 
       // Process each user's monthly reset
@@ -84,24 +85,23 @@ class MonthlyResetService {
         } catch (error) {
           console.error(
             `❌ Error performing monthly reset for ${user.discord_id}:`,
-            error,
+            error
           );
         }
       }
 
       if (usersNeedingReset.rows.length > 0) {
         console.log(
-          `✅ Completed monthly reset check for ${usersNeedingReset.rows.length} users`,
+          `✅ Completed monthly reset check for ${usersNeedingReset.rows.length} users`
         );
       }
 
       // 2. Check for daily streak resets (users who missed yesterday)
       try {
-        const voiceService = require("../services/voiceService");
         const streaksReset = await voiceService.checkAllStreaks();
-        if (streaksReset > 0) {
+        if (streaksReset.usersReset > 0) {
           console.log(
-            `🔥 Daily streak check: Reset ${streaksReset} user streaks for missed days`,
+            `🔥 Daily streak check: Reset ${streaksReset} user streaks for missed days`
           );
         }
       } catch (error) {
@@ -197,7 +197,7 @@ class MonthlyResetService {
                    OR last_monthly_reset < $1
                 ORDER BY last_monthly_reset ASC NULLS FIRST
             `,
-        [currentMonth.format("YYYY-MM-DD")],
+        [currentMonth.format("YYYY-MM-DD")]
       );
 
       return result.rows;

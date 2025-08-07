@@ -5,6 +5,8 @@
  */
 
 import voiceService from "../services/voiceService.ts";
+// Get grace period sessions if available
+import { gracePeriodSessions } from "../events/voiceStateUpdate.ts";
 
 class VoiceStateScanner {
   private isScanning: boolean;
@@ -46,9 +48,6 @@ class VoiceStateScanner {
     const startTime = Date.now();
 
     try {
-      // Get grace period sessions if available
-      const { gracePeriodSessions } = require("../events/voiceStateUpdate");
-
       // Get all guilds (should be only one for this bot)
       const guilds = client.guilds.cache;
 
@@ -62,7 +61,7 @@ class VoiceStateScanner {
         await this.scanGuildVoiceStates(
           guild,
           activeVoiceSessions,
-          gracePeriodSessions,
+          gracePeriodSessions
         );
       }
 
@@ -74,7 +73,7 @@ class VoiceStateScanner {
       console.log(`   🔍 Scan Duration: ${scanDuration}ms`);
       console.log(`   👥 Users Found: ${this.scanResults.totalUsersFound}`);
       console.log(
-        `   ✅ Tracking Started: ${this.scanResults.trackingStarted}`,
+        `   ✅ Tracking Started: ${this.scanResults.trackingStarted}`
       );
       console.log(`   ❌ Errors: ${this.scanResults.errors}`);
       console.log(`   🎤 Active Channels: ${this.scanResults.channels.length}`);
@@ -88,7 +87,7 @@ class VoiceStateScanner {
 
       if (this.scanResults.trackingStarted > 0) {
         console.log(
-          `   🎯 Successfully started automatic tracking for ${this.scanResults.trackingStarted} users`,
+          `   🎯 Successfully started automatic tracking for ${this.scanResults.trackingStarted} users`
         );
       } else if (this.scanResults.totalUsersFound > 0) {
         console.log("   ℹ️  All found users were already being tracked");

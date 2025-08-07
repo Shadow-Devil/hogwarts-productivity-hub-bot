@@ -3,8 +3,8 @@
  * Proactively loads frequently accessed data into cache
  */
 
-const queryCache = require("./queryCache");
-const voiceService = require("../services/voiceService");
+import queryCache from "./queryCache.ts";
+import voiceService from "../services/voiceService.ts";
 
 class CacheWarming {
   public isWarming: boolean;

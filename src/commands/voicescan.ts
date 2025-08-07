@@ -11,6 +11,8 @@ import {
   createStatsCard,
 } from "../utils/visualHelpers.ts";
 import { safeDeferReply } from "../utils/interactionUtils.ts";
+// Get active voice sessions from the voice state update handler
+import { activeVoiceSessions } from "../events/voiceStateUpdate.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -74,8 +76,6 @@ export default {
 
         await interaction.editReply({ embeds: [startEmbed] });
 
-        // Get active voice sessions from the voice state update handler
-        const { activeVoiceSessions } = require("../events/voiceStateUpdate");
 
         // Run the scan with timeout protection
         const scanPromise = voiceStateScanner.scanAndStartTracking(

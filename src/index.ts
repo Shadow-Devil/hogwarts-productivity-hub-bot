@@ -9,10 +9,11 @@ import {
   type Interaction,
   Events,
 } from "discord.js";
-import * as fs from "fs";
-import * as path from "path";
 import { initializeDatabase, getDbResilience } from "./models/db.ts";
-import { measureCommand, performanceMonitor } from "./utils/performanceMonitor.ts";
+import {
+  measureCommand,
+  performanceMonitor,
+} from "./utils/performanceMonitor.ts";
 import monthlyResetService from "./services/monthlyResetService.ts";
 import BotHealthMonitor from "./utils/botHealthMonitor.ts";
 import sessionRecovery from "./utils/sessionRecovery.ts";
@@ -34,7 +35,15 @@ import timer from "./commands/timer.ts";
 import timezoneCommand from "./commands/timezone.ts";
 import viewtasks from "./commands/viewtasks.ts";
 import voicescan from "./commands/voicescan.ts";
-import voiceStateUpdate from "./events/voiceStateUpdate.ts";
+import * as voiceStateUpdate from "./events/voiceStateUpdate.ts";
+import {
+  activeVoiceSessions,
+  gracePeriodSessions,
+  setDiscordClient,
+} from "./events/voiceStateUpdate.ts";
+import cacheWarming from "./utils/cacheWarming.ts";
+import { MaterializedViewManager } from "./services/materializedViewManager.ts";
+import voiceStateScanner from "./utils/voiceStateScanner.ts";
 
 class CustomClient extends Client {
   public commands = new Collection<string, any>();
@@ -63,9 +72,7 @@ const client: CustomClient = new CustomClient({
   ],
 });
 
-
-
-async function loadCommands() {
+function loadCommands() {
   client.commands.set(addtask.data.name, addtask);
   client.commands.set(completetask.data.name, completetask);
   client.commands.set(debug.data.name, debug);
@@ -82,11 +89,12 @@ async function loadCommands() {
   client.commands.set(timezoneCommand.data.name, timezoneCommand);
   client.commands.set(viewtasks.data.name, viewtasks);
   client.commands.set(voicescan.data.name, voicescan);
-  console.log(`📜 Commands loaded: ${client.commands.size}`);
 }
 
-async function loadEvents() {
-  client.on(Events.VoiceStateUpdate, (...args) => voiceStateUpdate.execute(...args));
+function loadEvents() {
+  client.on(Events.VoiceStateUpdate, (oldState, newState) =>
+    voiceStateUpdate.execute(oldState, newState)
+  );
 }
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
@@ -97,13 +105,9 @@ let centralResetService = null; // Will be initialized after database connection
 // Bot login
 
 client.on(Events.ClientReady, async (c) => {
-  console.log("🚀 Discord Bot Initialization");
-  console.log("═".repeat(50));
   console.log(`Bot User: ${c.user.tag}`);
   console.log(`lient ID: ${c.user.id}`);
   console.log(`Commands Loaded: ${client.commands.size}`);
-  console.log("Starting system initialization...");
-  console.log("");
 
   try {
     // Initialize database with enhanced fault tolerance
@@ -120,23 +124,18 @@ client.on(Events.ClientReady, async (c) => {
 
     // Initialize session recovery system
     console.log("🛡️  Initializing session recovery...");
-    const {
-      activeVoiceSessions,
-      gracePeriodSessions,
-      setDiscordClient,
-    } = require("./events/voiceStateUpdate");
 
     // Set Discord client reference for smart session cleanup
     setDiscordClient(client);
 
     const recoveryResults = await sessionRecovery.initialize(
       activeVoiceSessions,
-      gracePeriodSessions,
+      gracePeriodSessions
     );
     console.log("✅ Session recovery system initialized");
     if (recoveryResults > 0) {
       console.log(
-        `📈 Recovered ${recoveryResults} incomplete sessions from previous runs`,
+        `📈 Recovered ${recoveryResults} incomplete sessions from previous runs`
       );
     }
 
@@ -162,7 +161,6 @@ client.on(Events.ClientReady, async (c) => {
 
     // Initialize cache warming strategy
     console.log("🔥 Starting cache warming strategy...");
-    const cacheWarming = require("./utils/cacheWarming");
     try {
       await cacheWarming.startCacheWarming();
       console.log("✅ Cache warming strategy activated");
@@ -173,9 +171,6 @@ client.on(Events.ClientReady, async (c) => {
 
     // Initialize database optimizations and materialized view management
     console.log("⚡ Setting up database optimizations...");
-    const {
-      MaterializedViewManager,
-    } = require("./services/materializedViewManager");
     materializedViewManager = new MaterializedViewManager();
 
     // Start auto-refresh of materialized views every 5 minutes
@@ -185,35 +180,34 @@ client.on(Events.ClientReady, async (c) => {
     try {
       await materializedViewManager.refreshViews();
       console.log(
-        "✅ Database optimizations activated (40-60% performance improvement)",
+        "✅ Database optimizations activated (40-60% performance improvement)"
       );
     } catch (error) {
       console.warn(
         "⚠️ Initial materialized view refresh failed:",
-        error.message,
+        error.message
       );
       console.log(
-        "✅ Database optimizations activated (auto-refresh will retry)",
+        "✅ Database optimizations activated (auto-refresh will retry)"
       );
     }
 
     // Scan for users already in voice channels and start tracking
     console.log("🔍 Scanning for users already in voice channels...");
-    const voiceStateScanner = require("./utils/voiceStateScanner");
     const scanResults = await voiceStateScanner.scanAndStartTracking(
       client,
-      activeVoiceSessions,
+      activeVoiceSessions
     );
     console.log("✅ Voice state scanning completed");
 
     console.log("");
     console.log("🎉 Bot is fully operational!");
     console.log(
-      `🎯 Serving commands: ${Array.from(client.commands.keys()).join(", ")}`,
+      `🎯 Serving commands: ${Array.from(client.commands.keys()).join(", ")}`
     );
     if (scanResults.trackingStarted > 0) {
       console.log(
-        `🎤 Auto-started tracking for ${scanResults.trackingStarted} users already in voice channels`,
+        `🎤 Auto-started tracking for ${scanResults.trackingStarted} users already in voice channels`
       );
     }
     console.log("═".repeat(50));
@@ -256,19 +250,19 @@ client.on("interactionCreate", async (interaction) => {
   const command = client.commands.get(interaction.commandName);
   if (!command) {
     console.warn(
-      `⚠️ Unknown command attempted: /${interaction.commandName} by ${interaction.user.tag}`,
+      `⚠️ Unknown command attempted: /${interaction.commandName} by ${interaction.user.tag}`
     );
     return;
   }
 
   console.log(
-    `🎯 Command executed: /${interaction.commandName} by ${interaction.user.tag} in #${interaction.channel?.name || "DM"}`,
+    `🎯 Command executed: /${interaction.commandName} by ${interaction.user.tag} in #${interaction.channel?.name || "DM"}`
   );
 
   // Wrap command execution with performance monitoring and timeout protection
   const wrappedExecute = measureCommand(
     interaction.commandName,
-    command.execute,
+    command.execute
   );
 
   try {
@@ -311,16 +305,16 @@ client.on("interactionCreate", async (interaction) => {
       // Check if it's an "Unknown interaction" error (expired token)
       if (replyError.code === 10062) {
         console.warn(
-          `⚠️  Interaction expired for /${interaction.commandName} - command took too long`,
+          `⚠️  Interaction expired for /${interaction.commandName} - command took too long`
         );
       } else if (replyError.code === 40060) {
         console.warn(
-          `⚠️  Interaction already acknowledged for /${interaction.commandName}`,
+          `⚠️  Interaction already acknowledged for /${interaction.commandName}`
         );
       } else {
         console.error(
           `💥 Failed to send error response for /${interaction.commandName}:`,
-          replyError,
+          replyError
         );
       }
     }
@@ -330,25 +324,12 @@ client.on("interactionCreate", async (interaction) => {
 // Initialize bot asynchronously
 async function initializeBot() {
   try {
-    console.log("🌟 Discord Productivity Bot Starting Up");
-    console.log("═".repeat(50));
-    console.log("📅 Startup Time:", new Date().toISOString());
-    console.log("🔧 Node.js Version:", process.version);
-    console.log("💻 Platform:", process.platform);
-    console.log("");
+    loadCommands();
+    loadEvents();
 
-    console.log("🔄 Loading bot components...");
-    await Promise.all([loadCommands(), loadEvents()]);
-
-    console.log("🔐 Authenticating with Discord...");
     await client.login(process.env.DISCORD_TOKEN);
   } catch (error) {
-    console.log("❌ Bot Initialization Failed");
-    console.log("═".repeat(50));
-    console.error("💥 Error details:", error.message);
-    console.error("🔍 Full error:", error);
-    console.log("🔧 Check your Discord token and network connection");
-    console.log("═".repeat(50));
+    console.error("Error initializing bot:", error);
     process.exit(1);
   }
 }

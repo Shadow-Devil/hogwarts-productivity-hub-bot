@@ -1,11 +1,11 @@
 import { Client, Pool } from "pg";
 import dayjs from "dayjs";
-import { config } from "dotenv";
-config()
 
 import { performanceMonitor } from "../utils/performanceMonitor.ts";
 import databaseOptimizer from "../utils/databaseOptimizer.ts";
 import DatabaseResilience from "../utils/databaseResilience.ts";
+// Use smart cache invalidation for user data
+import queryCache from "../utils/queryCache.ts";
 
 // Simple user cache for performance (replaced legacy functions)
 const userCache = new Map();
@@ -65,11 +65,11 @@ pool.on("connect", (_client) => {
   // Only log the first few connections to avoid spam
   if (connectionCount <= 3) {
     console.log(
-      `✅ Connected to PostgreSQL database (${connectionCount}/${pool.options.max})`,
+      `✅ Connected to PostgreSQL database (${connectionCount}/${pool.options.max})`
     );
   } else if (connectionCount === 4) {
     console.log(
-      `✅ PostgreSQL connection pool active (${pool.options.min}-${pool.options.max} connections)`,
+      `✅ PostgreSQL connection pool active (${pool.options.min}-${pool.options.max} connections)`
     );
   }
   performanceMonitor.updateActiveConnections(pool.totalCount);
@@ -119,7 +119,7 @@ async function runMigrations(client) {
           // duplicate_column error
           console.log(
             `ℹ️  Column ${column.name} already exists or other issue:`,
-            error.message,
+            error.message
           );
         }
       }
@@ -136,7 +136,7 @@ async function runMigrations(client) {
       if (error.code !== "42701") {
         console.log(
           "ℹ️  points_earned column already exists or other issue:",
-          error.message,
+          error.message
         );
       }
     }
@@ -162,7 +162,7 @@ async function runMigrations(client) {
           // duplicate_column error
           console.log(
             `ℹ️  Column ${column.name} already exists or other issue:`,
-            error.message,
+            error.message
           );
         }
       }
@@ -182,7 +182,7 @@ async function runMigrations(client) {
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
         console.log(
-          `✅ Added column ${column.name} to vc_sessions table for session recovery`,
+          `✅ Added column ${column.name} to vc_sessions table for session recovery`
         );
       } catch (error) {
         // Column might already exist, that's okay
@@ -190,7 +190,7 @@ async function runMigrations(client) {
           // duplicate_column error
           console.log(
             `ℹ️  Column ${column.name} already exists or other issue:`,
-            error.message,
+            error.message
           );
         }
       }
@@ -215,7 +215,7 @@ async function runMigrations(client) {
           // duplicate_column error
           console.log(
             `ℹ️  Column ${column.name} already exists or other issue:`,
-            error.message,
+            error.message
           );
         }
       }
@@ -248,7 +248,7 @@ async function runMigrations(client) {
     } catch (error) {
       console.log(
         "ℹ️  daily_task_stats table already exists or other issue:",
-        error.message,
+        error.message
       );
     }
 
@@ -273,7 +273,7 @@ async function runMigrations(client) {
           // duplicate_column error
           console.log(
             `ℹ️  Timezone column ${column.name} already exists or other issue:`,
-            error.message,
+            error.message
           );
         }
       }
@@ -291,7 +291,7 @@ async function runMigrations(client) {
     } catch (error) {
       console.log(
         "ℹ️  Timezone indexes already exist or other issue:",
-        error.message,
+        error.message
       );
     }
 
@@ -567,7 +567,7 @@ function calculatePointsForHours(startingHours, hoursToCalculate) {
       // First hour territory (5 points per hour)
       const firstHourPortion = Math.min(
         remainingHours,
-        1 - Math.floor(currentTotal),
+        1 - Math.floor(currentTotal)
       );
       points += firstHourPortion * 5;
       remainingHours -= firstHourPortion;
@@ -591,7 +591,7 @@ async function checkAndPerformMonthlyReset(discordId) {
     // Get user data
     const userResult = await client.query(
       "SELECT * FROM users WHERE discord_id = $1",
-      [discordId],
+      [discordId]
     );
 
     if (userResult.rows.length === 0) return;
@@ -605,7 +605,7 @@ async function checkAndPerformMonthlyReset(discordId) {
     // Check if we need to perform monthly reset
     if (!lastReset || lastReset.isBefore(currentMonth)) {
       console.log(
-        `🔄 Performing monthly reset for user ${discordId} (all-time stats now continuously updated)`,
+        `🔄 Performing monthly reset for user ${discordId} (all-time stats now continuously updated)`
       );
 
       // Store the monthly summary before reset (for historical tracking)
@@ -629,7 +629,7 @@ async function checkAndPerformMonthlyReset(discordId) {
             lastMonth,
             user.monthly_hours,
             user.monthly_points,
-          ],
+          ]
         );
       }
 
@@ -643,11 +643,9 @@ async function checkAndPerformMonthlyReset(discordId) {
                     updated_at = CURRENT_TIMESTAMP
                 WHERE discord_id = $2
             `,
-        [firstOfMonth, discordId],
+        [firstOfMonth, discordId]
       );
 
-      // Use smart cache invalidation for user data
-      const queryCache = require("../utils/queryCache");
       queryCache.invalidateUserRelatedCache(discordId);
 
       console.log(`✅ Monthly reset completed for ${discordId}`);

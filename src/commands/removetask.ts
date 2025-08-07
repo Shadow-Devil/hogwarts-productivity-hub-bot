@@ -6,6 +6,7 @@ import {
 } from "../utils/embedTemplates.ts";
 import { StatusEmojis } from "../utils/constants.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
+import dayjs from "dayjs";
 
 export default {
   data: new SlashCommandBuilder()
@@ -35,9 +36,8 @@ export default {
       const result = await taskService.removeTask(discordId, taskNumber);
 
       if (result.success) {
-        const dayjs = require("dayjs");
         const resetTime = Math.floor(
-          dayjs().add(1, "day").startOf("day").valueOf() / 1000,
+          dayjs().add(1, "day").startOf("day").valueOf() / 1000
         );
 
         // Create slot information with reclaim status
@@ -47,8 +47,7 @@ export default {
         if (result.stats) {
           const slotReclaimedText = result.slotReclaimed
             ? " ✨ **Slot Reclaimed!**"
-            : result.slotReclaimed === false &&
-                "maxRecoverableSlots" in result
+            : result.slotReclaimed === false && "maxRecoverableSlots" in result
               ? " 🚫 **Slot Not Reclaimed**"
               : "";
           slotInfo = `\n\n**Daily Task Slots:** ${result.stats.remaining}/${result.stats.limit} remaining • **Resets:** <t:${resetTime}:R>${slotReclaimedText}`;
@@ -75,7 +74,7 @@ export default {
           {
             helpText: `${StatusEmojis.INFO} Use \`/viewtasks\` to see your updated task list`,
             additionalInfo: additionalInfo,
-          },
+          }
         );
         return interaction.editReply({ embeds: [embed] });
       } else {
@@ -84,7 +83,7 @@ export default {
           result.message,
           {
             helpText: `${StatusEmojis.INFO} Use \`/viewtasks\` to check your task numbers`,
-          },
+          }
         );
         return interaction.editReply({ embeds: [embed] });
       }

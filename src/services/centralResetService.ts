@@ -59,7 +59,7 @@ class CentralResetService extends BaseService {
         }),
         winston.format.errors({ stack: true }),
         winston.format.json(),
-        winston.format.colorize({ all: true }),
+        winston.format.colorize({ all: true })
       ),
       defaultMeta: { service: "CentralResetService" },
       transports: [
@@ -73,8 +73,8 @@ class CentralResetService extends BaseService {
                   ? JSON.stringify(meta, null, 2)
                   : "";
                 return `${timestamp} [${service}] ${level}: ${message} ${metaStr}`;
-              },
-            ),
+              }
+            )
           ),
         }),
         // File transport for persistent logging
@@ -91,15 +91,6 @@ class CentralResetService extends BaseService {
       exceptionHandlers: [
         new winston.transports.File({ filename: "logs/reset-exceptions.log" }),
       ],
-    });
-
-    this.logger.info("CentralResetService initialized", {
-      features: [
-        "timezone-aware resets",
-        "cron scheduling",
-        "structured logging",
-      ],
-      logLevel: "info",
     });
   }
 
