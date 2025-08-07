@@ -37,7 +37,7 @@ describe('Visual Helpers', () => {
     describe('formatDataGrid', () => {
         it('should format data into grid structure', () => {
             const data = ['Item 1', 'Item 2', 'Item 3'];
-            const result = formatDataGrid(data, 2);
+            const result = formatDataGrid(data, {});
             expect(typeof result).toBe('string');
             expect(result.length).toBeGreaterThan(0);
         });

@@ -196,7 +196,7 @@ const timezoneCommand = {
 
             switch (subcommand) {
             case 'view':
-                await handleViewTimezone(interaction, discordId);
+                await timezoneCommand.handleViewTimezone(interaction, discordId);
                 break;
             case 'set': {
                 const timezone = interaction.options.getString('timezone');
