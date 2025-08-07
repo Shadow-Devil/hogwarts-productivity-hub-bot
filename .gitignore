@@ -57,3 +57,6 @@ reports/validations/*-2025-*.json
 # Production secrets
 .env.production
 .env.local
+
+requirement.txt
+requirement.md
