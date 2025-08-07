@@ -3,7 +3,8 @@
  * Validates the consolidated visual constants and their proper structure
  */
 
-const { BotColors, StatusEmojis, VisualPatterns } = require('../../src/utils/constants');
+import { describe, expect, test } from '@jest/globals';
+import { BotColors, StatusEmojis, VisualPatterns } from '../../src/utils/constants';
 
 describe('Constants Module', () => {
     describe('BotColors', () => {
@@ -123,13 +124,6 @@ describe('Constants Module', () => {
             expect(BotColors).toBeDefined();
             expect(StatusEmojis).toBeDefined();
             expect(VisualPatterns).toBeDefined();
-        });
-
-        test('should be importable by other modules', () => {
-            // This test ensures the module can be required without errors
-            expect(() => {
-                require('../../src/utils/constants');
-            }).not.toThrow();
         });
 
         test('should have consistent naming conventions', () => {

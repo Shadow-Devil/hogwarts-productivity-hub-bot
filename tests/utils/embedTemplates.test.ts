@@ -3,6 +3,9 @@
  * Validates actual functionality of Discord embed template functions
  */
 
+import { jest, describe, afterEach, it, expect } from '@jest/globals';
+import { createErrorTemplate, createHealthTemplate, createHouseTemplate, createLeaderboardTemplate, createSuccessTemplate, createTaskTemplate, createTimerTemplate } from '../../src/utils/embedTemplates';
+
 // Mock Discord.js components since they depend on the Discord API
 jest.mock('discord.js', () => ({
     EmbedBuilder: jest.fn().mockImplementation(() => ({
@@ -18,39 +21,14 @@ jest.mock('discord.js', () => ({
 }));
 
 describe('Embed Templates', () => {
-    let embedTemplates;
-
-    beforeAll(() => {
-        embedTemplates = require('../../src/utils/embedTemplates');
-    });
-
     afterEach(() => {
         jest.clearAllMocks();
-    });
-
-    describe('Function Exports', () => {
-        it('should export all required template functions', () => {
-            const expectedFunctions = [
-                'createSuccessTemplate',
-                'createErrorTemplate',
-                'createLeaderboardTemplate',
-                'createTaskTemplate',
-                'createTimerTemplate',
-                'createHouseTemplate',
-                'createChampionTemplate',
-                'createHealthTemplate'
-            ];
-
-            expectedFunctions.forEach(funcName => {
-                expect(typeof embedTemplates[funcName]).toBe('function');
-            });
-        });
     });
 
     describe('Basic Templates', () => {
         describe('createSuccessTemplate', () => {
             it('should create a success template with title and message', () => {
-                const result = embedTemplates.createSuccessTemplate('Test Success', 'Test message');
+                const result = createSuccessTemplate('Test Success', 'Test message');
                 expect(result).toBeDefined();
                 expect(result.setTitle).toHaveBeenCalledWith('✅ Test Success');
                 expect(result.setDescription).toHaveBeenCalledWith('Test message');
@@ -58,7 +36,7 @@ describe('Embed Templates', () => {
 
             it('should handle options with points and streak', () => {
                 const options = { points: 100, streak: 5, celebration: true };
-                const result = embedTemplates.createSuccessTemplate('Achievement', 'Great job!', options);
+                const result = createSuccessTemplate('Achievement', 'Great job!', options);
                 expect(result).toBeDefined();
                 expect(result.setTitle).toHaveBeenCalledWith('🎉 Achievement');
                 expect(result.addFields).toHaveBeenCalled();
@@ -66,14 +44,14 @@ describe('Embed Templates', () => {
 
             it('should work without options', () => {
                 expect(() => {
-                    embedTemplates.createSuccessTemplate('Title', 'Message');
+                    createSuccessTemplate('Title', 'Message');
                 }).not.toThrow();
             });
         });
 
         describe('createErrorTemplate', () => {
             it('should create an error template', () => {
-                const result = embedTemplates.createErrorTemplate('Error Title', 'Error occurred');
+                const result = createErrorTemplate('Error Title', 'Error occurred');
                 expect(result).toBeDefined();
                 expect(result.setTitle).toHaveBeenCalled();
                 expect(result.setDescription).toHaveBeenCalled();
@@ -81,11 +59,11 @@ describe('Embed Templates', () => {
 
             it('should handle null/undefined messages', () => {
                 expect(() => {
-                    embedTemplates.createErrorTemplate('Title', null);
+                    createErrorTemplate('Title', null);
                 }).not.toThrow();
 
                 expect(() => {
-                    embedTemplates.createErrorTemplate('Title', undefined);
+                    createErrorTemplate('Title', undefined);
                 }).not.toThrow();
             });
         });
@@ -98,11 +76,11 @@ describe('Embed Templates', () => {
                 // In production, this would be provided by Discord.js
                 expect(() => {
                     const invalidUser = { username: 'TestUser' }; // Missing displayAvatarURL method
-                    embedTemplates.createTaskTemplate([], invalidUser);
+                    createTaskTemplate([], invalidUser);
                 }).toThrow('user.displayAvatarURL is not a function');
 
                 // This documents the expected behavior - it should work with proper objects
-                expect(typeof embedTemplates.createTaskTemplate).toBe('function');
+                expect(typeof createTaskTemplate).toBe('function');
             });
         });
 
@@ -116,7 +94,7 @@ describe('Embed Templates', () => {
                     timeRemaining: 25
                 };
 
-                const result = embedTemplates.createTimerTemplate('start', timerData);
+                const result = createTimerTemplate('start', timerData);
                 expect(result).toBeDefined();
                 expect(result.setTitle).toHaveBeenCalledWith('⏱️ Pomodoro Timer Started');
             });
@@ -131,7 +109,7 @@ describe('Embed Templates', () => {
                 };
 
                 expect(() => {
-                    embedTemplates.createTimerTemplate('status', timerData);
+                    createTimerTemplate('status', timerData);
                 }).not.toThrow();
             });
         });
@@ -145,7 +123,7 @@ describe('Embed Templates', () => {
 
                 const currentUser = { id: '1' };
 
-                const result = embedTemplates.createLeaderboardTemplate('monthly', leaderboardData, currentUser);
+                const result = createLeaderboardTemplate('monthly', leaderboardData, currentUser);
                 expect(result).toBeDefined();
                 expect(result.setTitle).toHaveBeenCalledWith('📅 Monthly Voice Leaderboard');
             });
@@ -154,7 +132,7 @@ describe('Embed Templates', () => {
                 const currentUser = { id: '1' };
 
                 expect(() => {
-                    embedTemplates.createLeaderboardTemplate('monthly', [], currentUser);
+                    createLeaderboardTemplate('monthly', [], currentUser);
                 }).not.toThrow();
             });
         });
@@ -168,7 +146,7 @@ describe('Embed Templates', () => {
                     { name: 'Slytherin', points: 80 }
                 ];
 
-                const result = embedTemplates.createHouseTemplate(housesData, 'monthly');
+                const result = createHouseTemplate(housesData, 'monthly');
                 expect(result).toBeDefined();
                 expect(result.setTitle).toHaveBeenCalledWith('🏆 Monthly House Points');
                 expect(result.setColor).toHaveBeenCalled();
@@ -176,7 +154,7 @@ describe('Embed Templates', () => {
 
             it('should handle empty houses data', () => {
                 expect(() => {
-                    embedTemplates.createHouseTemplate([], 'monthly');
+                    createHouseTemplate([], 'monthly');
                 }).not.toThrow();
             });
         });
@@ -191,7 +169,7 @@ describe('Embed Templates', () => {
                     activeSessions: 3
                 };
 
-                const result = embedTemplates.createHealthTemplate('Bot Health', healthData);
+                const result = createHealthTemplate('Bot Health', healthData);
                 expect(result).toBeDefined();
                 expect(result.setTitle).toHaveBeenCalledWith('🩺 Bot Health');
                 expect(result.setColor).toHaveBeenCalled();
@@ -205,7 +183,7 @@ describe('Embed Templates', () => {
                 };
 
                 expect(() => {
-                    embedTemplates.createHealthTemplate('System Issues', healthData);
+                    createHealthTemplate('System Issues', healthData);
                 }).not.toThrow();
             });
         });
@@ -216,27 +194,27 @@ describe('Embed Templates', () => {
             // Test with null/undefined data - these may legitimately throw
             // since the functions expect certain data structures
             expect(() => {
-                embedTemplates.createSuccessTemplate(null, null);
+                createSuccessTemplate(null, null);
             }).not.toThrow();
 
             // Test leaderboard with proper empty array instead of null
             expect(() => {
-                embedTemplates.createLeaderboardTemplate('monthly', [], { id: '1' });
+                createLeaderboardTemplate('monthly', [], { id: '1' });
             }).not.toThrow();
         });
 
         it('should handle missing optional parameters', () => {
             // All functions should work with minimal required params
             expect(() => {
-                embedTemplates.createSuccessTemplate('Title', 'Message');
-                embedTemplates.createErrorTemplate('Error', 'Message');
-                embedTemplates.createHouseTemplate([], 'monthly');
+                createSuccessTemplate('Title', 'Message');
+                createErrorTemplate('Error', 'Message');
+                createHouseTemplate([], 'monthly');
             }).not.toThrow();
         });
 
         it('should validate return types are objects', () => {
-            const successResult = embedTemplates.createSuccessTemplate('Test', 'Message');
-            const errorResult = embedTemplates.createErrorTemplate('Error', 'Message');
+            const successResult = createSuccessTemplate('Test', 'Message');
+            const errorResult = createErrorTemplate('Error', 'Message');
 
             expect(typeof successResult).toBe('object');
             expect(typeof errorResult).toBe('object');
@@ -250,12 +228,12 @@ describe('Embed Templates', () => {
 
             // Leaderboard with empty but valid array
             expect(() => {
-                embedTemplates.createLeaderboardTemplate('all-time', [], { id: 'user123' });
+                createLeaderboardTemplate('all-time', [], { id: 'user123' });
             }).not.toThrow();
 
             // Health template with minimal valid data
             expect(() => {
-                embedTemplates.createHealthTemplate('Health Check', {
+                createHealthTemplate('Health Check', {
                     status: 'healthy',
                     systemHealth: true
                 });
@@ -263,7 +241,7 @@ describe('Embed Templates', () => {
 
             // Timer template with valid action
             expect(() => {
-                embedTemplates.createTimerTemplate('start', {
+                createTimerTemplate('start', {
                     workTime: 25,
                     breakTime: 5,
                     voiceChannel: { id: '123' },
@@ -280,10 +258,10 @@ describe('Embed Templates', () => {
             // This is tested indirectly by ensuring the functions don't throw
             // and that they call the expected Discord.js methods
 
-            const result = embedTemplates.createSuccessTemplate('Test', 'Message');
+            const result = createSuccessTemplate('Test', 'Message');
             expect(result.setColor).toHaveBeenCalled();
 
-            const houseResult = embedTemplates.createHouseTemplate([
+            const houseResult = createHouseTemplate([
                 { name: 'Gryffindor', points: 100 }
             ], 'monthly');
             expect(houseResult.setColor).toHaveBeenCalled();

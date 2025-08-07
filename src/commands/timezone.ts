@@ -156,7 +156,7 @@ function createTimezoneChangeEmbed(oldTimezone, newTimezone, userLocalTime, impa
     return embed;
 }
 
-export default {
+const timezoneCommand = {
     data: new SlashCommandBuilder()
         .setName('timezone')
         .setDescription('Manage your timezone settings for accurate daily/monthly resets')
@@ -196,15 +196,15 @@ export default {
 
             switch (subcommand) {
             case 'view':
-                await module.exports.handleViewTimezone(interaction, discordId);
+                await handleViewTimezone(interaction, discordId);
                 break;
             case 'set': {
                 const timezone = interaction.options.getString('timezone');
-                await module.exports.handleSetTimezone(interaction, discordId, timezone);
+                await timezoneCommand.handleSetTimezone(interaction, discordId, timezone);
                 break;
             }
             case 'list':
-                await module.exports.handleListTimezones(interaction);
+                await timezoneCommand.handleListTimezones(interaction);
                 break;
             default:
                 await safeErrorReply(interaction, 'Unknown subcommand');
@@ -223,8 +223,8 @@ export default {
 
             // Get next reset times
             const nextResets = {
-                daily: await module.exports.getNextResetDisplay(discordId, 'daily'),
-                monthly: await module.exports.getNextResetDisplay(discordId, 'monthly')
+                daily: await timezoneCommand.getNextResetDisplay(discordId, 'daily'),
+                monthly: await timezoneCommand.getNextResetDisplay(discordId, 'monthly')
             };
 
             const embed = createTimezoneEmbed(userTimezone, userLocalTime, nextResets);
@@ -315,3 +315,5 @@ export default {
         }
     }
 };
+
+export default timezoneCommand;

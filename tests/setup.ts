@@ -2,6 +2,7 @@
  * Jest Test Setup
  * Global test configuration and mocks
  */
+import { afterEach, jest } from '@jest/globals';
 
 // Mock environment variables for testing
 process.env.NODE_ENV = 'test';
