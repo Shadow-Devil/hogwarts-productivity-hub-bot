@@ -1,11 +1,5 @@
-import { Client, Pool, type PoolClient } from "pg";
+import { Pool, type PoolClient } from "pg";
 import dayjs from "dayjs";
-
-import { performanceMonitor } from "../utils/performanceMonitor.ts";
-import databaseOptimizer from "../utils/databaseOptimizer.ts";
-import DatabaseResilience from "../utils/databaseResilience.ts";
-// Use smart cache invalidation for user data
-import queryCache from "../utils/queryCache.ts";
 
 const pool = new Pool({
   user: process.env.DB_USER || "postgres",
@@ -22,32 +16,14 @@ const pool = new Pool({
 
 pool.on("connect", (_client) => {
   console.log(`Connected to PostgreSQL database`);
-
-  performanceMonitor.updateActiveConnections(pool.totalCount);
-});
-
-pool.on("acquire", (_client) => {
-  performanceMonitor.updateActiveConnections(pool.totalCount);
-});
-
-pool.on("release", (_client) => {
-  performanceMonitor.updateActiveConnections(pool.totalCount);
 });
 
 pool.on("error", (err) => {
   console.error("❌ Database connection error:", err);
 });
 
-// Initialize database optimizer with pool (avoid circular dependency)
-databaseOptimizer.setPool(pool);
-
-// Initialize database resilience system
-const dbResilience = new DatabaseResilience(pool);
-
 // Database migrations for schema updates
 async function runMigrations(client: PoolClient) {
-  console.log("🔧 Running database migrations...");
-
   try {
     // Migration 1: Add new columns to users table for points system
     const columnsToAdd = [
@@ -81,7 +57,6 @@ async function runMigrations(client: PoolClient) {
                 ALTER TABLE daily_voice_stats
                 ADD COLUMN IF NOT EXISTS points_earned INTEGER DEFAULT 0
             `);
-      console.log("✅ Added points_earned column to daily_voice_stats table");
     } catch (error) {
       if (error.code !== "42701") {
         console.log(
@@ -105,7 +80,6 @@ async function runMigrations(client: PoolClient) {
                     ALTER TABLE houses
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
-        console.log(`✅ Added column ${column.name} to houses table`);
       } catch (error) {
         // Column might already exist, that's okay
         if (error.code !== "42701") {
@@ -131,9 +105,7 @@ async function runMigrations(client: PoolClient) {
                     ALTER TABLE vc_sessions
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
-        console.log(
-          `✅ Added column ${column.name} to vc_sessions table for session recovery`
-        );
+        console.log();
       } catch (error) {
         // Column might already exist, that's okay
         if (error.code !== "42701") {
@@ -158,7 +130,6 @@ async function runMigrations(client: PoolClient) {
                     ALTER TABLE tasks
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
-        console.log(`✅ Added column ${column.name} to tasks table`);
       } catch (error) {
         // Column might already exist, that's okay
         if (error.code !== "42701") {
@@ -187,14 +158,12 @@ async function runMigrations(client: PoolClient) {
                     UNIQUE(discord_id, date)
                 )
             `);
-      console.log("✅ Created daily_task_stats table for daily task limits");
 
       // Create indexes
       await client.query(`
                 CREATE INDEX IF NOT EXISTS idx_daily_task_stats_discord_id_date ON daily_task_stats(discord_id, date);
                 CREATE INDEX IF NOT EXISTS idx_daily_task_stats_date ON daily_task_stats(date);
             `);
-      console.log("✅ Created indexes for daily_task_stats table");
     } catch (error) {
       console.log(
         "ℹ️  daily_task_stats table already exists or other issue:",
@@ -216,7 +185,6 @@ async function runMigrations(client: PoolClient) {
                     ALTER TABLE users
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
-        console.log(`✅ Added timezone column ${column.name} to users table`);
       } catch (error) {
         // Column might already exist, that's okay
         if (error.code !== "42701") {
@@ -237,15 +205,12 @@ async function runMigrations(client: PoolClient) {
                 CREATE INDEX IF NOT EXISTS idx_users_timezone_daily ON users(timezone, last_daily_reset_tz);
                 CREATE INDEX IF NOT EXISTS idx_users_timezone_monthly ON users(timezone, last_monthly_reset_tz);
             `);
-      console.log("✅ Created timezone-specific indexes for users table");
     } catch (error) {
       console.log(
         "ℹ️  Timezone indexes already exist or other issue:",
         error.message
       );
     }
-
-    console.log("✅ Database migrations completed");
   } catch (error) {
     console.error("❌ Error running migrations:", error);
     // Don't throw, let the initialization continue
@@ -448,8 +413,6 @@ export async function initializeDatabase() {
             CREATE INDEX IF NOT EXISTS idx_daily_task_stats_discord_id_date ON daily_task_stats(discord_id, date);
             CREATE INDEX IF NOT EXISTS idx_daily_task_stats_date ON daily_task_stats(date);
         `);
-
-    console.log("✅ Database tables initialized successfully");
   } catch (error) {
     console.error("❌ Error initializing database:", error);
     throw error;
@@ -595,9 +558,6 @@ async function checkAndPerformMonthlyReset(discordId) {
             `,
         [firstOfMonth, discordId]
       );
-
-      queryCache.invalidateUserRelatedCache(discordId);
-
       console.log(`✅ Monthly reset completed for ${discordId}`);
     }
   } catch (error) {
@@ -871,11 +831,6 @@ function generateLockId(str) {
   return Math.abs(hash);
 }
 
-// Export database resilience instance for health monitoring
-export function getDbResilience() {
-  return dbResilience;
-}
-
 export {
   pool,
   addToBatch,
@@ -890,40 +845,3 @@ export {
   withAdvisoryLock,
   generateLockId,
 };
-
-export async function executeWithResilience<T>(
-  callback: (client: Client) => Promise<T>,
-  options = {}
-): Promise<T> {
-  return await dbResilience.executeWithResilience(callback, options);
-}
-
-// Enhanced query execution with optimization tracking
-export async function executeCachedQuery(
-  operation,
-  query,
-  params = [],
-  cacheType = "default"
-) {
-  return await databaseOptimizer.executeTrackedQuery(
-    operation,
-    query,
-    params,
-    true,
-    cacheType
-  );
-}
-
-// Batch operations using optimizer
-export async function executeBatchQueries(operation, queries, batchSize = 50) {
-  return await databaseOptimizer.executeBatchOperation(
-    operation,
-    queries,
-    batchSize
-  );
-}
-
-// Get performance insights
-export function getOptimizationReport() {
-  return databaseOptimizer.getPerformanceReport();
-}

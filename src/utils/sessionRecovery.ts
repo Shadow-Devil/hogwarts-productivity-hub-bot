@@ -1,6 +1,5 @@
-import { executeWithResilience } from "../models/db.ts";
-import { measureDatabase } from "./performanceMonitor.ts";
 import dayjs from "dayjs";
+import { pool } from "../models/db.ts";
 
 /**
  * Session Recovery System
@@ -48,10 +47,6 @@ class SessionRecovery {
 
     // Start periodic session state saving
     this.startPeriodicSaving();
-
-    console.log(
-      `✅ Session recovery system initialized. Recovered ${recoveredSessions} sessions.`,
-    );
     return recoveredSessions;
   }
 
@@ -59,41 +54,34 @@ class SessionRecovery {
    * Recover incomplete sessions from database
    */
   async recoverIncompleteSessions() {
-    return measureDatabase("recoverIncompleteSessions", async () => {
-      return executeWithResilience(async (client) => {
-        const now = new Date();
-        const staleThreshold = new Date(
-          now.getTime() - this.config.maxSessionDurationHours * 60 * 60 * 1000,
-        );
+    const client = await pool.connect();
+    const now = new Date();
+    const staleThreshold = new Date(
+      now.getTime() - this.config.maxSessionDurationHours * 60 * 60 * 1000
+    );
 
-        // Find incomplete sessions (no left_at timestamp)
-        const result = await client.query(
-          `
+    // Find incomplete sessions (no left_at timestamp)
+    const result = await client.query(
+      `
                     SELECT * FROM vc_sessions
                     WHERE left_at IS NULL
                     AND joined_at > $1
                     ORDER BY joined_at ASC
                 `,
-          [staleThreshold],
-        );
+      [staleThreshold]
+    );
 
-        console.log(
-          `🔄 Found ${result.rows.length} incomplete sessions to recover`,
-        );
+    let recoveredCount = 0;
+    for (const session of result.rows) {
+      try {
+        await this.processIncompleteSession(client, session, now);
+        recoveredCount++;
+      } catch (error) {
+        console.error(`❌ Error recovering session ${session.id}:`, error);
+      }
+    }
 
-        let recoveredCount = 0;
-        for (const session of result.rows) {
-          try {
-            await this.processIncompleteSession(client, session, now);
-            recoveredCount++;
-          } catch (error) {
-            console.error(`❌ Error recovering session ${session.id}:`, error);
-          }
-        }
-
-        return recoveredCount;
-      });
-    })();
+    return recoveredCount;
   }
 
   /**
@@ -112,20 +100,20 @@ class SessionRecovery {
     if (lastHeartbeat) {
       // Add grace period to last heartbeat
       estimatedEndTime = new Date(
-        lastHeartbeat.getTime() + this.config.recoveryGracePeriodMs,
+        lastHeartbeat.getTime() + this.config.recoveryGracePeriodMs
       );
     } else {
       // No heartbeat data, estimate based on reasonable session length
       estimatedEndTime = new Date(
         sessionStartTime.getTime() +
-          Math.min(sessionDurationMs, 3 * 60 * 60 * 1000),
+          Math.min(sessionDurationMs, 3 * 60 * 60 * 1000)
       ); // Max 3 hours
     }
 
     const estimatedDurationMs =
       estimatedEndTime.getTime() - sessionStartTime.getTime();
     const sessionDurationMinutes = Math.floor(
-      estimatedDurationMs / (1000 * 60),
+      estimatedDurationMs / (1000 * 60)
     );
 
     // Don't award points for very short sessions (likely connection issues)
@@ -136,11 +124,11 @@ class SessionRecovery {
                 SET left_at = $1, duration_minutes = 0, recovery_note = 'Recovered: Session too short'
                 WHERE id = $2
             `,
-        [estimatedEndTime, session.id],
+        [estimatedEndTime, session.id]
       );
 
       console.log(
-        `🔄 Recovered short session for ${session.discord_id}: 0 minutes`,
+        `🔄 Recovered short session for ${session.discord_id}: 0 minutes`
       );
       return;
     }
@@ -152,7 +140,7 @@ class SessionRecovery {
             SET left_at = $1, duration_minutes = $2, recovery_note = 'Recovered from crash'
             WHERE id = $3
         `,
-      [estimatedEndTime, sessionDurationMinutes, session.id],
+      [estimatedEndTime, sessionDurationMinutes, session.id]
     );
 
     // Calculate and award points for the recovered session
@@ -160,7 +148,7 @@ class SessionRecovery {
     try {
       const pointsResult = await voiceService.calculateAndAwardPoints(
         session.discord_id,
-        sessionDurationMinutes,
+        sessionDurationMinutes
       );
       const pointsEarned =
         typeof pointsResult === "object"
@@ -172,16 +160,16 @@ class SessionRecovery {
         session.discord_id,
         session.date,
         sessionDurationMinutes,
-        pointsEarned,
+        pointsEarned
       );
 
       console.log(
-        `✅ Recovered session for ${session.discord_id}: ${sessionDurationMinutes} minutes, ${pointsEarned} points`,
+        `✅ Recovered session for ${session.discord_id}: ${sessionDurationMinutes} minutes, ${pointsEarned} points`
       );
     } catch (error) {
       console.error(
         `❌ Error calculating points for recovered session ${session.id}:`,
-        error,
+        error
       );
     }
   }
@@ -203,10 +191,6 @@ class SessionRecovery {
         }
       }
     }, this.config.saveIntervalMs);
-
-    console.log(
-      `✅ Periodic session saving started (every ${this.config.saveIntervalMs / 1000} seconds)`,
-    );
   }
 
   /**
@@ -216,40 +200,36 @@ class SessionRecovery {
     if (!this.activeVoiceSessions || this.activeVoiceSessions.size === 0) {
       return;
     }
+    const client = await pool.connect();
+    const now = new Date();
+    const activeSessions = Array.from(this.activeVoiceSessions.entries());
 
-    return measureDatabase("saveActiveSessionStates", async () => {
-      return executeWithResilience(async (client) => {
-        const now = new Date();
-        const activeSessions = Array.from(this.activeVoiceSessions.entries());
+    for (const [userId, sessionData] of activeSessions) {
+      try {
+        // Calculate current session duration
+        const durationMs = now.getTime() - sessionData.joinTime.getTime();
+        const durationMinutes = Math.floor(durationMs / (1000 * 60));
 
-        for (const [userId, sessionData] of activeSessions) {
-          try {
-            // Calculate current session duration
-            const durationMs = now.getTime() - sessionData.joinTime.getTime();
-            const durationMinutes = Math.floor(durationMs / (1000 * 60));
-
-            // Update the session with current progress (heartbeat)
-            await client.query(
-              `
+        // Update the session with current progress (heartbeat)
+        await client.query(
+          `
                             UPDATE vc_sessions
                             SET last_heartbeat = $1, current_duration_minutes = $2
                             WHERE id = $3 AND left_at IS NULL
                         `,
-              [now, durationMinutes, sessionData.sessionId],
-            );
-          } catch (error) {
-            console.error(
-              `❌ Error saving session state for user ${userId}:`,
-              error,
-            );
-          }
-        }
-
-        console.log(
-          `💾 Heartbeat saved for ${activeSessions.length} active sessions`,
+          [now, durationMinutes, sessionData.sessionId]
         );
-      });
-    })();
+      } catch (error) {
+        console.error(
+          `❌ Error saving session state for user ${userId}:`,
+          error
+        );
+      }
+    }
+
+    console.log(
+      `💾 Heartbeat saved for ${activeSessions.length} active sessions`
+    );
   }
 
   /**
@@ -280,110 +260,95 @@ class SessionRecovery {
       console.log("ℹ️ No active sessions to close");
       return;
     }
+    const client = await pool.connect();
+    const now = new Date();
+    const voiceService = require("../services/voiceService");
+    let closedSessions = 0;
 
-    return measureDatabase("closeAllActiveSessions", async () => {
-      return executeWithResilience(async (client) => {
-        const now = new Date();
-        const voiceService = require("../services/voiceService");
-        let closedSessions = 0;
+    console.log(
+      `🔄 Closing ${this.activeVoiceSessions.size} active voice sessions...`
+    );
 
-        console.log(
-          `🔄 Closing ${this.activeVoiceSessions.size} active voice sessions...`,
-        );
+    for (const [userId, sessionData] of this.activeVoiceSessions.entries()) {
+      try {
+        // Calculate session duration
+        const durationMs = now.getTime() - sessionData.joinTime.getTime();
+        const durationMinutes = Math.floor(durationMs / (1000 * 60));
 
-        for (const [
-          userId,
-          sessionData,
-        ] of this.activeVoiceSessions.entries()) {
-          try {
-            // Calculate session duration
-            const durationMs = now.getTime() - sessionData.joinTime.getTime();
-            const durationMinutes = Math.floor(durationMs / (1000 * 60));
-
-            // Update session in database
-            await client.query(
-              `
+        // Update session in database
+        await client.query(
+          `
                             UPDATE vc_sessions
                             SET left_at = $1, duration_minutes = $2, recovery_note = 'Graceful shutdown'
                             WHERE id = $3 AND left_at IS NULL
                         `,
-              [now, durationMinutes, sessionData.sessionId],
-            );
+          [now, durationMinutes, sessionData.sessionId]
+        );
 
-            // Award points if session was long enough
-            if (durationMinutes > 0) {
-              const pointsResult = await voiceService.calculateAndAwardPoints(
-                userId,
-                durationMinutes,
-              );
-              const pointsEarned =
-                typeof pointsResult === "object"
-                  ? pointsResult.pointsEarned
-                  : pointsResult;
+        // Award points if session was long enough
+        if (durationMinutes > 0) {
+          const pointsResult = await voiceService.calculateAndAwardPoints(
+            userId,
+            durationMinutes
+          );
+          const pointsEarned =
+            typeof pointsResult === "object"
+              ? pointsResult.pointsEarned
+              : pointsResult;
 
-              // Update daily stats
-              const sessionDate = dayjs(sessionData.joinTime).format(
-                "YYYY-MM-DD",
-              );
-              await voiceService.updateDailyStats(
-                userId,
-                sessionDate,
-                durationMinutes,
-                pointsEarned,
-              );
-
-              console.log(
-                `✅ Closed session for ${userId}: ${durationMinutes} minutes, ${pointsEarned} points`,
-              );
-            }
-
-            closedSessions++;
-          } catch (error) {
-            console.error(
-              `❌ Error closing session for user ${userId}:`,
-              error,
-            );
-          }
-        }
-
-        // Clear both active sessions and grace period sessions maps
-        this.activeVoiceSessions.clear();
-
-        // Also clear grace period sessions and end any pending sessions
-        if (this.gracePeriodSessions && this.gracePeriodSessions.size > 0) {
-          console.log(
-            `🔄 Processing ${this.gracePeriodSessions.size} grace period sessions...`,
+          // Update daily stats
+          const sessionDate = dayjs(sessionData.joinTime).format("YYYY-MM-DD");
+          await voiceService.updateDailyStats(
+            userId,
+            sessionDate,
+            durationMinutes,
+            pointsEarned
           );
 
-          for (const [
-            userId,
-            sessionData,
-          ] of this.gracePeriodSessions.entries()) {
-            try {
-              console.log(
-                `⏰ Ending grace period session for ${userId} during shutdown`,
-              );
-              await voiceService.endVoiceSession(
-                userId,
-                sessionData.channelId,
-                null,
-              );
-            } catch (error) {
-              console.error(
-                `Error ending grace period session for ${userId}:`,
-                error,
-              );
-            }
-          }
-          this.gracePeriodSessions.clear();
-          console.log("✅ Grace period sessions cleared during shutdown");
+          console.log(
+            `✅ Closed session for ${userId}: ${durationMinutes} minutes, ${pointsEarned} points`
+          );
         }
 
-        console.log(
-          `✅ Successfully closed ${closedSessions} voice sessions during shutdown`,
-        );
-      });
-    })();
+        closedSessions++;
+      } catch (error) {
+        console.error(`❌ Error closing session for user ${userId}:`, error);
+      }
+    }
+
+    // Clear both active sessions and grace period sessions maps
+    this.activeVoiceSessions.clear();
+
+    // Also clear grace period sessions and end any pending sessions
+    if (this.gracePeriodSessions && this.gracePeriodSessions.size > 0) {
+      console.log(
+        `🔄 Processing ${this.gracePeriodSessions.size} grace period sessions...`
+      );
+
+      for (const [userId, sessionData] of this.gracePeriodSessions.entries()) {
+        try {
+          console.log(
+            `⏰ Ending grace period session for ${userId} during shutdown`
+          );
+          await voiceService.endVoiceSession(
+            userId,
+            sessionData.channelId,
+            null
+          );
+        } catch (error) {
+          console.error(
+            `Error ending grace period session for ${userId}:`,
+            error
+          );
+        }
+      }
+      this.gracePeriodSessions.clear();
+      console.log("✅ Grace period sessions cleared during shutdown");
+    }
+
+    console.log(
+      `✅ Successfully closed ${closedSessions} voice sessions during shutdown`
+    );
   }
 
   /**
@@ -397,14 +362,14 @@ class SessionRecovery {
     process.on("uncaughtException", async (error) => {
       console.error(
         "💥 Uncaught Exception - attempting session recovery:",
-        error,
+        error
       );
       try {
         await this.forceSave();
       } catch (saveError) {
         console.error(
           "❌ Failed to save sessions during uncaught exception:",
-          saveError,
+          saveError
         );
       }
       process.exit(1);
@@ -414,14 +379,14 @@ class SessionRecovery {
     process.on("unhandledRejection", async (reason, _promise) => {
       console.error(
         "💥 Unhandled Rejection - attempting session recovery:",
-        reason,
+        reason
       );
       try {
         await this.forceSave();
       } catch (saveError) {
         console.error(
           "❌ Failed to save sessions during unhandled rejection:",
-          saveError,
+          saveError
         );
       }
     });

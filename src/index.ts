@@ -1,13 +1,7 @@
 import "dotenv/config";
 
 import { Client, IntentsBitField, MessageFlags, Events } from "discord.js";
-import { initializeDatabase, getDbResilience } from "./models/db.ts";
-import {
-  measureCommand,
-  performanceMonitor,
-} from "./utils/performanceMonitor.ts";
-import monthlyResetService from "./services/monthlyResetService.ts";
-import * as BotHealthMonitor from "./utils/botHealthMonitor.ts";
+import { initializeDatabase } from "./models/db.ts";
 import sessionRecovery from "./utils/sessionRecovery.ts";
 import * as DailyTaskManager from "./utils/dailyTaskManager.ts";
 import CentralResetService from "./services/centralResetService.ts";
@@ -15,13 +9,11 @@ import * as voiceStateUpdate from "./events/voiceStateUpdate.ts";
 import {
   activeVoiceSessions,
   gracePeriodSessions,
-  setDiscordClient,
 } from "./events/voiceStateUpdate.ts";
-import { MaterializedViewManager } from "./services/materializedViewManager.ts";
 import voiceStateScanner from "./utils/voiceStateScanner.ts";
 import { commands } from "./commands.ts";
 
-const client = new Client({
+export const client = new Client({
   intents: [
     IntentsBitField.Flags.Guilds,
     IntentsBitField.Flags.GuildMessages,
@@ -38,7 +30,6 @@ function loadEvents() {
 }
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
-let materializedViewManager = null; // Will be initialized after database connection
 
 client.on(Events.ClientReady, async (c) => {
   console.log(`Bot User: ${c.user.tag}`);
@@ -50,19 +41,10 @@ client.on(Events.ClientReady, async (c) => {
     await initializeDatabase();
     console.log("Database connection established");
 
-    console.log("🩺 Setting up health monitoring...");
-    const dbResilience = getDbResilience();
-    BotHealthMonitor.initialize(client, dbResilience); // Attach to client for command access
-    console.log("✅ Health monitoring system active");
-
-    // Set Discord client reference for smart session cleanup
-    setDiscordClient(client);
-
     const recoveryResults = await sessionRecovery.initialize(
       activeVoiceSessions,
       gracePeriodSessions
     );
-    console.log("✅ Session recovery system initialized");
     if (recoveryResults > 0) {
       console.log(
         `📈 Recovered ${recoveryResults} incomplete sessions from previous runs`
@@ -77,37 +59,11 @@ client.on(Events.ClientReady, async (c) => {
     await CentralResetService.start();
     console.log("✅ Central reset service started");
 
-    monthlyResetService.start();
-    console.log("✅ Monthly reset scheduler started");
-
     // Initialize daily task manager
     console.log("📅 Starting daily task manager...");
     DailyTaskManager.setDiscordClient(client);
     DailyTaskManager.start();
     console.log("✅ Daily task manager started");
-
-    // Initialize database optimizations and materialized view management
-    console.log("⚡ Setting up database optimizations...");
-    materializedViewManager = new MaterializedViewManager();
-
-    // Start auto-refresh of materialized views every 5 minutes
-    materializedViewManager.startAutoRefresh(5);
-
-    // Perform initial refresh to populate views
-    try {
-      await materializedViewManager.refreshViews();
-      console.log(
-        "✅ Database optimizations activated (40-60% performance improvement)"
-      );
-    } catch (error) {
-      console.warn(
-        "⚠️ Initial materialized view refresh failed:",
-        error.message
-      );
-      console.log(
-        "✅ Database optimizations activated (auto-refresh will retry)"
-      );
-    }
 
     // Scan for users already in voice channels and start tracking
     console.log("🔍 Scanning for users already in voice channels...");
@@ -115,25 +71,14 @@ client.on(Events.ClientReady, async (c) => {
       client,
       activeVoiceSessions
     );
-    console.log("✅ Voice state scanning completed");
+    console.log("Voice state scanning completed");
 
-    console.log("");
-    console.log("🎉 Bot is fully operational!");
-    console.log(
-      `🎯 Serving commands: ${Array.from(commands.keys()).join(", ")}`
-    );
     if (scanResults.trackingStarted > 0) {
       console.log(
         `🎤 Auto-started tracking for ${scanResults.trackingStarted} users already in voice channels`
       );
     }
     console.log("═".repeat(50));
-
-    // Trigger initial health check
-    setTimeout(() => {
-      console.log("🔍 Running initial health check...");
-      BotHealthMonitor.triggerHealthCheck();
-    }, 5000); // Wait 5 seconds for everything to settle
   } catch (error) {
     console.log("❌ Bot Initialization Failed");
     console.log("═".repeat(50));
@@ -174,14 +119,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     `🎯 Command executed: /${interaction.commandName} by ${interaction.user.tag} in #${interaction.channel?.name || "DM"}`
   );
 
-  // Wrap command execution with performance monitoring and timeout protection
-  const wrappedExecute = measureCommand(
-    interaction.commandName,
-    command.execute
-  );
-
   try {
-    await wrappedExecute(interaction, { activeVoiceTimers });
+    await command.execute(interaction, { activeVoiceTimers });
   } catch (error) {
     console.error(`💥 Command execution failed: /${interaction.commandName}`, {
       user: interaction.user.tag,
@@ -279,18 +218,6 @@ async function shutdown() {
     }
     console.log("✅ Voice sessions saved");
 
-    // Stop health monitoring
-    console.log("🩺 [2/5] Stopping health monitoring...");
-    await Promise.race([
-      Promise.resolve(BotHealthMonitor.shutdown()),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Health monitor timeout")), 2000)
-      ),
-    ]).catch((error) => {
-      console.warn("⚠️  Health monitor shutdown timeout:", error.message);
-    });
-    console.log("✅ Health monitoring stopped");
-
     // Stop schedulers and optimizations
     console.log("⏰ [3/5] Stopping schedulers...");
     try {
@@ -298,34 +225,11 @@ async function shutdown() {
       await CentralResetService.stop();
       console.log("✅ Central reset service stopped");
 
-      monthlyResetService.stop();
       DailyTaskManager.stop();
-      performanceMonitor.cleanup();
-
-      // Stop materialized view auto-refresh
-      if (materializedViewManager) {
-        materializedViewManager.stopAutoRefresh();
-        console.log("✅ Database optimizations stopped");
-      }
     } catch (error) {
       console.warn("⚠️  Scheduler shutdown error:", error.message);
     }
     console.log("✅ Schedulers stopped");
-
-    // Close database connections gracefully
-    console.log("🗄️  [4/5] Closing database connections...");
-    const dbResilience = getDbResilience();
-    if (dbResilience) {
-      await Promise.race([
-        dbResilience.shutdown(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Database shutdown timeout")), 8000)
-        ),
-      ]).catch((error) => {
-        console.warn("⚠️  Database shutdown timeout:", error.message);
-      });
-    }
-    console.log("✅ Database connections closed");
 
     // Disconnect Discord client
     console.log("🤖 [5/5] Disconnecting Discord client...");

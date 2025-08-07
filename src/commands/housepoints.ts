@@ -12,7 +12,6 @@ import {
   fastMemberFetch,
 } from "../utils/interactionUtils.ts";
 import { getUserHouse } from "../models/db.ts";
-import queryCache from "../utils/queryCache.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -101,22 +100,9 @@ async function showHouseLeaderboard(interaction, type) {
 }
 
 async function showHouseChampions(interaction) {
-  // Use batch cache operations for efficiency
-  const cacheKeys = ["house_champions:monthly", "house_champions:alltime"];
-
-  const cacheResults = await queryCache.batchGet(cacheKeys);
-
   // Check cache first, then fetch missing data
-  let monthlyChampions = cacheResults["house_champions:monthly"];
-  let allTimeChampions = cacheResults["house_champions:alltime"];
-
-  // Fetch any missing data
-  if (!monthlyChampions) {
-    monthlyChampions = await voiceService.getHouseChampions("monthly");
-  }
-  if (!allTimeChampions) {
-    allTimeChampions = await voiceService.getHouseChampions("alltime");
-  }
+  const monthlyChampions = await voiceService.getHouseChampions("monthly");
+  const allTimeChampions = await voiceService.getHouseChampions("alltime");
 
   // Always show the champion template, even if empty (to match house leaderboard behavior)
 

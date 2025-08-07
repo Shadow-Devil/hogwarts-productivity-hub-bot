@@ -22,7 +22,6 @@ import winston from "winston";
 import { pool } from "../models/db.ts";
 import timezoneService from "./timezoneService.ts";
 import voiceService from "./voiceService.ts";
-import BaseService from "../utils/baseService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
@@ -31,18 +30,16 @@ import timezone from "dayjs/plugin/timezone.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-class CentralResetService extends BaseService {
+class CentralResetService {
   public isRunning: boolean;
-  public scheduledJobs: Map<string, cron.ScheduledTask>
+  public scheduledJobs: Map<string, cron.ScheduledTask>;
   public resetStats: {
     dailyResets: { successful: number; failed: number; lastRun: Date | null };
     monthlyResets: { successful: number; failed: number; lastRun: Date | null };
-  }
+  };
   public logger: winston.Logger;
 
   constructor() {
-    super("CentralResetService");
-
     this.isRunning = false;
     this.scheduledJobs = new Map(); // Track all scheduled cron jobs
     this.resetStats = {
@@ -115,9 +112,8 @@ class CentralResetService extends BaseService {
           await this.processDailyResets();
         },
         {
-          //scheduled: false,
           timezone: "UTC", // Always run in UTC, convert per user
-        },
+        }
       );
 
       // Schedule monthly reset checks - run every 6 hours on the 1st of the month
@@ -127,9 +123,8 @@ class CentralResetService extends BaseService {
           await this.processMonthlyResets();
         },
         {
-          //scheduled: false,
           timezone: "UTC",
-        },
+        }
       );
 
       // Schedule service health checks - every 15 minutes
@@ -139,9 +134,8 @@ class CentralResetService extends BaseService {
           await this.performHealthCheck();
         },
         {
-          //scheduled: false,
           timezone: "UTC",
-        },
+        }
       );
 
       // Track all jobs
@@ -268,7 +262,7 @@ class CentralResetService extends BaseService {
                 error: error.message,
               });
             }
-          }),
+          })
         );
 
         // Small delay between batches to be gentle on the database
@@ -308,44 +302,19 @@ class CentralResetService extends BaseService {
     const userStartTime = Date.now();
 
     try {
-      // Reset daily voice stats and limits using voiceService
-      await this.executeWithFallback(
-        "performDailyResetForUser",
-        async () => {
-          const success = await voiceService.resetDailyStats(user.discord_id);
-          if (!success) {
-            throw new Error("Voice service daily reset failed");
-          }
-          return { success: true };
-        },
-        async () => {
-          this.logger.warn(
-            "Fallback: Could not reset daily voice stats for user",
-            {
-              userId: user.discord_id,
-            },
-          );
-        },
-      );
+      const success = await voiceService.resetDailyStats(user.discord_id);
+      if (!success) {
+        throw new Error("Voice service daily reset failed");
+      }
 
       // Reset daily task stats
-      await this.executeWithFallback(
-        "performDailyResetForUser",
-        async () => {
-          return await pool.query(
-            `
-                    DELETE FROM daily_task_stats
-                    WHERE discord_id = $1
-                    AND stat_date < CURRENT_DATE
+      await pool.query(
+        `
+        DELETE FROM daily_task_stats
+        WHERE discord_id = $1
+        AND stat_date < CURRENT_DATE
                 `,
-            [user.discord_id],
-          );
-        },
-        async () => {
-          this.logger.warn("Fallback: Could not reset daily task stats", {
-            userId: user.discord_id,
-          });
-        },
+        [user.discord_id]
       );
 
       // Update streak logic (preserve streaks appropriately)
@@ -380,53 +349,28 @@ class CentralResetService extends BaseService {
       const yesterday = userTime.subtract(1, "day");
 
       // Check if user had voice activity yesterday
-      const hadActivityYesterday = await this.executeWithFallback(
-        "updateUserStreak",
-        async () => {
-          const result = await pool.query(
-            `
-                    SELECT EXISTS(
-                        SELECT 1 FROM daily_voice_stats
-                        WHERE discord_id = $1
-                        AND stat_date = $2::date
-                        AND hours_spent > 0
-                    ) as had_activity
-                `,
-            [user.discord_id, yesterday.format("YYYY-MM-DD")],
-          );
-
-          return result.rows[0].had_activity;
-        },
-        async () => {
-          this.logger.warn(
-            "Fallback: Could not check yesterday activity for streak",
-            {
-              userId: user.discord_id,
-            },
-          );
-          return false;
-        },
+      const result = await pool.query(
+        `
+        SELECT EXISTS(
+            SELECT 1 FROM daily_voice_stats
+            WHERE discord_id = $1
+            AND stat_date = $2::date
+            AND hours_spent > 0
+        ) as had_activity`,
+        [user.discord_id, yesterday.format("YYYY-MM-DD")]
       );
+
+      const hadActivityYesterday = result.rows[0].had_activity;
 
       if (!hadActivityYesterday) {
         // Reset streak if no activity yesterday
-        await this.executeWithFallback(
-          "updateUserStreak",
-          async () => {
-            return await pool.query(
-              `
-                        UPDATE users
-                        SET current_streak = 0
-                        WHERE discord_id = $1
-                    `,
-              [user.discord_id],
-            );
-          },
-          async () => {
-            this.logger.warn("Fallback: Could not reset streak for user", {
-              userId: user.discord_id,
-            });
-          },
+        await pool.query(
+          `
+                    UPDATE users
+                    SET current_streak = 0
+                    WHERE discord_id = $1
+                `,
+          [user.discord_id]
         );
 
         this.logger.debug("Streak reset for user (no activity yesterday)", {
@@ -439,7 +383,7 @@ class CentralResetService extends BaseService {
           {
             userId: user.discord_id,
             timezone: user.timezone,
-          },
+          }
         );
       }
     } catch (error) {
@@ -502,7 +446,7 @@ class CentralResetService extends BaseService {
                 error: error.message,
               });
             }
-          }),
+          })
         );
 
         // Delay between batches
@@ -540,11 +484,8 @@ class CentralResetService extends BaseService {
   async performMonthlyResetForUser(user) {
     try {
       // Reset monthly stats
-      await this.executeWithFallback(
-        "performMonthlyResetForUser",
-        async () => {
-          return await pool.query(
-            `
+      await pool.query(
+        `
                     UPDATE users
                     SET
                         monthly_hours = 0,
@@ -552,14 +493,7 @@ class CentralResetService extends BaseService {
                         last_monthly_reset_tz = NOW()
                     WHERE discord_id = $1
                 `,
-            [user.discord_id],
-          );
-        },
-        async () => {
-          this.logger.warn("Fallback: Could not reset monthly stats for user", {
-            userId: user.discord_id,
-          });
-        },
+        [user.discord_id]
       );
 
       this.logger.debug("Monthly reset completed for user", {

@@ -1,6 +1,7 @@
 import { type VoiceState } from "discord.js";
 import voiceService from "../services/voiceService.ts";
 import dayjs from "dayjs";
+import { client } from "../index.ts";
 
 /**
  * Voice State Update Handler with Smart Session Management
@@ -24,15 +25,12 @@ export const activeVoiceSessions = new Map<
 const GRACE_PERIOD_MS = 5 * 60 * 1000; // 5 minutes
 export const gracePeriodSessions = new Map(); // Track sessions in grace period
 
-// Store client reference for cleanup operations
-let discordClient = null;
-
 // Enhanced smart cleanup with grace period handling
 // Runs every 15 minutes and processes both active sessions and grace period sessions
 setInterval(async () => {
   if (
     (activeVoiceSessions.size === 0 && gracePeriodSessions.size === 0) ||
-    !discordClient
+    !client
   )
     return;
 
@@ -76,7 +74,7 @@ setInterval(async () => {
         }
       } else {
         // Check if user has returned to voice during grace period
-        for (const [_guildId, guild] of discordClient.guilds.cache) {
+        for (const [_guildId, guild] of client.guilds.cache) {
           try {
             const voiceState = guild.voiceStates.cache.get(userId);
             if (voiceState?.channel) {
@@ -122,7 +120,7 @@ setInterval(async () => {
         let userStillInVoice = false;
 
         // Check all guilds to see if user is actually in a voice channel
-        for (const [_guildId, guild] of discordClient.guilds.cache) {
+        for (const [_guildId, guild] of client.guilds.cache) {
           try {
             // Check voice states cache first (most efficient)
             const voiceState = guild.voiceStates.cache.get(userId);
@@ -184,7 +182,7 @@ setInterval(async () => {
 
 // Midnight crossover handler - runs every hour to check for sessions crossing midnight
 setInterval(async () => {
-  if (activeVoiceSessions.size === 0 || !discordClient) return;
+  if (activeVoiceSessions.size === 0 || !client) return;
 
   const now = dayjs();
   const isJustAfterMidnight = now.hour() === 0 && now.minute() < 60; // First hour of the day
@@ -212,7 +210,7 @@ setInterval(async () => {
 
           // Find the user's member object for notifications
           let member = null;
-          for (const [_guildId, guild] of discordClient.guilds.cache) {
+          for (const [_guildId, guild] of client.guilds.cache) {
             try {
               member = await guild.members.fetch(userId);
               if (member) break;
@@ -256,15 +254,9 @@ setInterval(async () => {
   }
 }, 3600000); // Run every hour
 
-// Function to set the Discord client reference (called from main bot file)
-export function setDiscordClient(client) {
-  discordClient = client;
-  console.log("✅ Discord client reference set for smart session cleanup");
-}
-
 // Manual cleanup function for debugging/admin purposes
 export async function manualCleanup() {
-  if (!discordClient) {
+  if (!client) {
     console.log("❌ Cannot run manual cleanup: Discord client not set");
     return { error: "Discord client not available" };
   }
@@ -316,7 +308,7 @@ export async function manualCleanup() {
 
     try {
       // Check all guilds to see if user is actually in a voice channel
-      for (const [_guildId, guild] of discordClient.guilds.cache) {
+      for (const [_guildId, guild] of client.guilds.cache) {
         const voiceState = guild.voiceStates.cache.get(userId);
         if (voiceState?.channel) {
           userStillInVoice = true;

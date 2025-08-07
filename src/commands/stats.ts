@@ -95,19 +95,13 @@ export default {
 
       // 3. Points Limit (remaining hours with midnight reset awareness)
       const remainingHours = today.remainingHours || 0;
-      const allowanceRemaining = today.allowanceHoursRemaining || 0;
-      const hoursUntilMidnight = today.hoursUntilMidnight || 0;
 
       // Use centralized daily limit status formatting
       const limitInfo = {
         dailyHours: today.hours,
-        allowanceHoursRemaining: allowanceRemaining,
-        hoursUntilMidnight: hoursUntilMidnight,
         remainingHours: remainingHours,
         limitReached: today.limitReached,
         canEarnPoints: today.canEarnPoints,
-        isLimitedByAllowance: allowanceRemaining <= hoursUntilMidnight,
-        isLimitedByTime: hoursUntilMidnight < allowanceRemaining,
       };
 
       const limitStatus = formatDailyLimitStatus(limitInfo);

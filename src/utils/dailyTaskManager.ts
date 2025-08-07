@@ -3,9 +3,7 @@
  * Handles 10 tasks per day limit, midnight cleanup, and daily voice stats reset
  */
 
-import { pool, executeWithResilience } from "../models/db.ts";
-import { measureDatabase } from "./performanceMonitor.ts";
-import CacheInvalidationService from "./cacheInvalidationService.ts";
+import { pool } from "../models/db.ts";
 import dayjs from "dayjs";
 import type { Client } from "discord.js";
 // Get reference to active voice sessions and grace period sessions
@@ -179,106 +177,95 @@ async function handleActiveVoiceSessionsAtMidnight() {
  * FULLY COMPATIBLE WITH: Daily Cumulative Points, Grace Period, 55-Min Rounding, Task Integration
  */
 async function resetDailyVoiceStats() {
-  return executeWithResilience(async (client) => {
-    console.log("🌅 Starting comprehensive midnight reset system...");
+  console.log("🌅 Starting comprehensive midnight reset system...");
 
-    const allActiveUsers = new Set([
-      ...Array.from(activeVoiceSessions.keys()),
-      ...Array.from(gracePeriodSessions.keys()),
-    ]);
+  const allActiveUsers = new Set([
+    ...Array.from(activeVoiceSessions.keys()),
+    ...Array.from(gracePeriodSessions.keys()),
+  ]);
 
-    console.log(
-      `📊 Processing midnight reset for ${allActiveUsers.size} users (${activeVoiceSessions.size} active, ${gracePeriodSessions.size} grace period)`
-    );
+  console.log(
+    `📊 Processing midnight reset for ${allActiveUsers.size} users (${activeVoiceSessions.size} active, ${gracePeriodSessions.size} grace period)`
+  );
 
-    // Step 1: Handle all users currently in voice or grace period
-    const resetResults = {
-      processedSessions: 0,
-      gracePeriodHandled: 0,
-      newSessionsCreated: 0,
-      errors: 0,
-      totalPointsAwarded: 0,
-      totalHoursProcessed: 0,
-    };
+  // Step 1: Handle all users currently in voice or grace period
+  const resetResults = {
+    processedSessions: 0,
+    gracePeriodHandled: 0,
+    newSessionsCreated: 0,
+    errors: 0,
+    totalPointsAwarded: 0,
+    totalHoursProcessed: 0,
+  };
 
-    for (const userId of allActiveUsers) {
-      try {
-        const result = await processUserMidnightReset(
-          userId,
-          activeVoiceSessions,
-          gracePeriodSessions,
-          voiceService
-        );
+  for (const userId of allActiveUsers) {
+    try {
+      const result = await processUserMidnightReset(
+        userId,
+        activeVoiceSessions,
+        gracePeriodSessions,
+        voiceService
+      );
 
-        resetResults.processedSessions++;
-        if (result.wasInGracePeriod) resetResults.gracePeriodHandled++;
-        if (result.newSessionCreated) resetResults.newSessionsCreated++;
-        resetResults.totalPointsAwarded += result.pointsAwarded || 0;
-        resetResults.totalHoursProcessed += result.hoursProcessed || 0;
-      } catch (error) {
-        console.error(
-          `❌ Error processing midnight reset for user ${userId}:`,
-          error
-        );
-        resetResults.errors++;
-      }
+      resetResults.processedSessions++;
+      if (result.wasInGracePeriod) resetResults.gracePeriodHandled++;
+      if (result.newSessionCreated) resetResults.newSessionsCreated++;
+      resetResults.totalPointsAwarded += result.pointsAwarded || 0;
+      resetResults.totalHoursProcessed += result.hoursProcessed || 0;
+    } catch (error) {
+      console.error(
+        `❌ Error processing midnight reset for user ${userId}:`,
+        error
+      );
+      resetResults.errors++;
     }
+  }
 
-    // Step 2: Archive completed daily stats for users not in voice
-    const yesterday = require("dayjs")()
-      .subtract(1, "day")
-      .format("YYYY-MM-DD");
-    const usersInVoiceArray = Array.from(allActiveUsers);
+  // Step 2: Archive completed daily stats for users not in voice
+  const yesterday = require("dayjs")().subtract(1, "day").format("YYYY-MM-DD");
+  const usersInVoiceArray = Array.from(allActiveUsers);
 
-    let archiveQuery = `
+  let archiveQuery = `
               UPDATE daily_voice_stats
               SET archived = true, updated_at = CURRENT_TIMESTAMP
               WHERE date = $1`;
 
-    const queryParams = [yesterday];
+  const queryParams = [yesterday];
 
-    if (usersInVoiceArray.length > 0) {
-      const placeholders = usersInVoiceArray
-        .map((_, i) => `$${i + 2}`)
-        .join(",");
-      archiveQuery += ` AND discord_id NOT IN (${placeholders})`;
-      queryParams.push(...usersInVoiceArray);
-    }
+  if (usersInVoiceArray.length > 0) {
+    const placeholders = usersInVoiceArray.map((_, i) => `$${i + 2}`).join(",");
+    archiveQuery += ` AND discord_id NOT IN (${placeholders})`;
+    queryParams.push(...usersInVoiceArray);
+  }
 
-    const archiveResult = await client.query(archiveQuery, queryParams);
-    console.log(
-      `📊 Archived ${archiveResult.rowCount} completed daily stats from yesterday`
-    );
+  const client = await pool.connect();
+  const archiveResult = await client.query(archiveQuery, queryParams);
+  console.log(
+    `📊 Archived ${archiveResult.rowCount} completed daily stats from yesterday`
+  );
 
-    // Step 3: Clear voice-related caches to ensure fresh data for new day
-    const queryCache = require("./queryCache");
-    queryCache.invalidatePattern("user_stats*");
-    queryCache.invalidatePattern("daily_voice*");
-    queryCache.invalidatePattern("leaderboard*");
+  // Step 3: Clear voice-related caches to ensure fresh data for new day
+  const queryCache = require("./queryCache");
+  queryCache.invalidatePattern("user_stats*");
+  queryCache.invalidatePattern("daily_voice*");
+  queryCache.invalidatePattern("leaderboard*");
 
-    // Step 4: Log comprehensive reset summary
-    console.log("✅ Enhanced midnight reset completed successfully!");
-    console.log("═".repeat(50));
-    console.log("📊 MIDNIGHT RESET SUMMARY:");
-    console.log(`   👥 Users Processed: ${resetResults.processedSessions}`);
-    console.log(
-      `   🔄 Grace Period Handled: ${resetResults.gracePeriodHandled}`
-    );
-    console.log(
-      `   🆕 New Sessions Created: ${resetResults.newSessionsCreated}`
-    );
-    console.log(
-      `   💰 Total Points Awarded: ${resetResults.totalPointsAwarded}`
-    );
-    console.log(
-      `   ⏰ Total Hours Processed: ${resetResults.totalHoursProcessed.toFixed(2)}h`
-    );
-    console.log(`   📁 Daily Stats Archived: ${archiveResult.rowCount}`);
-    console.log(`   ❌ Errors: ${resetResults.errors}`);
-    console.log("═".repeat(50));
+  // Step 4: Log comprehensive reset summary
+  console.log("✅ Enhanced midnight reset completed successfully!");
+  console.log("═".repeat(50));
+  console.log("📊 MIDNIGHT RESET SUMMARY:");
+  console.log(`   👥 Users Processed: ${resetResults.processedSessions}`);
+  console.log(`   🔄 Grace Period Handled: ${resetResults.gracePeriodHandled}`);
+  console.log(`   🆕 New Sessions Created: ${resetResults.newSessionsCreated}`);
+  console.log(`   💰 Total Points Awarded: ${resetResults.totalPointsAwarded}`);
+  console.log(
+    `   ⏰ Total Hours Processed: ${resetResults.totalHoursProcessed.toFixed(2)}h`
+  );
+  console.log(`   📁 Daily Stats Archived: ${archiveResult.rowCount}`);
+  console.log(`   ❌ Errors: ${resetResults.errors}`);
+  console.log("═".repeat(50));
 
-    return resetResults;
-  });
+  return resetResults;
 }
 
 /**
@@ -433,23 +420,17 @@ async function cleanupUserTasks(
   taskCount: number,
   taskTitles: string[]
 ) {
-  return executeWithResilience(async (client) => {
-    // Delete all pending tasks for this user
-    await client.query(
-      "DELETE FROM tasks WHERE discord_id = $1 AND is_complete = FALSE",
-      [discordId]
-    );
+  const client = await pool.connect();
+  // Delete all pending tasks for this user
+  await client.query(
+    "DELETE FROM tasks WHERE discord_id = $1 AND is_complete = FALSE",
+    [discordId]
+  );
 
-    // Clear user cache
-    CacheInvalidationService.invalidateAfterTaskOperation(discordId);
+  // Try to send notification to user
+  await sendCleanupNotification(discordId, taskCount, taskTitles);
 
-    // Try to send notification to user
-    await sendCleanupNotification(discordId, taskCount, taskTitles);
-
-    console.log(
-      `🧹 Cleaned up ${taskCount} pending tasks for user ${discordId}`
-    );
-  });
+  console.log(`🧹 Cleaned up ${taskCount} pending tasks for user ${discordId}`);
 }
 
 /**
@@ -511,27 +492,24 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
  * Check if user can add more tasks today
  */
 export async function canUserAddTask(discordId: string) {
-  return measureDatabase("checkDailyTaskLimit", async () => {
-    return executeWithResilience(async (client) => {
-      const today = dayjs().format("YYYY-MM-DD");
+  const client = await pool.connect();
+  const today = dayjs().format("YYYY-MM-DD");
 
-      // Get today's task stats
-      const result = await client.query(
-        "SELECT total_task_actions FROM daily_task_stats WHERE discord_id = $1 AND date = $2",
-        [discordId, today]
-      );
+  // Get today's task stats
+  const result = await client.query(
+    "SELECT total_task_actions FROM daily_task_stats WHERE discord_id = $1 AND date = $2",
+    [discordId, today]
+  );
 
-      const currentActions = result.rows[0]?.total_task_actions || 0;
-      const remaining = Math.max(0, DAILY_TASK_LIMIT - currentActions);
+  const currentActions = result.rows[0]?.total_task_actions || 0;
+  const remaining = Math.max(0, DAILY_TASK_LIMIT - currentActions);
 
-      return {
-        canAdd: currentActions < DAILY_TASK_LIMIT,
-        currentActions,
-        remaining,
-        limit: DAILY_TASK_LIMIT,
-      };
-    });
-  })();
+  return {
+    canAdd: currentActions < DAILY_TASK_LIMIT,
+    currentActions,
+    remaining,
+    limit: DAILY_TASK_LIMIT,
+  };
 }
 
 /**
@@ -545,24 +523,23 @@ export async function canUserCompleteTask(discordId: string) {
  * Record a task action (add or complete)
  */
 export async function recordTaskAction(discordId: string, actionType: string) {
-  return measureDatabase("recordTaskAction", async () => {
-    return executeWithResilience(async (client) => {
-      const today = dayjs().format("YYYY-MM-DD");
+  const client = await pool.connect();
+  const today = dayjs().format("YYYY-MM-DD");
 
-      // Ensure user exists
-      await client.query(
-        `INSERT INTO users (discord_id, username)
+  // Ensure user exists
+  await client.query(
+    `INSERT INTO users (discord_id, username)
                     VALUES ($1, $1)
                     ON CONFLICT (discord_id) DO NOTHING`,
-        [discordId]
-      );
+    [discordId]
+  );
 
-      // Update or create daily task stats
-      const incrementField =
-        actionType === "add" ? "tasks_added" : "tasks_completed";
+  // Update or create daily task stats
+  const incrementField =
+    actionType === "add" ? "tasks_added" : "tasks_completed";
 
-      await client.query(
-        `
+  await client.query(
+    `
                   INSERT INTO daily_task_stats (user_id, discord_id, date, ${incrementField}, total_task_actions)
                   VALUES ((SELECT id FROM users WHERE discord_id = $1), $1, $2, 1, 1)
                   ON CONFLICT (discord_id, date)
@@ -571,48 +548,37 @@ export async function recordTaskAction(discordId: string, actionType: string) {
                       total_task_actions = daily_task_stats.total_task_actions + 1,
                       updated_at = CURRENT_TIMESTAMP
               `,
-        [discordId, today]
-      );
-
-      // Clear cache for this user
-      CacheInvalidationService.invalidateAfterTaskOperation(discordId);
-    });
-  })();
+    [discordId, today]
+  );
 }
 
 /**
  * Get user's daily task stats
  */
 export async function getUserDailyStats(discordId: string) {
-  return measureDatabase("getUserDailyTaskStats", async () => {
-    return executeWithResilience(async (client) => {
-      const today = dayjs().format("YYYY-MM-DD");
+  const client = await pool.connect();
+  const today = dayjs().format("YYYY-MM-DD");
 
-      const result = await client.query(
-        `SELECT tasks_added, tasks_completed, total_task_actions
+  const result = await client.query(
+    `SELECT tasks_added, tasks_completed, total_task_actions
                     FROM daily_task_stats
                     WHERE discord_id = $1 AND date = $2`,
-        [discordId, today]
-      );
+    [discordId, today]
+  );
 
-      const stats = result.rows[0] || {
-        tasks_added: 0,
-        tasks_completed: 0,
-        total_task_actions: 0,
-      };
-      const remaining = Math.max(
-        0,
-        DAILY_TASK_LIMIT - stats.total_task_actions
-      );
+  const stats = result.rows[0] || {
+    tasks_added: 0,
+    tasks_completed: 0,
+    total_task_actions: 0,
+  };
+  const remaining = Math.max(0, DAILY_TASK_LIMIT - stats.total_task_actions);
 
-      return {
-        ...stats,
-        remaining,
-        limit: DAILY_TASK_LIMIT,
-        limitReached: stats.total_task_actions >= DAILY_TASK_LIMIT,
-      };
-    });
-  })();
+  return {
+    ...stats,
+    remaining,
+    limit: DAILY_TASK_LIMIT,
+    limitReached: stats.total_task_actions >= DAILY_TASK_LIMIT,
+  };
 }
 
 /**
@@ -640,77 +606,71 @@ export async function forceCleanup() {
  * Regain a task slot when removing a task (only for tasks added today)
  */
 export async function reclaimTaskSlot(discordId, taskCreatedAt) {
-  return measureDatabase("reclaimTaskSlot", async () => {
-    return executeWithResilience(async (client) => {
-      const today = dayjs().format("YYYY-MM-DD");
-      const taskDate = dayjs(taskCreatedAt).format("YYYY-MM-DD");
+  const client = await pool.connect();
+  const today = dayjs().format("YYYY-MM-DD");
+  const taskDate = dayjs(taskCreatedAt).format("YYYY-MM-DD");
 
-      // Only regain slot if task was created today
-      if (taskDate !== today) {
-        return {
-          slotReclaimed: false,
-          reason: "Task was created on a different day",
-        };
-      }
+  // Only regain slot if task was created today
+  if (taskDate !== today) {
+    return {
+      slotReclaimed: false,
+      reason: "Task was created on a different day",
+    };
+  }
 
-      // Check if user has daily stats for today
-      const result = await client.query(
-        "SELECT tasks_added, tasks_completed, total_task_actions FROM daily_task_stats WHERE discord_id = $1 AND date = $2",
-        [discordId, today]
-      );
+  // Check if user has daily stats for today
+  const result = await client.query(
+    "SELECT tasks_added, tasks_completed, total_task_actions FROM daily_task_stats WHERE discord_id = $1 AND date = $2",
+    [discordId, today]
+  );
 
-      if (result.rows.length === 0 || result.rows[0].tasks_added === 0) {
-        return {
-          slotReclaimed: false,
-          reason: "No task additions recorded for today",
-        };
-      }
+  if (result.rows.length === 0 || result.rows[0].tasks_added === 0) {
+    return {
+      slotReclaimed: false,
+      reason: "No task additions recorded for today",
+    };
+  }
 
-      const stats = result.rows[0];
-      const tasksCompleted = stats.tasks_completed;
-      const currentTotalActions = stats.total_task_actions;
+  const stats = result.rows[0];
+  const tasksCompleted = stats.tasks_completed;
+  const currentTotalActions = stats.total_task_actions;
 
-      // Calculate maximum recoverable slots = DAILY_LIMIT - tasks_completed
-      // This ensures users can't exceed their theoretical maximum after completing tasks
-      const maxRecoverableSlots = DAILY_TASK_LIMIT - tasksCompleted;
-      const currentAvailableSlots = DAILY_TASK_LIMIT - currentTotalActions;
+  // Calculate maximum recoverable slots = DAILY_LIMIT - tasks_completed
+  // This ensures users can't exceed their theoretical maximum after completing tasks
+  const maxRecoverableSlots = DAILY_TASK_LIMIT - tasksCompleted;
+  const currentAvailableSlots = DAILY_TASK_LIMIT - currentTotalActions;
 
-      // Check if user would exceed their recoverable limit
-      const newTotalActions = currentTotalActions - 1;
-      const newAvailableSlots = DAILY_TASK_LIMIT - newTotalActions;
+  // Check if user would exceed their recoverable limit
+  const newTotalActions = currentTotalActions - 1;
+  const newAvailableSlots = DAILY_TASK_LIMIT - newTotalActions;
 
-      if (newAvailableSlots > maxRecoverableSlots) {
-        return {
-          slotReclaimed: false,
-          reason: `Cannot reclaim slot: Maximum recoverable slots is ${maxRecoverableSlots} (you've completed ${tasksCompleted} tasks today)`,
-          maxRecoverableSlots,
-          tasksCompleted,
-          currentAvailableSlots,
-        };
-      }
+  if (newAvailableSlots > maxRecoverableSlots) {
+    return {
+      slotReclaimed: false,
+      reason: `Cannot reclaim slot: Maximum recoverable slots is ${maxRecoverableSlots} (you've completed ${tasksCompleted} tasks today)`,
+      maxRecoverableSlots,
+      tasksCompleted,
+      currentAvailableSlots,
+    };
+  }
 
-      // Decrease the task counts (only if within recoverable limit)
-      await client.query(
-        `
+  // Decrease the task counts (only if within recoverable limit)
+  await client.query(
+    `
                   UPDATE daily_task_stats
                   SET tasks_added = GREATEST(0, tasks_added - 1),
                       total_task_actions = GREATEST(0, total_task_actions - 1),
                       updated_at = CURRENT_TIMESTAMP
                   WHERE discord_id = $1 AND date = $2
               `,
-        [discordId, today]
-      );
+    [discordId, today]
+  );
 
-      // Clear cache for this user
-      CacheInvalidationService.invalidateAfterTaskOperation(discordId);
-
-      return {
-        slotReclaimed: true,
-        reason: "Task slot successfully reclaimed",
-        maxRecoverableSlots,
-        tasksCompleted,
-        newAvailableSlots,
-      };
-    });
-  })();
+  return {
+    slotReclaimed: true,
+    reason: "Task slot successfully reclaimed",
+    maxRecoverableSlots,
+    tasksCompleted,
+    newAvailableSlots,
+  };
 }

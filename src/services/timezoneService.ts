@@ -5,7 +5,6 @@
  */
 
 import { pool } from "../models/db.ts";
-import BaseService from "../utils/baseService.ts";
 import winston from "winston";
 import timezonePerformanceMonitor from "../utils/timezonePerformanceMonitor.ts";
 import dayjs from "dayjs";
@@ -16,14 +15,12 @@ import timezone from "dayjs/plugin/timezone.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-class TimezoneService extends BaseService {
+class TimezoneService {
   public logger: winston.Logger;
   public timezoneCache: Map<string, any>;
   public validTimezones: Set<string>;
 
   constructor() {
-    super("TimezoneService");
-
     // Production-grade winston logger with structured logging
     this.logger = winston.createLogger({
       level: process.env.LOG_LEVEL || "info",
