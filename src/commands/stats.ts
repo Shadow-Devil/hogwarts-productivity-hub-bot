@@ -1,208 +1,224 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import voiceService from '../services/voiceService';
-import taskService from '../services/taskService';
-import timezoneService from '../services/timezoneService';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-import { BotColors, StatusEmojis } from '../utils/constants';
-import { createErrorTemplate } from '../utils/embedTemplates';
-import { safeDeferReply, safeErrorReply } from '../utils/interactionUtils';
-import { formatDailyLimitStatus } from '../utils/dailyLimitUtils';
-import { formatHours } from '../utils/timeUtils';
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import voiceService from "../services/voiceService";
+import taskService from "../services/taskService";
+import timezoneService from "../services/timezoneService";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import { BotColors, StatusEmojis } from "../utils/constants";
+import { createErrorTemplate } from "../utils/embedTemplates";
+import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils";
+import { formatDailyLimitStatus } from "../utils/dailyLimitUtils";
+import { formatHours } from "../utils/timeUtils";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default {
-    data: new SlashCommandBuilder()
-        .setName('stats')
-        .setDescription('View your productivity statistics'),
-    async execute(interaction) {
-        try {
-            // Immediately defer to prevent timeout
-            const deferred = await safeDeferReply(interaction);
-            if (!deferred) {
-                console.warn('Failed to defer stats interaction');
-                return;
-            }
+  data: new SlashCommandBuilder()
+    .setName("stats")
+    .setDescription("View your productivity statistics"),
+  async execute(interaction) {
+    try {
+      // Immediately defer to prevent timeout
+      const deferred = await safeDeferReply(interaction);
+      if (!deferred) {
+        console.warn("Failed to defer stats interaction");
+        return;
+      }
 
-            const discordId = interaction.user.id;
-            const stats = await voiceService.getUserStatsOptimized(discordId);
-            const taskStats = await taskService.getTaskStatsOptimized(discordId);
+      const discordId = interaction.user.id;
+      const stats = await voiceService.getUserStatsOptimized(discordId);
+      const taskStats = await taskService.getTaskStatsOptimized(discordId);
 
-            // Fetch user tasks with error handling
-            let userTasks = [];
-            try {
-                userTasks = await taskService.getUserTasksOptimized(discordId);
-            } catch (error) {
-                console.warn('⚠️ Failed to fetch user tasks for stats:', error.message);
-                // Continue without tasks - will show fallback message
-            }
+      // Fetch user tasks with error handling
+      let userTasks = [];
+      try {
+        userTasks = await taskService.getUserTasksOptimized(discordId);
+      } catch (error) {
+        console.warn("⚠️ Failed to fetch user tasks for stats:", error.message);
+        // Continue without tasks - will show fallback message
+      }
 
-            if (!stats) {
-                await interaction.editReply({
-                    content: '📊 You haven\'t joined any voice channels yet! Join a voice channel to start tracking your time.'
-                });
-                return;
-            }
+      if (!stats) {
+        await interaction.editReply({
+          content:
+            "📊 You haven't joined any voice channels yet! Join a voice channel to start tracking your time.",
+        });
+        return;
+      }
 
-            const { user, today, thisMonth, allTime } = stats;
+      const { user, today, thisMonth, allTime } = stats;
 
-            // Use centralized formatHours utility (no need for local function)            // Create minimal, clean embed
-            const embed = new EmbedBuilder()
-                .setTitle('📊 Your Stats')
-                .setColor(BotColors.PRIMARY)
-                .setThumbnail(interaction.user.displayAvatarURL());
+      // Use centralized formatHours utility (no need for local function)            // Create minimal, clean embed
+      const embed = new EmbedBuilder()
+        .setTitle("📊 Your Stats")
+        .setColor(BotColors.PRIMARY)
+        .setThumbnail(interaction.user.displayAvatarURL());
 
-            // Personalized greeting based on streak
-            let greeting = '';
-            if (user.current_streak >= 7) {
-                greeting = `🔥 Hey ${user.username}! You're on a ${user.current_streak}-day streak!`;
-            } else if (user.current_streak > 0) {
-                greeting = `💪 Great work ${user.username}! ${user.current_streak} days and counting!`;
-            } else {
-                greeting = `👋 Hi ${user.username}! Ready to start your productivity journey?`;
-            }
+      // Personalized greeting based on streak
+      let greeting = "";
+      if (user.current_streak >= 7) {
+        greeting = `🔥 Hey ${user.username}! You're on a ${user.current_streak}-day streak!`;
+      } else if (user.current_streak > 0) {
+        greeting = `💪 Great work ${user.username}! ${user.current_streak} days and counting!`;
+      } else {
+        greeting = `👋 Hi ${user.username}! Ready to start your productivity journey?`;
+      }
 
-            embed.setDescription(greeting);
+      embed.setDescription(greeting);
 
-            // 1. Streak Information
-            embed.addFields([
-                {
-                    name: '🔥 Current Streak',
-                    value: `**${user.current_streak}** days`,
-                    inline: true
-                }
-            ]);
+      // 1. Streak Information
+      embed.addFields([
+        {
+          name: "🔥 Current Streak",
+          value: `**${user.current_streak}** days`,
+          inline: true,
+        },
+      ]);
 
-            // 2. Voice Channel Hours (today, this month, all-time)
-            const voiceHoursText = [
-                `**Today:** ${formatHours(today.hours)}`,
-                `**This Month:** ${formatHours(thisMonth.hours)}`,
-                `**All-Time:** ${formatHours(allTime.hours)}`
-            ].join('\n');
+      // 2. Voice Channel Hours (today, this month, all-time)
+      const voiceHoursText = [
+        `**Today:** ${formatHours(today.hours)}`,
+        `**This Month:** ${formatHours(thisMonth.hours)}`,
+        `**All-Time:** ${formatHours(allTime.hours)}`,
+      ].join("\n");
 
-            embed.addFields([
-                {
-                    name: '🎧 Voice Hours',
-                    value: voiceHoursText,
-                    inline: true
-                }
-            ]);
+      embed.addFields([
+        {
+          name: "🎧 Voice Hours",
+          value: voiceHoursText,
+          inline: true,
+        },
+      ]);
 
-            // 3. Points Limit (remaining hours with midnight reset awareness)
-            const remainingHours = today.remainingHours || 0;
-            const allowanceRemaining = today.allowanceHoursRemaining || 0;
-            const hoursUntilMidnight = today.hoursUntilMidnight || 0;
+      // 3. Points Limit (remaining hours with midnight reset awareness)
+      const remainingHours = today.remainingHours || 0;
+      const allowanceRemaining = today.allowanceHoursRemaining || 0;
+      const hoursUntilMidnight = today.hoursUntilMidnight || 0;
 
-            // Use centralized daily limit status formatting
-            const limitInfo = {
-                dailyHours: today.hours,
-                allowanceHoursRemaining: allowanceRemaining,
-                hoursUntilMidnight: hoursUntilMidnight,
-                remainingHours: remainingHours,
-                limitReached: today.limitReached,
-                canEarnPoints: today.canEarnPoints,
-                isLimitedByAllowance: allowanceRemaining <= hoursUntilMidnight,
-                isLimitedByTime: hoursUntilMidnight < allowanceRemaining
-            };
+      // Use centralized daily limit status formatting
+      const limitInfo = {
+        dailyHours: today.hours,
+        allowanceHoursRemaining: allowanceRemaining,
+        hoursUntilMidnight: hoursUntilMidnight,
+        remainingHours: remainingHours,
+        limitReached: today.limitReached,
+        canEarnPoints: today.canEarnPoints,
+        isLimitedByAllowance: allowanceRemaining <= hoursUntilMidnight,
+        isLimitedByTime: hoursUntilMidnight < allowanceRemaining,
+      };
 
-            const limitStatus = formatDailyLimitStatus(limitInfo);
+      const limitStatus = formatDailyLimitStatus(limitInfo);
 
-            embed.addFields([
-                {
-                    name: '⏳ Daily Limit (15h)',
-                    value: limitStatus,
-                    inline: true
-                }
-            ]);
+      embed.addFields([
+        {
+          name: "⏳ Daily Limit (15h)",
+          value: limitStatus,
+          inline: true,
+        },
+      ]);
 
-            // 4. Points Breakdown (today, this month, all-time)
-            const pointsText = [
-                `**Today:** ${today.points} pts`,
-                `**This Month:** ${thisMonth.points} pts`,
-                `**All-Time:** ${allTime.points} pts`
-            ].join('\n');
+      // 4. Points Breakdown (today, this month, all-time)
+      const pointsText = [
+        `**Today:** ${today.points} pts`,
+        `**This Month:** ${thisMonth.points} pts`,
+        `**All-Time:** ${allTime.points} pts`,
+      ].join("\n");
 
-            embed.addFields([
-                {
-                    name: '💰 Points Earned',
-                    value: pointsText,
-                    inline: true
-                }
-            ]);
+      embed.addFields([
+        {
+          name: "💰 Points Earned",
+          value: pointsText,
+          inline: true,
+        },
+      ]);
 
-            // 5. Pending Tasks (show actual tasks, not just count)
-            const pendingTasks = userTasks.filter(task => !task.is_complete);
-            let pendingTasksValue;
+      // 5. Pending Tasks (show actual tasks, not just count)
+      const pendingTasks = userTasks.filter((task) => !task.is_complete);
+      let pendingTasksValue;
 
-            if (userTasks.length === 0) {
-                // No tasks at all or failed to fetch
-                pendingTasksValue = taskStats.pending_tasks > 0 ?
-                    `**${taskStats.pending_tasks}** tasks` :
-                    '🎯 **No tasks yet**';
-            } else if (pendingTasks.length === 0) {
-                pendingTasksValue = '🎉 **All caught up!**';
-            } else if (pendingTasks.length <= 3) {
-                // Show all tasks if 3 or fewer
-                const taskList = pendingTasks.map((task, index) =>
-                    `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + '...' : task.title}`
-                ).join('\n');
-                pendingTasksValue = `**${pendingTasks.length}** tasks:\n${taskList}`;
-            } else {
-                // Show first 3 tasks with "and X more"
-                const taskList = pendingTasks.slice(0, 3).map((task, index) =>
-                    `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + '...' : task.title}`
-                ).join('\n');
-                const remainingCount = pendingTasks.length - 3;
-                pendingTasksValue = `**${pendingTasks.length}** tasks:\n${taskList}\n*...and ${remainingCount} more*`;
-            }
+      if (userTasks.length === 0) {
+        // No tasks at all or failed to fetch
+        pendingTasksValue =
+          taskStats.pending_tasks > 0
+            ? `**${taskStats.pending_tasks}** tasks`
+            : "🎯 **No tasks yet**";
+      } else if (pendingTasks.length === 0) {
+        pendingTasksValue = "🎉 **All caught up!**";
+      } else if (pendingTasks.length <= 3) {
+        // Show all tasks if 3 or fewer
+        const taskList = pendingTasks
+          .map(
+            (task, index) =>
+              `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + "..." : task.title}`,
+          )
+          .join("\n");
+        pendingTasksValue = `**${pendingTasks.length}** tasks:\n${taskList}`;
+      } else {
+        // Show first 3 tasks with "and X more"
+        const taskList = pendingTasks
+          .slice(0, 3)
+          .map(
+            (task, index) =>
+              `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + "..." : task.title}`,
+          )
+          .join("\n");
+        const remainingCount = pendingTasks.length - 3;
+        pendingTasksValue = `**${pendingTasks.length}** tasks:\n${taskList}\n*...and ${remainingCount} more*`;
+      }
 
-            embed.addFields([
-                {
-                    name: '📋 Pending Tasks',
-                    value: pendingTasksValue,
-                    inline: true
-                }
-            ]);
+      embed.addFields([
+        {
+          name: "📋 Pending Tasks",
+          value: pendingTasksValue,
+          inline: true,
+        },
+      ]);
 
-            // Add a simple spacer field to balance the layout
-            embed.addFields([
-                {
-                    name: '\u200b',
-                    value: '\u200b',
-                    inline: true
-                }
-            ]);
+      // Add a simple spacer field to balance the layout
+      embed.addFields([
+        {
+          name: "\u200b",
+          value: "\u200b",
+          inline: true,
+        },
+      ]);
 
-            // Add timezone context to footer for user awareness
-            try {
-                const userTimezone = await timezoneService.getUserTimezone(discordId);
-                const userLocalTime = dayjs().tz(userTimezone);
-                const nextMidnight = dayjs().tz(userTimezone).add(1, 'day').startOf('day');
-                const hoursUntilReset = nextMidnight.diff(userLocalTime, 'hour', true);
+      // Add timezone context to footer for user awareness
+      try {
+        const userTimezone = await timezoneService.getUserTimezone(discordId);
+        const userLocalTime = dayjs().tz(userTimezone);
+        const nextMidnight = dayjs()
+          .tz(userTimezone)
+          .add(1, "day")
+          .startOf("day");
+        const hoursUntilReset = nextMidnight.diff(userLocalTime, "hour", true);
 
-                embed.setFooter({
-                    text: `🌍 Your timezone: ${userTimezone} | Local time: ${userLocalTime.format('h:mm A')} | Daily reset in ${hoursUntilReset.toFixed(1)}h`
-                });
-            } catch (error) {
-                console.warn('Could not add timezone info to stats:', error.message);
-                embed.setFooter({ text: '⏰ Daily limit resets at midnight your local time' });
-            }
+        embed.setFooter({
+          text: `🌍 Your timezone: ${userTimezone} | Local time: ${userLocalTime.format("h:mm A")} | Daily reset in ${hoursUntilReset.toFixed(1)}h`,
+        });
+      } catch (error) {
+        console.warn("Could not add timezone info to stats:", error.message);
+        embed.setFooter({
+          text: "⏰ Daily limit resets at midnight your local time",
+        });
+      }
 
-            await interaction.editReply({ embeds: [embed] });
-        } catch (error) {
-            console.error('Error in /stats:', error);
+      await interaction.editReply({ embeds: [embed] });
+    } catch (error) {
+      console.error("Error in /stats:", error);
 
-            const embed = createErrorTemplate(
-                `${StatusEmojis.ERROR} Stats Load Failed`,
-                'An error occurred while fetching your statistics. Please try again in a moment.',
-                { helpText: `${StatusEmojis.INFO} If this problem persists, contact support` }
-            );
+      const embed = createErrorTemplate(
+        `${StatusEmojis.ERROR} Stats Load Failed`,
+        "An error occurred while fetching your statistics. Please try again in a moment.",
+        {
+          helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
+        },
+      );
 
-            await safeErrorReply(interaction, embed);
-        }
+      await safeErrorReply(interaction, embed);
     }
+  },
 };

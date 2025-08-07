@@ -4,7 +4,7 @@
 
 **Transform your Discord server into a productivity powerhouse**
 
-*Gamified task management • Pomodoro timers • Global timezone support • Community engagement*
+_Gamified task management • Pomodoro timers • Global timezone support • Community engagement_
 
 [![Deploy in 5 minutes](https://img.shields.io/badge/Deploy-5%20Minutes-brightgreen.svg)](#-quick-start)
 [![Production Ready](https://img.shields.io/badge/Production-Ready-success.svg)](#-why-teams-trust-us)
@@ -21,7 +21,7 @@
 
 <div align="center">
 
-*Turn your Discord server into a place where productivity meets fun*
+_Turn your Discord server into a place where productivity meets fun_
 
 </div>
 
@@ -72,7 +72,7 @@ No confusing time displays
 
 <div align="center">
 
-*Here's what your community members will experience*
+_Here's what your community members will experience_
 
 </div>
 
@@ -123,10 +123,10 @@ React with ✅ to complete • 🗑️ to remove • ➕ to add new
 
 ### **💬 What Server Owners Say**
 
-> *"Our study server went from 20% active users to 80% active users in one month. The gamification actually works!"*
+> _"Our study server went from 20% active users to 80% active users in one month. The gamification actually works!"_
 > **– University Discord Community (2,500+ members)**
 
-> *"Finally, a bot that handles our global team properly. No more timezone confusion in standup meetings."*
+> _"Finally, a bot that handles our global team properly. No more timezone confusion in standup meetings."_
 > **– Remote Software Team (150+ members)**
 
 ---
@@ -137,18 +137,19 @@ React with ✅ to complete • 🗑️ to remove • ➕ to add new
 
 ### **⚡ Get Your Bot Running in 5 Minutes**
 
-*No technical experience required!*
+_No technical experience required!_
 
 </div>
 
-**Step 1:** [Create a Discord Bot](https://discord.com/developers/applications) *(2 minutes)*
-**Step 2:** Download & Configure *(2 minutes)*
-**Step 3:** Start the Bot *(1 minute)*
+**Step 1:** [Create a Discord Bot](https://discord.com/developers/applications) _(2 minutes)_
+**Step 2:** Download & Configure _(2 minutes)_
+**Step 3:** Start the Bot _(1 minute)_
 
 <details>
 <summary><b>🔧 Detailed Setup Guide (Click to expand)</b></summary>
 
 ### **Prerequisites**
+
 ```bash
 # You'll need these installed:
 - Node.js (v16 or higher)
@@ -157,6 +158,7 @@ React with ✅ to complete • 🗑️ to remove • ➕ to add new
 ```
 
 ### **Quick Install**
+
 ```bash
 # 1. Clone the repository
 git clone https://github.com/yourusername/discord-productivity-bot.git
@@ -183,6 +185,7 @@ npm start
 ### **✅ Verify It's Working**
 
 In your Discord server, try:
+
 - `/addtask Learn something new` - Add your first task
 - `/stats` - Check your progress
 - `/timer 25 5` - Start a focus session
@@ -195,23 +198,23 @@ In your Discord server, try:
 
 ### **For Your Community Members**
 
-| Feature | What It Does | Why They'll Love It |
-|---------|-------------|------------------|
-| **📝 Personal Tasks** | Track individual goals and to-dos | Earn points for completing tasks |
-| **⏰ Pomodoro Timers** | Focus sessions with automatic breaks | Study/work together with friends |
-| **🏆 House Competition** | Friendly team-based competition | Motivation through friendly rivalry |
-| **🌍 Global Timezone** | Shows times in each user's timezone | No more "what time is that for me?" |
-| **🗣️ Voice Rewards** | Earn points for time in voice channels | Recognition for active participation |
+| Feature                  | What It Does                           | Why They'll Love It                  |
+| ------------------------ | -------------------------------------- | ------------------------------------ |
+| **📝 Personal Tasks**    | Track individual goals and to-dos      | Earn points for completing tasks     |
+| **⏰ Pomodoro Timers**   | Focus sessions with automatic breaks   | Study/work together with friends     |
+| **🏆 House Competition** | Friendly team-based competition        | Motivation through friendly rivalry  |
+| **🌍 Global Timezone**   | Shows times in each user's timezone    | No more "what time is that for me?"  |
+| **🗣️ Voice Rewards**     | Earn points for time in voice channels | Recognition for active participation |
 
 ### **For Server Administrators**
 
-| Feature | What It Does | Why You'll Love It |
-|---------|-------------|------------------|
-| **🛡️ Self-Healing** | Automatically recovers from crashes | Less maintenance, more reliability |
-| **📊 Health Monitoring** | Real-time system diagnostics | Know if something needs attention |
-| **⚙️ Easy Setup** | One-command deployment | Get running without technical headaches |
-| **🔄 Session Recovery** | Never loses user progress | Happy users, fewer support requests |
-| **📈 Performance Insights** | Track bot and community metrics | Understand what's working |
+| Feature                     | What It Does                        | Why You'll Love It                      |
+| --------------------------- | ----------------------------------- | --------------------------------------- |
+| **🛡️ Self-Healing**         | Automatically recovers from crashes | Less maintenance, more reliability      |
+| **📊 Health Monitoring**    | Real-time system diagnostics        | Know if something needs attention       |
+| **⚙️ Easy Setup**           | One-command deployment              | Get running without technical headaches |
+| **🔄 Session Recovery**     | Never loses user progress           | Happy users, fewer support requests     |
+| **📈 Performance Insights** | Track bot and community metrics     | Understand what's working               |
 
 ---
 
@@ -271,23 +274,27 @@ In your Discord server, try:
 ## 📚 **Full Command List**
 
 ### **📝 Task Management**
+
 - `/addtask <description>` - Add a new personal task
 - `/viewtasks` - See all your current tasks
 - `/completetask <number>` - Complete a task (+2 points!)
 - `/removetask <number>` - Remove a task
 
 ### **⏰ Focus & Timing**
+
 - `/timer <study> <break>` - Start a Pomodoro session (e.g., `/timer 25 5`)
 - `/stoptimer` - Stop the current timer
 - `/time` - Check current time in your timezone
 - `/timezone <zone>` - Set your timezone (e.g., `/timezone America/New_York`)
 
 ### **🏆 Progress & Competition**
+
 - `/stats` - View your personal statistics
 - `/leaderboard` - See server rankings
 - `/housepoints` - Check house standings
 
 ### **🔧 Admin Commands**
+
 - `/health` - System diagnostics (admin only)
 - `/performance` - Performance metrics (admin only)
 - `/recovery` - Session management (admin only)
@@ -299,15 +306,18 @@ In your Discord server, try:
 ### **📋 Quick Troubleshooting**
 
 **Bot not responding?**
+
 - Check that the bot has proper Discord permissions
 - Verify the bot token in your `.env` file
 - Try `/debug` to check bot status
 
 **Database issues?**
+
 - Ensure PostgreSQL is running: `sudo systemctl status postgresql`
 - Test connection: `npm run db:test`
 
 **Performance problems?**
+
 - Check system health: `/health overview`
 - Monitor performance: `/performance overview`
 
@@ -326,6 +336,7 @@ In your Discord server, try:
 <summary><b>🔧 Technical Details (Click to expand)</b></summary>
 
 ### **Tech Stack**
+
 - **Runtime**: Node.js v22+ with ESM modules
 - **Database**: PostgreSQL 12+ with connection pooling
 - **Discord API**: Discord.js v14.19.3 (latest features)
@@ -333,6 +344,7 @@ In your Discord server, try:
 - **Code Quality**: ESLint + Prettier, zero warnings
 
 ### **Architecture Highlights**
+
 - **Production-grade reliability**: 99.9% uptime, comprehensive error handling
 - **Performance monitoring**: Real-time analytics, bottleneck detection
 - **Session recovery**: Crash-proof data persistence
@@ -340,6 +352,7 @@ In your Discord server, try:
 - **Scalable design**: Handles 10,000+ users, optimized queries
 
 ### **Quality Metrics**
+
 - 📊 **Test Coverage**: 97% (65/65 tests passing)
 - ⚡ **Response Time**: <50ms average
 - 🛡️ **Uptime**: 99.95% observed
@@ -347,6 +360,7 @@ In your Discord server, try:
 - 🔄 **Recovery Time**: <15 seconds
 
 ### **Contributing**
+
 ```bash
 # Development setup
 git clone https://github.com/yourusername/discord-productivity-bot.git
@@ -373,7 +387,7 @@ npm run validate
 
 **📜 Open Source & Free Forever**
 
-Licensed under ISC License - *See [LICENSE](LICENSE) for details*
+Licensed under ISC License - _See [LICENSE](LICENSE) for details_
 
 ### **🙏 Built With Industry Leaders**
 
@@ -384,7 +398,7 @@ Licensed under ISC License - *See [LICENSE](LICENSE) for details*
 
 ### **🌟 Our Mission**
 
-> *"We believe productivity tools should be powerful, reliable, and accessible to everyone. By making this bot open-source and free, we're democratizing enterprise-grade productivity features for Discord communities worldwide."*
+> _"We believe productivity tools should be powerful, reliable, and accessible to everyone. By making this bot open-source and free, we're democratizing enterprise-grade productivity features for Discord communities worldwide."_
 
 **Help us build the future of Discord productivity:**
 

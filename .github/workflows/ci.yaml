@@ -1,10 +1,10 @@
 on:
   pull_request:
     branches:
-        - main
+      - main
   push:
     branches:
-        - main
+      - main
 
 name: CI
 
@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-            pnpm install
+          pnpm install
 
       - name: Typecheck
         run: |
