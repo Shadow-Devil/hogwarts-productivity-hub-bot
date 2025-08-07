@@ -1,0 +1,30 @@
+on:
+  pull_request:
+    branches:
+        - main
+  push:
+    branches:
+        - main
+
+name: CI
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 7
+
+      - name: Install dependencies
+        run: |
+            pnpm install
+
+      - name: Typecheck
+        run: |
+          pnpm typecheck
+
