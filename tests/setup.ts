@@ -2,32 +2,29 @@
  * Jest Test Setup
  * Global test configuration and mocks
  */
-import { afterEach, jest } from "@jest/globals";
+import { afterEach, vi } from "vitest";
 
 // Mock environment variables for testing
 process.env.NODE_ENV = "test";
 process.env.DB_NAME = "discord_bot_test";
 process.env.DISCORD_TOKEN = "test-token";
 
-// Global test timeout
-jest.setTimeout(30000);
-
 // Mock console methods in tests to reduce noise
 global.console = {
   ...console,
-  log: jest.fn(),
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
+  log: vi.fn(),
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
 };
 
 // Mock Discord.js for testing
-jest.mock("discord.js", () => ({
-  Client: jest.fn(() => ({
+vi.mock("discord.js", () => ({
+  Client: vi.fn(() => ({
     commands: new Map(),
-    login: jest.fn(),
-    on: jest.fn(),
+    login: vi.fn(),
+    on: vi.fn(),
     user: { id: "test-bot-id" },
   })),
   IntentsBitField: {
@@ -39,26 +36,26 @@ jest.mock("discord.js", () => ({
       GuildVoiceStates: 16,
     },
   },
-  SlashCommandBuilder: jest.fn(() => ({
-    setName: jest.fn().mockReturnThis(),
-    setDescription: jest.fn().mockReturnThis(),
-    addStringOption: jest.fn().mockReturnThis(),
-    addIntegerOption: jest.fn().mockReturnThis(),
-    addBooleanOption: jest.fn().mockReturnThis(),
-    toJSON: jest.fn(() => ({})),
+  SlashCommandBuilder: vi.fn(() => ({
+    setName: vi.fn().mockReturnThis(),
+    setDescription: vi.fn().mockReturnThis(),
+    addStringOption: vi.fn().mockReturnThis(),
+    addIntegerOption: vi.fn().mockReturnThis(),
+    addBooleanOption: vi.fn().mockReturnThis(),
+    toJSON: vi.fn(() => ({})),
   })),
-  EmbedBuilder: jest.fn(() => ({
-    setTitle: jest.fn().mockReturnThis(),
-    setDescription: jest.fn().mockReturnThis(),
-    setColor: jest.fn().mockReturnThis(),
-    addFields: jest.fn().mockReturnThis(),
-    setFooter: jest.fn().mockReturnThis(),
-    setTimestamp: jest.fn().mockReturnThis(),
+  EmbedBuilder: vi.fn(() => ({
+    setTitle: vi.fn().mockReturnThis(),
+    setDescription: vi.fn().mockReturnThis(),
+    setColor: vi.fn().mockReturnThis(),
+    addFields: vi.fn().mockReturnThis(),
+    setFooter: vi.fn().mockReturnThis(),
+    setTimestamp: vi.fn().mockReturnThis(),
   })),
   Collection: Map,
 }));
 
 // Cleanup after each test
 afterEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });

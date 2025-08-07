@@ -6,9 +6,9 @@
     "start": "node src/index.ts",
     "dev": "nodemon src/index.ts",
     "register": "node src/register-commands.ts",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
     "lint": "eslint src/ --max-warnings=0",
     "lint:fix": "eslint src/ --fix",
     "typecheck": "tsc --noEmit",
@@ -39,19 +39,16 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@jest/globals": "^30.0.5",
-    "@types/jest": "^30.0.0",
     "@types/node": "^24.2.0",
     "@types/pg": "^8.15.5",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
     "eslint": "^9.32.0",
-    "jest": "^30.0.5",
     "nodemon": "^3.1.10",
     "prettier": "^3.6.2",
-    "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.39.0"
+    "typescript-eslint": "^8.39.0",
+    "vitest": "^3.2.4"
   }
 }

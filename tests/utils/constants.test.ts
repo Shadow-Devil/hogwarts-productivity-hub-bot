@@ -3,7 +3,7 @@
  * Validates the consolidated visual constants and their proper structure
  */
 
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 import {
   BotColors,
   StatusEmojis,

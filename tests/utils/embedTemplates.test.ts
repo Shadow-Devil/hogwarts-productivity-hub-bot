@@ -3,7 +3,7 @@
  * Validates actual functionality of Discord embed template functions
  */
 
-import { jest, describe, afterEach, it, expect } from "@jest/globals";
+import { vi, describe, afterEach, it, expect } from "vitest";
 import {
   createErrorTemplate,
   createHealthTemplate,
@@ -15,22 +15,22 @@ import {
 } from "../../src/utils/embedTemplates";
 
 // Mock Discord.js components since they depend on the Discord API
-jest.mock("discord.js", () => ({
-  EmbedBuilder: jest.fn().mockImplementation(() => ({
-    setTitle: jest.fn().mockReturnThis(),
-    setDescription: jest.fn().mockReturnThis(),
-    setColor: jest.fn().mockReturnThis(),
-    setThumbnail: jest.fn().mockReturnThis(),
-    addFields: jest.fn().mockReturnThis(),
-    setFooter: jest.fn().mockReturnThis(),
-    setTimestamp: jest.fn().mockReturnThis(),
-    toJSON: jest.fn().mockReturnValue({ title: "Mock Embed" }),
+vi.mock("discord.js", () => ({
+  EmbedBuilder: vi.fn().mockImplementation(() => ({
+    setTitle: vi.fn().mockReturnThis(),
+    setDescription: vi.fn().mockReturnThis(),
+    setColor: vi.fn().mockReturnThis(),
+    setThumbnail: vi.fn().mockReturnThis(),
+    addFields: vi.fn().mockReturnThis(),
+    setFooter: vi.fn().mockReturnThis(),
+    setTimestamp: vi.fn().mockReturnThis(),
+    toJSON: vi.fn().mockReturnValue({ title: "Mock Embed" }),
   })),
 }));
 
 describe("Embed Templates", () => {
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Basic Templates", () => {
