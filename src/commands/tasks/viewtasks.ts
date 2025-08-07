@@ -1,17 +1,20 @@
-import { SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import taskService from "../../services/taskService.ts";
 import {
   createTaskTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
 import { StatusEmojis } from "../../utils/constants.ts";
-import { safeDeferReply, safeErrorReply } from "../../utils/interactionUtils.ts";
+import {
+  safeDeferReply,
+  safeErrorReply,
+} from "../../utils/interactionUtils.ts";
 
 export default {
   data: new SlashCommandBuilder()
     .setName("viewtasks")
     .setDescription("View all your tasks with their numbers"),
-  async execute(interaction) {
+  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -31,7 +34,8 @@ export default {
           helpText: "Tip: Completing tasks earns you 2 points each!",
           useEnhancedLayout: true,
         });
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        return;
       }
 
       // Separate completed and incomplete tasks
@@ -44,7 +48,7 @@ export default {
       const totalPending = incompleteTasks.length;
       const totalTaskPoints = tasks.reduce(
         (sum, task) => sum + (task.points_awarded || 0),
-        0,
+        0
       );
       const completionRate =
         totalTasks > 0 ? (totalCompleted / totalTasks) * 100 : 0;
@@ -74,10 +78,11 @@ export default {
           useTableFormat: true,
           maxRecentCompleted: 5,
           showDailyLimit: true,
-        },
+        }
       );
 
-      return interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
+      return;
     } catch (error) {
       console.error("Error in /viewtasks:", error);
 
@@ -86,7 +91,7 @@ export default {
         "An error occurred while fetching your tasks. Please try again in a moment.",
         {
           helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
-        },
+        }
       );
 
       await safeErrorReply(interaction, embed);

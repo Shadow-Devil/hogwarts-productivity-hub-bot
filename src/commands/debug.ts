@@ -1,4 +1,9 @@
-import { SlashCommandBuilder, MessageFlags, EmbedBuilder } from "discord.js";
+import {
+  SlashCommandBuilder,
+  MessageFlags,
+  EmbedBuilder,
+  ChatInputCommandInteraction,
+} from "discord.js";
 import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
 import {
   createHeader,
@@ -14,7 +19,10 @@ export default {
   data: new SlashCommandBuilder()
     .setName("debug")
     .setDescription("Debug voice channel detection"),
-  async execute(interaction, { activeVoiceTimers }) {
+  async execute(
+    interaction: ChatInputCommandInteraction,
+    { activeVoiceTimers }
+  ) {
     try {
       // Defer reply immediately to prevent timeout issues
       await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
@@ -30,7 +38,7 @@ export default {
 
       if (voiceChannel) {
         console.log(
-          `Voice channel found via cached member: ${voiceChannel.name} (${voiceChannel.id})`,
+          `Voice channel found via cached member: ${voiceChannel.name} (${voiceChannel.id})`
         );
 
         // Check if there's an active timer in this voice channel
@@ -41,7 +49,7 @@ export default {
         if (activeVoiceTimers.has(voiceChannel.id)) {
           const timer = activeVoiceTimers.get(voiceChannel.id);
           timeRemaining = Math.ceil(
-            (timer.endTime - new Date().getTime()) / 60000,
+            (timer.endTime - new Date().getTime()) / 60000
           );
           timerStatus = "Active timer detected";
           timerPhase = timer.phase.toUpperCase();
@@ -53,8 +61,8 @@ export default {
               "Voice Channel Debug",
               "Detection Working",
               "🔍",
-              "large",
-            ),
+              "large"
+            )
           )
           .setColor(0x00ff00)
           .setTimestamp();
@@ -67,13 +75,13 @@ export default {
         if (userSession) {
           sessionTracked = "✅ Tracked";
           sessionAge = Math.floor(
-            (Date.now() - userSession.joinTime.getTime()) / (1000 * 60),
+            (Date.now() - userSession.joinTime.getTime()) / (1000 * 60)
           );
         }
 
         if (userInGracePeriod) {
           const gracePeriodElapsed = Math.floor(
-            (Date.now() - userInGracePeriod.gracePeriodStart) / (1000 * 60),
+            (Date.now() - userInGracePeriod.gracePeriodStart) / (1000 * 60)
           );
           const gracePeriodRemaining = Math.max(0, 5 - gracePeriodElapsed);
           sessionTracked = "⏸️ Grace Period";
@@ -94,11 +102,11 @@ export default {
           {
             showBigNumbers: true,
             emphasizeFirst: true,
-          },
+          }
         );
 
         embed.setDescription(
-          `Voice channel detection is working correctly!\n\n${debugStats}`,
+          `Voice channel detection is working correctly!\n\n${debugStats}`
         );
 
         // Channel info in table format
@@ -152,9 +160,9 @@ export default {
           ? gracePeriodSessions.size
           : 0;
         const sessionsOlderThanHour = Array.from(
-          activeVoiceSessions.values(),
+          activeVoiceSessions.values()
         ).filter(
-          (session) => Date.now() - session.joinTime.getTime() > 60 * 60 * 1000,
+          (session) => Date.now() - session.joinTime.getTime() > 60 * 60 * 1000
         ).length;
 
         const embed = new EmbedBuilder()
@@ -163,8 +171,8 @@ export default {
               "Voice Channel Debug",
               "No Channel Detected",
               "🔍",
-              "large",
-            ),
+              "large"
+            )
           )
           .setColor(0xff0000)
           .setTimestamp();
@@ -183,11 +191,11 @@ export default {
           {
             showBigNumbers: true,
             emphasizeFirst: true,
-          },
+          }
         );
 
         embed.setDescription(
-          `No voice channel detected for your user.\n\n${debugStats}`,
+          `No voice channel detected for your user.\n\n${debugStats}`
         );
 
         // Troubleshooting steps in table format
@@ -200,7 +208,7 @@ export default {
 
         const troubleshootingTable = formatDataTable(
           troubleshootingData,
-          [10, 30],
+          [10, 30]
         );
 
         embed.addFields([

@@ -1,11 +1,14 @@
-import { SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import taskService from "../../services/taskService.ts";
 import {
   createSuccessTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
 import { StatusEmojis } from "../../utils/constants.ts";
-import { safeDeferReply, safeErrorReply } from "../../utils/interactionUtils.ts";
+import {
+  safeDeferReply,
+  safeErrorReply,
+} from "../../utils/interactionUtils.ts";
 import dayjs from "dayjs";
 
 export default {
@@ -16,12 +19,12 @@ export default {
       option
         .setName("number")
         .setDescription(
-          "The task number to complete (use /viewtasks to see numbers)",
+          "The task number to complete (use /viewtasks to see numbers)"
         )
         .setRequired(true)
-        .setMinValue(1),
+        .setMinValue(1)
     ),
-  async execute(interaction) {
+  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -37,13 +40,13 @@ export default {
       const result = await taskService.completeTask(
         discordId,
         taskNumber,
-        member,
+        member
       );
 
       if (result.success === false) {
-          if ("limitReached" in result && result.limitReached) {
+        if ("limitReached" in result && result.limitReached) {
           const resetTime = Math.floor(
-            dayjs().add(1, "day").startOf("day").valueOf() / 1000,
+            dayjs().add(1, "day").startOf("day").valueOf() / 1000
           );
 
           const embed = createErrorTemplate(
@@ -52,20 +55,21 @@ export default {
             {
               helpText: `${StatusEmojis.INFO} Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
               additionalInfo: `**Remaining:** ${result.stats.remaining} actions\n**Resets:** <t:${resetTime}:R>`,
-            },
+            }
           );
-          return interaction.editReply({ embeds: [embed] });
+          await interaction.editReply({ embeds: [embed] });
+          return;
         } else {
           const embed = createErrorTemplate(
             `${StatusEmojis.ERROR} Task Completion Failed`,
             result.message,
             {
               helpText: `${StatusEmojis.INFO} Use \`/viewtasks\` to check your task numbers`,
-            },
+            }
           );
-          return interaction.editReply({ embeds: [embed] });
+          await interaction.editReply({ embeds: [embed] });
+          return;
         }
-
       } else {
         const embed = createSuccessTemplate(
           `${StatusEmojis.COMPLETED} Task Completed Successfully!`,
@@ -78,9 +82,10 @@ export default {
             useTableFormat: true,
             showBigNumbers: true,
             additionalInfo: `${StatusEmojis.IN_PROGRESS} **Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`,
-          },
+          }
         );
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        return;
       }
     } catch (error) {
       console.error("Error in /completetask:", error);
@@ -90,7 +95,7 @@ export default {
         "An unexpected error occurred while completing your task. Please try again in a moment.",
         {
           helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
-        },
+        }
       );
 
       await safeErrorReply(interaction, embed);

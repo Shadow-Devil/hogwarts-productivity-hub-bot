@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
 import {
   createTimerTemplate,
@@ -19,7 +19,10 @@ export default {
   data: new SlashCommandBuilder()
     .setName("time")
     .setDescription("Check your active Pomodoro timer status"),
-  async execute(interaction, { activeVoiceTimers }) {
+  async execute(
+    interaction: ChatInputCommandInteraction,
+    { activeVoiceTimers }
+  ): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -39,9 +42,10 @@ export default {
             helpText: "Join a voice channel first, then try again",
             additionalInfo:
               "Timer status is tied to your current voice channel location.",
-          },
+          }
         );
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        return;
       }
 
       const voiceChannelId = voiceChannel.id;
@@ -53,10 +57,11 @@ export default {
           {
             voiceChannel: voiceChannel,
           },
-          { includeMotivation: true },
+          { includeMotivation: true }
         );
 
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        return;
       }
 
       // Get timer info
@@ -64,7 +69,7 @@ export default {
       const now = new Date().getTime();
       const timeRemaining = Math.max(
         0,
-        Math.ceil((timer.endTime - now) / 1000 / 60),
+        Math.ceil((timer.endTime - now) / 1000 / 60)
       );
 
       const embed = createTimerTemplate(
@@ -82,13 +87,13 @@ export default {
               ? timeRemaining + Math.ceil((now - timer.startTime) / 1000 / 60)
               : null,
         },
-        { showProgress: true },
+        { showProgress: true }
       );
 
       // Add timezone context to timer status
       try {
         const userTimezone = await timezoneService.getUserTimezone(
-          interaction.user.id,
+          interaction.user.id
         );
         const sessionEndTime = dayjs(timer.endTime).tz(userTimezone);
         const localTime = dayjs().tz(userTimezone);
@@ -101,7 +106,7 @@ export default {
       } catch (error) {
         console.warn(
           "Could not add timezone info to timer status:",
-          error.message,
+          error.message
         );
         // Use default footer if timezone fails
         embed.setFooter({
@@ -118,7 +123,7 @@ export default {
         "An error occurred while checking your timer status. Please try again in a moment.",
         {
           helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
-        },
+        }
       );
 
       await safeErrorReply(interaction, embed);

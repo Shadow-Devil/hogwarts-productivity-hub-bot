@@ -3,6 +3,7 @@ import {
   EmbedBuilder,
   PermissionFlagsBits,
   MessageFlags,
+  ChatInputCommandInteraction,
 } from "discord.js";
 import sessionRecovery from "../utils/sessionRecovery.ts";
 import {
@@ -19,16 +20,16 @@ export default {
     .addSubcommand((subcommand) =>
       subcommand
         .setName("status")
-        .setDescription("View session recovery system status"),
+        .setDescription("View session recovery system status")
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName("save")
-        .setDescription("Force save current session states"),
+        .setDescription("Force save current session states")
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-  async execute(interaction) {
+  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -48,8 +49,8 @@ export default {
               "Session Recovery System",
               stats.isInitialized ? "Operational" : "Inactive",
               "🛡️",
-              "large",
-            ),
+              "large"
+            )
           )
           .setColor(stats.isInitialized ? 0x57f287 : 0xed4245)
           .setTimestamp();
@@ -68,20 +69,20 @@ export default {
           {
             showBigNumbers: true,
             emphasizeFirst: true,
-          },
+          }
         );
 
         if (stats.isInitialized && stats.activeSessions > 0) {
           embed.setDescription(
-            `✅ **System is operational** - Currently protecting ${stats.activeSessions} active voice session${stats.activeSessions !== 1 ? "s" : ""}\n\n${systemStats}`,
+            `✅ **System is operational** - Currently protecting ${stats.activeSessions} active voice session${stats.activeSessions !== 1 ? "s" : ""}\n\n${systemStats}`
           );
         } else if (stats.isInitialized) {
           embed.setDescription(
-            `✅ **System is operational** - No active sessions to protect\n\n${systemStats}`,
+            `✅ **System is operational** - No active sessions to protect\n\n${systemStats}`
           );
         } else {
           embed.setDescription(
-            `❌ **System not initialized** - Session recovery unavailable\n\n${systemStats}`,
+            `❌ **System not initialized** - Session recovery unavailable\n\n${systemStats}`
           );
         }
 
@@ -129,19 +130,21 @@ export default {
           text: "Session data is protected against crashes and server restarts",
         });
 
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        return;
       } else if (subcommand === "save") {
         await sessionRecovery.forceSave();
 
         const embed = new EmbedBuilder()
           .setTitle("💾 Force Save Completed")
           .setDescription(
-            "All active session states have been saved to the database",
+            "All active session states have been saved to the database"
           )
           .setColor(0x57f287)
           .setTimestamp();
 
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        return;
       }
     } catch (error) {
       console.error("💥 Error in /recovery command:", {
@@ -155,7 +158,7 @@ export default {
       const errorEmbed = new EmbedBuilder()
         .setTitle("❌ Error")
         .setDescription(
-          "An error occurred while accessing the session recovery system",
+          "An error occurred while accessing the session recovery system"
         )
         .setColor(0xed4245);
 
@@ -171,7 +174,7 @@ export default {
       } catch (replyError) {
         console.error(
           "🔥 Error sending recovery error reply:",
-          replyError.message,
+          replyError.message
         );
       }
     }

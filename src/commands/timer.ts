@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, MessageFlags } from "discord.js";
+import { SlashCommandBuilder, MessageFlags, ChatInputCommandInteraction } from "discord.js";
 import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
 import {
   createTimerTemplate,
@@ -38,7 +38,10 @@ export default {
         .setRequired(false)
         .setMinValue(5)
     ),
-  async execute(interaction, { activeVoiceTimers }): Promise<void> {
+  async execute(
+    interaction: ChatInputCommandInteraction,
+    { activeVoiceTimers }
+  ): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);

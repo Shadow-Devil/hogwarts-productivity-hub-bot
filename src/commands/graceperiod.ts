@@ -1,4 +1,9 @@
-import { SlashCommandBuilder, MessageFlags, EmbedBuilder } from "discord.js";
+import {
+  SlashCommandBuilder,
+  MessageFlags,
+  EmbedBuilder,
+  ChatInputCommandInteraction,
+} from "discord.js";
 import {
   createHeader,
   formatDataTable,
@@ -15,9 +20,9 @@ export default {
   data: new SlashCommandBuilder()
     .setName("graceperiod")
     .setDescription(
-      "View grace period sessions for users with connection issues",
+      "View grace period sessions for users with connection issues"
     ),
-  async execute(interaction) {
+  async execute(interaction: ChatInputCommandInteraction) {
     try {
       // Defer reply immediately
       await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
@@ -28,8 +33,8 @@ export default {
             "Grace Period Status",
             "Connection Stability Monitor",
             "⏸️",
-            "large",
-          ),
+            "large"
+          )
         )
         .setColor(BotColors.INFO)
         .setTimestamp();
@@ -54,11 +59,11 @@ export default {
         {
           showBigNumbers: true,
           emphasizeFirst: true,
-        },
+        }
       );
 
       embed.setDescription(
-        `Monitor users experiencing connection issues\n\n${statsCard}`,
+        `Monitor users experiencing connection issues\n\n${statsCard}`
       );
 
       // Grace period sessions details
@@ -72,10 +77,10 @@ export default {
               Date.now() - sessionData.gracePeriodStart;
             const gracePeriodRemaining = Math.max(
               0,
-              Math.floor((GRACE_PERIOD_MS - gracePeriodElapsed) / (1000 * 60)),
+              Math.floor((GRACE_PERIOD_MS - gracePeriodElapsed) / (1000 * 60))
             );
             const sessionAge = Math.floor(
-              (Date.now() - sessionData.joinTime.getTime()) / (1000 * 60),
+              (Date.now() - sessionData.joinTime.getTime()) / (1000 * 60)
             );
 
             // Get username (truncated for display)
@@ -98,7 +103,7 @@ export default {
           } catch (error) {
             console.error(
               `Error processing grace period session ${userId}:`,
-              error,
+              error
             );
           }
         }
@@ -106,7 +111,7 @@ export default {
         if (gracePeriodData.length > 0) {
           const gracePeriodTable = formatDataTable(
             gracePeriodData,
-            [14, 10, 12],
+            [14, 10, 12]
           );
 
           embed.addFields([
@@ -115,7 +120,7 @@ export default {
                 "Users in Grace Period",
                 null,
                 "⏳",
-                "emphasis",
+                "emphasis"
               ),
               value: gracePeriodTable,
               inline: false,
@@ -141,13 +146,13 @@ export default {
               !gracePeriodSessions ||
               !gracePeriodSessions.has(
                 Array.from(activeVoiceSessions.keys()).find(
-                  (key) => activeVoiceSessions.get(key) === session,
-                ),
-              ),
+                  (key) => activeVoiceSessions.get(key) === session
+                )
+              )
           )
           .filter(
             (session) =>
-              Date.now() - session.joinTime.getTime() > 60 * 60 * 1000,
+              Date.now() - session.joinTime.getTime() > 60 * 60 * 1000
           ).length;
 
         const recentSessions = Array.from(activeVoiceSessions.values())
@@ -156,13 +161,13 @@ export default {
               !gracePeriodSessions ||
               !gracePeriodSessions.has(
                 Array.from(activeVoiceSessions.keys()).find(
-                  (key) => activeVoiceSessions.get(key) === session,
-                ),
-              ),
+                  (key) => activeVoiceSessions.get(key) === session
+                )
+              )
           )
           .filter(
             (session) =>
-              Date.now() - session.joinTime.getTime() <= 60 * 60 * 1000,
+              Date.now() - session.joinTime.getTime() <= 60 * 60 * 1000
           ).length;
 
         const activeStatsData = [

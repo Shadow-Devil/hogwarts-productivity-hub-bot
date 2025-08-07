@@ -3,6 +3,7 @@ import {
   EmbedBuilder,
   PermissionFlagsBits,
   MessageFlags,
+  ChatInputCommandInteraction,
 } from "discord.js";
 import voiceStateScanner from "../utils/voiceStateScanner.ts";
 import {
@@ -18,11 +19,11 @@ export default {
   data: new SlashCommandBuilder()
     .setName("voicescan")
     .setDescription(
-      "Scan voice channels and start tracking for users already in voice",
+      "Scan voice channels and start tracking for users already in voice"
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-  async execute(interaction) {
+  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -42,7 +43,7 @@ export default {
           const embed = new EmbedBuilder()
             .setTitle("🔄 Voice Scan Already Running")
             .setDescription(
-              "A voice state scan is already in progress. Please wait for it to complete.",
+              "A voice state scan is already in progress. Please wait for it to complete."
             )
             .setColor(0xfee75c)
             .addFields([
@@ -55,14 +56,15 @@ export default {
             ])
             .setTimestamp();
 
-          return interaction.editReply({ embeds: [embed] });
+          await interaction.editReply({ embeds: [embed] });
+          return;
         }
 
         // Start the scan notification
         const startEmbed = new EmbedBuilder()
           .setTitle("🔍 Starting Voice State Scan")
           .setDescription(
-            "Scanning all voice channels for users to automatically start tracking...",
+            "Scanning all voice channels for users to automatically start tracking..."
           )
           .setColor(0x3498db)
           .addFields([
@@ -76,11 +78,10 @@ export default {
 
         await interaction.editReply({ embeds: [startEmbed] });
 
-
         // Run the scan with timeout protection
         const scanPromise = voiceStateScanner.scanAndStartTracking(
           interaction.client,
-          activeVoiceSessions,
+          activeVoiceSessions
         );
         const timeoutPromise = new Promise<{
           totalUsersFound: number;
@@ -93,7 +94,7 @@ export default {
           }>;
         }>(
           (_, reject) =>
-            setTimeout(() => reject(new Error("SCAN_TIMEOUT")), 10000), // 10 second scan timeout
+            setTimeout(() => reject(new Error("SCAN_TIMEOUT")), 10000) // 10 second scan timeout
         );
 
         const scanResults = await Promise.race([scanPromise, timeoutPromise]);
@@ -101,7 +102,7 @@ export default {
         // Create comprehensive results embed
         const resultsEmbed = new EmbedBuilder()
           .setTitle(
-            createHeader("Voice Scan Results", "Scan Completed", "🎯", "large"),
+            createHeader("Voice Scan Results", "Scan Completed", "🎯", "large")
           )
           .setColor(scanResults.errors > 0 ? 0xfee75c : 0x57f287)
           .setTimestamp();
@@ -118,21 +119,21 @@ export default {
           {
             showBigNumbers: true,
             emphasizeFirst: true,
-          },
+          }
         );
 
         // Set description based on results
         if (scanResults.trackingStarted > 0) {
           resultsEmbed.setDescription(
-            `✅ **Voice scan completed successfully!** Started tracking for ${scanResults.trackingStarted} users.\n\n${scanStats}`,
+            `✅ **Voice scan completed successfully!** Started tracking for ${scanResults.trackingStarted} users.\n\n${scanStats}`
           );
         } else if (scanResults.totalUsersFound > 0) {
           resultsEmbed.setDescription(
-            `ℹ️ **Scan completed.** Found ${scanResults.totalUsersFound} users but they were already being tracked.\n\n${scanStats}`,
+            `ℹ️ **Scan completed.** Found ${scanResults.totalUsersFound} users but they were already being tracked.\n\n${scanStats}`
           );
         } else {
           resultsEmbed.setDescription(
-            `📭 **No users found in voice channels.** All voice channels are currently empty.\n\n${scanStats}`,
+            `📭 **No users found in voice channels.** All voice channels are currently empty.\n\n${scanStats}`
           );
         }
 
@@ -153,7 +154,7 @@ export default {
                 "Active Voice Channels",
                 null,
                 "🎤",
-                "emphasis",
+                "emphasis"
               ),
               value: channelTable,
               inline: false,
@@ -171,7 +172,8 @@ export default {
 
         // Send results with fallback
         try {
-          return await interaction.editReply({ embeds: [resultsEmbed] });
+          await interaction.editReply({ embeds: [resultsEmbed] });
+          return;
         } catch (replyError) {
           console.error("❌ Failed to send scan results embed:", replyError);
 
@@ -179,7 +181,8 @@ export default {
           const fallbackMessage = `✅ Voice scan completed: ${scanResults.trackingStarted} users tracked, ${scanResults.totalUsersFound} users found in ${scanResults.channels.length} channels.`;
 
           try {
-            return await interaction.editReply({ content: fallbackMessage });
+            await interaction.editReply({ content: fallbackMessage });
+            return;
           } catch (fallbackError) {
             console.error("❌ Even fallback response failed:", fallbackError);
           }
@@ -211,7 +214,8 @@ export default {
           ])
           .setTimestamp();
 
-        return interaction.editReply({ embeds: [errorEmbed] });
+        await interaction.editReply({ embeds: [errorEmbed] });
+        return;
       } finally {
         clearTimeout(commandTimeout);
       }
@@ -226,7 +230,7 @@ export default {
       const errorEmbed = new EmbedBuilder()
         .setTitle("❌ Command Error")
         .setDescription(
-          "An unexpected error occurred while executing the voice scan command.",
+          "An unexpected error occurred while executing the voice scan command."
         )
         .setColor(0xed4245)
         .setTimestamp();

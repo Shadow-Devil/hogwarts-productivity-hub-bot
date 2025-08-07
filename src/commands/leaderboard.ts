@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import voiceService from "../services/voiceService.ts";
 import timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
@@ -26,10 +26,10 @@ export default {
         .setRequired(true)
         .addChoices(
           { name: "📅 Monthly", value: "monthly" },
-          { name: "🌟 All Time", value: "alltime" },
-        ),
+          { name: "🌟 All Time", value: "alltime" }
+        )
     ),
-  async execute(interaction) {
+  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -50,7 +50,7 @@ export default {
             helpText: "Join a voice channel to start accumulating hours",
             additionalInfo:
               "Your time in voice channels automatically contributes to both monthly and all-time rankings.",
-          },
+          }
         );
         await interaction.editReply({ embeds: [embed] });
         return;
@@ -74,7 +74,7 @@ export default {
           includeStats: true,
           useEnhancedLayout: true,
           useTableFormat: true,
-        },
+        }
       );
 
       // Add timezone context to footer for monthly leaderboards
@@ -90,7 +90,7 @@ export default {
         } catch (error) {
           console.warn(
             "Could not add timezone info to leaderboard:",
-            error.message,
+            error.message
           );
           embed.setFooter({
             text: "🗓️ Monthly rankings reset on 1st of each month | Global rankings update hourly",
@@ -102,7 +102,8 @@ export default {
         });
       }
 
-      return interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
+      return;
     } catch (error) {
       console.error("Error in /leaderboard:", error);
 
@@ -111,7 +112,7 @@ export default {
         "An error occurred while fetching the leaderboard data. Please try again in a moment.",
         {
           helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
-        },
+        }
       );
 
       await safeErrorReply(interaction, embed);

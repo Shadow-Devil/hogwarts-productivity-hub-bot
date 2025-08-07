@@ -2,8 +2,7 @@ import { executeWithResilience } from "../models/db.ts";
 import { measureDatabase } from "../utils/performanceMonitor.ts";
 import queryCache from "../utils/queryCache.ts";
 import voiceService from "./voiceService.ts";
-import DailyTaskManager from "../utils/dailyTaskManager.ts";
-const dailyTaskManager = new DailyTaskManager();
+import * as DailyTaskManager from "../utils/dailyTaskManager.ts";
 import BaseService from "../utils/baseService.ts";
 import CacheInvalidationService from "../utils/cacheInvalidationService.ts";
 
@@ -15,7 +14,7 @@ class TaskService extends BaseService {
   async addTask(discordId, title) {
     return measureDatabase("addTask", async () => {
       // Check daily task limit first
-      const limitCheck = await dailyTaskManager.canUserAddTask(discordId);
+      const limitCheck = await DailyTaskManager.canUserAddTask(discordId);
       if (!limitCheck.canAdd) {
         return {
           success: false,
@@ -33,11 +32,11 @@ class TaskService extends BaseService {
           `INSERT INTO tasks (user_id, discord_id, title)
                      VALUES ((SELECT id FROM users WHERE discord_id = $1), $1, $2)
                      RETURNING id, title, created_at`,
-          [discordId, title],
+          [discordId, title]
         );
 
         // Record task action for daily limit tracking
-        await dailyTaskManager.recordTaskAction(discordId, "add");
+        await DailyTaskManager.recordTaskAction(discordId, "add");
 
         // Smart cache invalidation for user-related data
         CacheInvalidationService.invalidateAfterTaskOperation(discordId);
@@ -46,7 +45,7 @@ class TaskService extends BaseService {
         return {
           success: true,
           task,
-          stats: await dailyTaskManager.getUserDailyStats(discordId),
+          stats: await DailyTaskManager.getUserDailyStats(discordId),
         } as const;
       });
     })();
@@ -61,7 +60,7 @@ class TaskService extends BaseService {
           `SELECT id, title, created_at FROM tasks
                      WHERE discord_id = $1 AND is_complete = FALSE
                      ORDER BY created_at ASC`,
-          [discordId],
+          [discordId]
         );
 
         if (tasksResult.rows.length === 0) {
@@ -78,9 +77,9 @@ class TaskService extends BaseService {
         const taskToRemove = tasksResult.rows[taskNumber - 1];
 
         // Try to reclaim the task slot if the task was added today
-        const reclaimResult = await dailyTaskManager.reclaimTaskSlot(
+        const reclaimResult = await DailyTaskManager.reclaimTaskSlot(
           discordId,
-          taskToRemove.created_at,
+          taskToRemove.created_at
         );
 
         // Delete the task
@@ -92,7 +91,7 @@ class TaskService extends BaseService {
         CacheInvalidationService.invalidateAfterTaskOperation(discordId);
 
         // Get updated daily stats after potential slot reclaim
-        const dailyStats = await dailyTaskManager.getUserDailyStats(discordId);
+        const dailyStats = await DailyTaskManager.getUserDailyStats(discordId);
 
         return {
           success: true,
@@ -111,7 +110,7 @@ class TaskService extends BaseService {
       "getUserTasks",
       this.getUserTasksOptimized.bind(this),
       this.getUserTasksOriginal.bind(this),
-      discordId,
+      discordId
     );
   }
 
@@ -119,7 +118,7 @@ class TaskService extends BaseService {
   async completeTask(discordId, taskNumber, member = null) {
     return measureDatabase("completeTask", async () => {
       // Check daily task limit first
-      const limitCheck = await dailyTaskManager.canUserCompleteTask(discordId);
+      const limitCheck = await DailyTaskManager.canUserCompleteTask(discordId);
       if (!limitCheck.canAdd) {
         return {
           success: false,
@@ -135,11 +134,14 @@ class TaskService extends BaseService {
           `SELECT id, title, created_at FROM tasks
                      WHERE discord_id = $1 AND is_complete = FALSE
                      ORDER BY created_at ASC`,
-          [discordId],
+          [discordId]
         );
 
         if (tasksResult.rows.length === 0) {
-          return { success: false, message: "You have no incomplete tasks." } as const;
+          return {
+            success: false,
+            message: "You have no incomplete tasks.",
+          } as const;
         }
 
         if (taskNumber < 1 || taskNumber > tasksResult.rows.length) {
@@ -166,18 +168,18 @@ class TaskService extends BaseService {
                         completed_at = CURRENT_TIMESTAMP,
                         points_awarded = $1
                      WHERE id = $2`,
-          [pointsAwarded, taskToComplete.id],
+          [pointsAwarded, taskToComplete.id]
         );
 
         // Record task action for daily limit tracking
-        await dailyTaskManager.recordTaskAction(discordId, "complete");
+        await DailyTaskManager.recordTaskAction(discordId, "complete");
 
         // Award points to user using voice service
         await voiceService.calculateAndAwardPoints(
           discordId,
           0,
           member,
-          pointsAwarded,
+          pointsAwarded
         );
 
         // Smart cache invalidation for user-related data
@@ -188,7 +190,7 @@ class TaskService extends BaseService {
           task: taskToComplete,
           points: pointsAwarded,
           message: `✅ Completed: "${taskToComplete.title}" (+${pointsAwarded} points)`,
-          stats: await dailyTaskManager.getUserDailyStats(discordId),
+          stats: await DailyTaskManager.getUserDailyStats(discordId),
         } as const;
       });
     })();
@@ -202,7 +204,7 @@ class TaskService extends BaseService {
         `SELECT joined_at FROM vc_sessions
                  WHERE discord_id = $1 AND left_at IS NULL
                  ORDER BY joined_at DESC LIMIT 1`,
-        [discordId],
+        [discordId]
       );
 
       if (activeSessionResult.rows.length === 0) {
@@ -220,7 +222,7 @@ class TaskService extends BaseService {
       // Check task creation time
       const taskResult = await client.query(
         "SELECT created_at FROM tasks WHERE id = $1",
-        [taskId],
+        [taskId]
       );
 
       if (taskResult.rows.length === 0) {
@@ -252,7 +254,7 @@ class TaskService extends BaseService {
       `INSERT INTO users (discord_id, username)
              VALUES ($1, $1)
              ON CONFLICT (discord_id) DO NOTHING`,
-      [discordId],
+      [discordId]
     );
   }
 
@@ -262,13 +264,13 @@ class TaskService extends BaseService {
       "getTaskStats",
       this.getTaskStatsOptimized.bind(this),
       this.getTaskStatsOriginal.bind(this),
-      discordId,
+      discordId
     );
   }
 
   // Get user's daily task limit information
   async getDailyTaskStats(discordId) {
-    return await dailyTaskManager.getUserDailyStats(discordId);
+    return await DailyTaskManager.getUserDailyStats(discordId);
   }
 
   // ========================================================================
@@ -289,7 +291,7 @@ class TaskService extends BaseService {
         // Single query using optimized view - replaces aggregation query
         const result = await client.query(
           "SELECT * FROM user_task_summary WHERE discord_id = $1",
-          [discordId],
+          [discordId]
         );
 
         let optimizedResult;
@@ -342,7 +344,7 @@ class TaskService extends BaseService {
                      JOIN users u ON t.discord_id = u.discord_id
                      WHERE t.discord_id = $1
                      ORDER BY t.is_complete ASC, t.created_at ASC`,
-          [discordId],
+          [discordId]
         );
 
         const tasks = result.rows;
@@ -377,7 +379,7 @@ class TaskService extends BaseService {
                         COALESCE(SUM(points_awarded), 0) as total_task_points
                      FROM tasks
                      WHERE discord_id = $1`,
-          [discordId],
+          [discordId]
         );
 
         const stats = result.rows[0];
@@ -405,7 +407,7 @@ class TaskService extends BaseService {
                      FROM tasks
                      WHERE discord_id = $1
                      ORDER BY is_complete ASC, created_at ASC`,
-          [discordId],
+          [discordId]
         );
 
         const tasks = result.rows;

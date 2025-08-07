@@ -9,7 +9,7 @@ import {
 import monthlyResetService from "./services/monthlyResetService.ts";
 import * as BotHealthMonitor from "./utils/botHealthMonitor.ts";
 import sessionRecovery from "./utils/sessionRecovery.ts";
-import DailyTaskManager from "./utils/dailyTaskManager.ts";
+import * as DailyTaskManager from "./utils/dailyTaskManager.ts";
 import CentralResetService from "./services/centralResetService.ts";
 import * as voiceStateUpdate from "./events/voiceStateUpdate.ts";
 import {
@@ -17,12 +17,9 @@ import {
   gracePeriodSessions,
   setDiscordClient,
 } from "./events/voiceStateUpdate.ts";
-import cacheWarming from "./utils/cacheWarming.ts";
 import { MaterializedViewManager } from "./services/materializedViewManager.ts";
 import voiceStateScanner from "./utils/voiceStateScanner.ts";
 import { commands } from "./commands.ts";
-
-const dailyTaskManager = new DailyTaskManager();
 
 const client = new Client({
   intents: [
@@ -42,7 +39,6 @@ function loadEvents() {
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
 let materializedViewManager = null; // Will be initialized after database connection
-let centralResetService = null; // Will be initialized after database connection
 
 client.on(Events.ClientReady, async (c) => {
   console.log(`Bot User: ${c.user.tag}`);
@@ -86,19 +82,9 @@ client.on(Events.ClientReady, async (c) => {
 
     // Initialize daily task manager
     console.log("📅 Starting daily task manager...");
-    dailyTaskManager.setDiscordClient(client);
-    dailyTaskManager.start();
+    DailyTaskManager.setDiscordClient(client);
+    DailyTaskManager.start();
     console.log("✅ Daily task manager started");
-
-    // Initialize cache warming strategy
-    console.log("🔥 Starting cache warming strategy...");
-    try {
-      await cacheWarming.startCacheWarming();
-      console.log("✅ Cache warming strategy activated");
-    } catch (error) {
-      console.warn("⚠️ Cache warming failed to start:", error.message);
-      console.log("🔄 Cache warming will be retried later");
-    }
 
     // Initialize database optimizations and materialized view management
     console.log("⚡ Setting up database optimizations...");
@@ -309,13 +295,11 @@ async function shutdown() {
     console.log("⏰ [3/5] Stopping schedulers...");
     try {
       // Stop Central Reset Service first
-      if (centralResetService) {
-        await centralResetService.stop();
-        console.log("✅ Central reset service stopped");
-      }
+      await CentralResetService.stop();
+      console.log("✅ Central reset service stopped");
 
       monthlyResetService.stop();
-      dailyTaskManager.stop();
+      DailyTaskManager.stop();
       performanceMonitor.cleanup();
 
       // Stop materialized view auto-refresh

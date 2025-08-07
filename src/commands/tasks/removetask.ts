@@ -1,11 +1,14 @@
-import { SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import taskService from "../../services/taskService.ts";
 import {
   createSuccessTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
 import { StatusEmojis } from "../../utils/constants.ts";
-import { safeDeferReply, safeErrorReply } from "../../utils/interactionUtils.ts";
+import {
+  safeDeferReply,
+  safeErrorReply,
+} from "../../utils/interactionUtils.ts";
 import dayjs from "dayjs";
 
 export default {
@@ -16,12 +19,12 @@ export default {
       option
         .setName("number")
         .setDescription(
-          "The task number to remove (use /viewtasks to see numbers)",
+          "The task number to remove (use /viewtasks to see numbers)"
         )
         .setRequired(true)
-        .setMinValue(1),
+        .setMinValue(1)
     ),
-  async execute(interaction) {
+  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -76,7 +79,8 @@ export default {
             additionalInfo: additionalInfo,
           }
         );
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        return;
       } else {
         const embed = createErrorTemplate(
           `${StatusEmojis.ERROR} Task Removal Failed`,
@@ -85,7 +89,8 @@ export default {
             helpText: `${StatusEmojis.INFO} Use \`/viewtasks\` to check your task numbers`,
           }
         );
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        return;
       }
     } catch (error) {
       console.error("Error in /removetask:", error);
@@ -95,7 +100,7 @@ export default {
         "An unexpected error occurred while removing your task. Please try again in a moment.",
         {
           helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
-        },
+        }
       );
 
       await safeErrorReply(interaction, embed);

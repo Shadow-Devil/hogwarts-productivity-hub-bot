@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from "discord.js";
 import voiceService from "../services/voiceService.ts";
 import taskService from "../services/taskService.ts";
 import timezoneService from "../services/timezoneService.ts";
@@ -19,7 +19,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName("stats")
     .setDescription("View your productivity statistics"),
-  async execute(interaction) {
+  async execute(interaction: ChatInputCommandInteraction) {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -152,7 +152,7 @@ export default {
         const taskList = pendingTasks
           .map(
             (task, index) =>
-              `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + "..." : task.title}`,
+              `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + "..." : task.title}`
           )
           .join("\n");
         pendingTasksValue = `**${pendingTasks.length}** tasks:\n${taskList}`;
@@ -162,7 +162,7 @@ export default {
           .slice(0, 3)
           .map(
             (task, index) =>
-              `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + "..." : task.title}`,
+              `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + "..." : task.title}`
           )
           .join("\n");
         const remainingCount = pendingTasks.length - 3;
@@ -215,7 +215,7 @@ export default {
         "An error occurred while fetching your statistics. Please try again in a moment.",
         {
           helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
-        },
+        }
       );
 
       await safeErrorReply(interaction, embed);

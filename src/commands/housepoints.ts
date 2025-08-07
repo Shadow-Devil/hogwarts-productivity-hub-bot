@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import voiceService from "../services/voiceService.ts";
 import {
   createHouseTemplate,
@@ -29,7 +29,7 @@ export default {
           { name: "👑 House Champions", value: "housechampion" }
         )
     ),
-  async execute(interaction) {
+  async execute(interaction: ChatInputCommandInteraction) {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);

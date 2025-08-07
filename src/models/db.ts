@@ -1,4 +1,4 @@
-import { Client, Pool } from "pg";
+import { Client, Pool, type PoolClient } from "pg";
 import dayjs from "dayjs";
 
 import { performanceMonitor } from "../utils/performanceMonitor.ts";
@@ -45,7 +45,7 @@ databaseOptimizer.setPool(pool);
 const dbResilience = new DatabaseResilience(pool);
 
 // Database migrations for schema updates
-async function runMigrations(client) {
+async function runMigrations(client: PoolClient) {
   console.log("🔧 Running database migrations...");
 
   try {
@@ -63,7 +63,6 @@ async function runMigrations(client) {
                     ALTER TABLE users
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
-        console.log(`✅ Added column ${column.name} to users table`);
       } catch (error) {
         // Column might already exist, that's okay
         if (error.code !== "42701") {

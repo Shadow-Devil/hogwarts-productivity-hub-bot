@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
 import {
   createSuccessTemplate,
@@ -23,7 +23,10 @@ export default {
   data: new SlashCommandBuilder()
     .setName("stoptimer")
     .setDescription("Stop the active Pomodoro timer in your voice channel"),
-  async execute(interaction, { activeVoiceTimers }) {
+  async execute(
+    interaction: ChatInputCommandInteraction,
+    { activeVoiceTimers }
+  ): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -43,9 +46,10 @@ export default {
             helpText: `${StatusEmojis.INFO} Join the voice channel with an active timer`,
             additionalInfo:
               "Timer controls are tied to your current voice channel location.",
-          },
+          }
         );
-        return safeReply(interaction, { embeds: [embed] });
+        await safeReply(interaction, { embeds: [embed] });
+        return;
       }
 
       const voiceChannelId = voiceChannel.id;
@@ -57,9 +61,10 @@ export default {
             helpText: `${StatusEmojis.INFO} Use \`/timer <work_minutes>\` to start a new Pomodoro session`,
             additionalInfo:
               "Check `/time` to see if there are any active timers in your current voice channel.",
-          },
+          }
         );
-        return interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed] });
+        return;
       }
       const timer = activeVoiceTimers.get(voiceChannelId);
       if (timer.workTimeout) clearTimeout(timer.workTimeout);
@@ -73,13 +78,13 @@ export default {
           helpText: `${StatusEmojis.INFO} Use \`/timer <work_minutes>\` when you're ready for another session`,
           additionalInfo:
             "Remember: Consistency is key to building productive habits.",
-        },
+        }
       );
 
       // Add timezone context showing when timer was stopped
       try {
         const userTimezone = await timezoneService.getUserTimezone(
-          interaction.user.id,
+          interaction.user.id
         );
         const stopTime = dayjs().tz(userTimezone);
         const timerFooter = `🌍 Timer stopped at: ${stopTime.format("h:mm A")} (${userTimezone}) | Use /timer to start a new session`;
@@ -88,14 +93,15 @@ export default {
       } catch (error) {
         console.warn(
           "Could not add timezone info to timer stop:",
-          error.message,
+          error.message
         );
         embed.setFooter({
           text: "Use /timer to start a new session when ready",
         });
       }
 
-      return interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
+      return;
     } catch (error) {
       console.error("Error in /stoptimer:", error);
 
@@ -104,7 +110,7 @@ export default {
         "An error occurred while stopping your timer. Please try again in a moment.",
         {
           helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
-        },
+        }
       );
 
       await safeErrorReply(interaction, embed);

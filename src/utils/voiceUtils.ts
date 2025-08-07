@@ -69,7 +69,7 @@ export async function getUserVoiceChannel(
       } catch (fetchError) {
         console.warn(
           "Error fetching member with force (timed out or failed):",
-          fetchError.message
+          fetchError
         );
       }
     }
