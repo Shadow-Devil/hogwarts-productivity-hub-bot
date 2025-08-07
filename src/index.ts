@@ -1,5 +1,4 @@
-import { config } from "dotenv";
-config();
+import "dotenv/config";
 
 import {
   Client,
@@ -19,22 +18,6 @@ import BotHealthMonitor from "./utils/botHealthMonitor.ts";
 import sessionRecovery from "./utils/sessionRecovery.ts";
 import DailyTaskManager from "./utils/dailyTaskManager.ts";
 import CentralResetService from "./services/centralResetService.ts";
-import addtask from "./commands/addtask.ts";
-import completetask from "./commands/completetask.ts";
-import debug from "./commands/debug.ts";
-import graceperiod from "./commands/graceperiod.ts";
-import housepoints from "./commands/housepoints.ts";
-import leaderboard from "./commands/leaderboard.ts";
-import performance from "./commands/performance.ts";
-import recovery from "./commands/recovery.ts";
-import removetask from "./commands/removetask.ts";
-import stats from "./commands/stats.ts";
-import stoptimer from "./commands/stoptimer.ts";
-import time from "./commands/time.ts";
-import timer from "./commands/timer.ts";
-import timezoneCommand from "./commands/timezone.ts";
-import viewtasks from "./commands/viewtasks.ts";
-import voicescan from "./commands/voicescan.ts";
 import * as voiceStateUpdate from "./events/voiceStateUpdate.ts";
 import {
   activeVoiceSessions,
@@ -44,6 +27,7 @@ import {
 import cacheWarming from "./utils/cacheWarming.ts";
 import { MaterializedViewManager } from "./services/materializedViewManager.ts";
 import voiceStateScanner from "./utils/voiceStateScanner.ts";
+import { commands } from "./commands.ts";
 
 class CustomClient extends Client {
   public commands = new Collection<string, any>();
@@ -53,7 +37,7 @@ class CustomClient extends Client {
 }
 
 declare module "discord.js" {
-  type CustomInteraction = Interaction & {
+  type CustomInteraction = CommandInteraction & {
     client: CustomClient;
     options: any;
     editReply: (options: any) => Promise<any>;
@@ -73,22 +57,7 @@ const client: CustomClient = new CustomClient({
 });
 
 function loadCommands() {
-  client.commands.set(addtask.data.name, addtask);
-  client.commands.set(completetask.data.name, completetask);
-  client.commands.set(debug.data.name, debug);
-  client.commands.set(graceperiod.data.name, graceperiod);
-  client.commands.set(housepoints.data.name, housepoints);
-  client.commands.set(leaderboard.data.name, leaderboard);
-  client.commands.set(performance.data.name, performance);
-  client.commands.set(recovery.data.name, recovery);
-  client.commands.set(removetask.data.name, removetask);
-  client.commands.set(stats.data.name, stats);
-  client.commands.set(stoptimer.data.name, stoptimer);
-  client.commands.set(time.data.name, time);
-  client.commands.set(timer.data.name, timer);
-  client.commands.set(timezoneCommand.data.name, timezoneCommand);
-  client.commands.set(viewtasks.data.name, viewtasks);
-  client.commands.set(voicescan.data.name, voicescan);
+  client.commands = commands;
 }
 
 function loadEvents() {
@@ -241,7 +210,7 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isCommand()) return;
+  if (!interaction.isChatInputCommand()) return;
 
   const command = client.commands.get(interaction.commandName);
   if (!command) {
@@ -262,15 +231,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   );
 
   try {
-    // Set a timeout to prevent Discord interaction expiration (3 second limit)
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Command execution timeout")), 2500); // 2.5 seconds safety margin
-    });
-
-    await Promise.race([
-      wrappedExecute(interaction, { activeVoiceTimers }),
-      timeoutPromise,
-    ]);
+    await wrappedExecute(interaction, { activeVoiceTimers });
   } catch (error) {
     console.error(`💥 Command execution failed: /${interaction.commandName}`, {
       user: interaction.user.tag,

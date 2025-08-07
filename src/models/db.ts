@@ -20,20 +20,9 @@ const pool = new Pool({
   min: parseInt(process.env.DB_MIN_CONNECTIONS) || 5, // Higher minimum for better performance
 });
 
-// Monitor connection pool
-let connectionCount = 0;
 pool.on("connect", (_client) => {
-  connectionCount++;
-  // Only log the first few connections to avoid spam
-  if (connectionCount <= 3) {
-    console.log(
-      `✅ Connected to PostgreSQL database (${connectionCount}/${pool.options.max})`
-    );
-  } else if (connectionCount === 4) {
-    console.log(
-      `✅ PostgreSQL connection pool active (${pool.options.min}-${pool.options.max} connections)`
-    );
-  }
+  console.log(`Connected to PostgreSQL database`);
+
   performanceMonitor.updateActiveConnections(pool.totalCount);
 });
 

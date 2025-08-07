@@ -7,3 +7,10 @@ services:
       POSTGRES_DB: "botd_production"
     ports:
       - "5432:5432"
+  pgadmin:
+    image: "dpage/pgadmin4:latest"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "test@test.de"
+      PGADMIN_DEFAULT_PASSWORD: "your_secure_password"
+    ports:
+      - "5050:80"

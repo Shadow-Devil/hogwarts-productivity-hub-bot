@@ -304,7 +304,7 @@ class PerformanceMonitor {
 export const performanceMonitor = new PerformanceMonitor();
 
 // Helper functions for easy usage
-export function measureCommand(commandName, fn) {
+export function measureCommand(commandName: string, fn: Function) {
   return async (...args) => {
     const startTime = Date.now();
     let error = null;

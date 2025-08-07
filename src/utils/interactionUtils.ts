@@ -3,13 +3,18 @@
  * Prevents timeout and acknowledgment errors
  */
 
+import type { CommandInteraction } from "discord.js";
+
 /**
  * Safely defer an interaction reply with timeout protection
  * @param {CommandInteraction} interaction - Discord interaction
  * @param {Object} options - Defer options
  * @returns {Promise<boolean>} - Success status
  */
-async function safeDeferReply(interaction, options = {}) {
+async function safeDeferReply(
+  interaction: CommandInteraction,
+  options: object = {}
+): Promise<boolean> {
   try {
     // Check if interaction is still valid and not expired
     if (!interaction || interaction.replied || interaction.deferred) {
@@ -19,7 +24,7 @@ async function safeDeferReply(interaction, options = {}) {
     // Set a timeout to ensure we respond within Discord's 3-second limit
     const deferPromise = interaction.deferReply(options);
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Defer timeout")), 2500),
+      setTimeout(() => reject(new Error("Defer timeout")), 2500)
     );
 
     await Promise.race([deferPromise, timeoutPromise]);
@@ -27,7 +32,7 @@ async function safeDeferReply(interaction, options = {}) {
   } catch (error) {
     console.warn(
       `Failed to defer interaction for /${interaction?.commandName}:`,
-      error.message,
+      error.message
     );
     return false;
   }
@@ -39,7 +44,10 @@ async function safeDeferReply(interaction, options = {}) {
  * @param {Object} payload - Reply payload
  * @returns {Promise<boolean>} - Success status
  */
-async function safeReply(interaction, payload) {
+async function safeReply(
+  interaction: CommandInteraction,
+  payload: object
+): Promise<boolean> {
   try {
     if (!interaction) {
       console.warn("Attempted to reply to null interaction");
@@ -48,7 +56,7 @@ async function safeReply(interaction, payload) {
 
     if (interaction.replied) {
       console.warn(
-        `Interaction for /${interaction.commandName} already replied`,
+        `Interaction for /${interaction.commandName} already replied`
       );
       return false;
     }
@@ -62,7 +70,7 @@ async function safeReply(interaction, payload) {
   } catch (error) {
     console.error(
       `Failed to send reply for /${interaction?.commandName}:`,
-      error.message,
+      error.message
     );
 
     // If the error is about unknown interaction or already acknowledged, don't retry
@@ -81,13 +89,16 @@ async function safeReply(interaction, payload) {
  * @param {Object} errorEmbed - Error embed to send
  * @returns {Promise<boolean>} - Success status
  */
-async function safeErrorReply(interaction, errorEmbed) {
+async function safeErrorReply(
+  interaction: CommandInteraction,
+  errorEmbed: object
+): Promise<boolean> {
   try {
     return await safeReply(interaction, { embeds: [errorEmbed] });
   } catch (error) {
     console.error(
       `Failed to send error reply for /${interaction?.commandName}:`,
-      error.message,
+      error.message
     );
 
     // Last resort: try a simple text reply
@@ -114,9 +125,9 @@ async function safeErrorReply(interaction, errorEmbed) {
  * @param {Object} options - Execution options
  */
 async function executeWithTimeout(
-  interaction,
-  commandFunction,
-  { timeout = 10000, errorTemplate = null } = {},
+  interaction: CommandInteraction,
+  commandFunction: Function,
+  { timeout = 10000, errorTemplate = null }: object = {}
 ) {
   let deferred = false;
 
@@ -126,7 +137,7 @@ async function executeWithTimeout(
 
     if (!deferred) {
       console.warn(
-        `Failed to defer interaction for /${interaction?.commandName}`,
+        `Failed to defer interaction for /${interaction?.commandName}`
       );
       return false;
     }
@@ -134,7 +145,7 @@ async function executeWithTimeout(
     // Execute the command with timeout protection
     const commandPromise = commandFunction(interaction);
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Command execution timeout")), timeout),
+      setTimeout(() => reject(new Error("Command execution timeout")), timeout)
     );
 
     await Promise.race([commandPromise, timeoutPromise]);
@@ -142,7 +153,7 @@ async function executeWithTimeout(
   } catch (error) {
     console.error(
       `Error executing /${interaction?.commandName}:`,
-      error.message,
+      error.message
     );
 
     // Send error reply if we successfully deferred
@@ -159,7 +170,7 @@ async function executeWithTimeout(
  * @param {CommandInteraction} interaction - Discord interaction
  * @returns {boolean} - Whether interaction is valid
  */
-function isInteractionValid(interaction) {
+function isInteractionValid(interaction: CommandInteraction): boolean {
   if (!interaction) return false;
 
   // Check if interaction has expired (Discord interactions expire after 15 minutes)
@@ -182,7 +193,11 @@ function isInteractionValid(interaction) {
  * @param {boolean} useCache - Whether to prefer cache over API
  * @returns {Promise<GuildMember|null>} - Guild member or null
  */
-async function fastMemberFetch(guild, userId, useCache = true) {
+async function fastMemberFetch(
+  guild: Guild,
+  userId: string,
+  useCache: boolean = true
+): Promise<GuildMember | null> {
   try {
     if (!guild || !userId) return null;
 
@@ -195,7 +210,7 @@ async function fastMemberFetch(guild, userId, useCache = true) {
     // Fallback to API fetch with timeout
     const fetchPromise = guild.members.fetch(userId);
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Member fetch timeout")), 3000),
+      setTimeout(() => reject(new Error("Member fetch timeout")), 3000)
     );
 
     return await Promise.race([fetchPromise, timeoutPromise]);

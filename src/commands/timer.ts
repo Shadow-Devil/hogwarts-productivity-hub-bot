@@ -14,6 +14,7 @@ import timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
+import type { Command } from "../commands.ts";
 
 // Extend dayjs with timezone support for timer displays
 dayjs.extend(utc);
@@ -28,16 +29,16 @@ export default {
         .setName("work")
         .setDescription("Work time in minutes (min 20)")
         .setRequired(true)
-        .setMinValue(20),
+        .setMinValue(20)
     )
     .addIntegerOption((opt) =>
       opt
         .setName("break")
         .setDescription("Break time in minutes (optional, min 5)")
         .setRequired(false)
-        .setMinValue(5),
+        .setMinValue(5)
     ),
-  async execute(interaction, { activeVoiceTimers }) {
+  async execute(interaction, { activeVoiceTimers }): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -57,10 +58,10 @@ export default {
             helpText: `${StatusEmojis.INFO} Join any voice channel first, then try again`,
             additionalInfo:
               "Timers help you maintain focus during productive voice sessions.",
-          },
+          }
         );
 
-        return safeReply(interaction, {
+        await safeReply(interaction, {
           embeds: [embed],
           flags: MessageFlags.Ephemeral,
         });
@@ -73,18 +74,18 @@ export default {
         // Safety check for timer data integrity
         if (!existingTimer || !existingTimer.endTime || !existingTimer.phase) {
           console.warn(
-            `Corrupted timer data found for channel ${voiceChannelId}, cleaning up...`,
+            `Corrupted timer data found for channel ${voiceChannelId}, cleaning up...`
           );
           activeVoiceTimers.delete(voiceChannelId);
         } else {
           const timeRemaining = Math.ceil(
-            (existingTimer.endTime - new Date().getTime()) / 60000,
+            (existingTimer.endTime - new Date().getTime()) / 60000
           );
 
           // If timer has already expired, clean it up
           if (timeRemaining <= 0) {
             console.log(
-              `Expired timer found for channel ${voiceChannelId}, cleaning up...`,
+              `Expired timer found for channel ${voiceChannelId}, cleaning up...`
             );
             if (existingTimer.workTimeout)
               clearTimeout(existingTimer.workTimeout);
@@ -99,7 +100,7 @@ export default {
               {
                 helpText: `${StatusEmojis.INFO} Use \`/stoptimer\` to stop the current timer first`,
                 additionalInfo: `**Current Phase:** ${existingTimer.phase.toUpperCase()}\n**Time Remaining:** ${timeRemaining} minutes`,
-              },
+              }
             );
 
             if (!interaction.replied && !interaction.deferred) {
@@ -122,7 +123,7 @@ export default {
             helpText: `${StatusEmojis.INFO} Try again with valid values`,
             additionalInfo:
               "**Minimum Requirements:** Work Time: **20 minutes** • Break Time: **5 minutes** (if specified)",
-          },
+          }
         );
 
         return safeReply(interaction, {
@@ -131,7 +132,7 @@ export default {
         });
       }
       const userTimezone = await timezoneService.getUserTimezone(
-        interaction.user.id,
+        interaction.user.id
       );
       const now = dayjs().tz(userTimezone);
       const startTime = now.format("HH:mm");
@@ -156,7 +157,7 @@ export default {
           showProgress: true,
           includeMotivation: true,
           style: "pomodoro",
-        },
+        }
       );
 
       await safeReply(interaction, { embeds: [embed] });
@@ -180,7 +181,7 @@ export default {
             includeMotivation: true,
             style: "pomodoro",
             customFooter: timerFooter,
-          },
+          }
         );
 
         await interaction.editReply({ embeds: [updatedEmbed] });
@@ -216,7 +217,7 @@ export default {
                       breakTime: breakTime,
                       voiceChannel: voiceChannel,
                       phase: "break_complete",
-                    },
+                    }
                   );
 
                   await interaction.followUp({
@@ -228,7 +229,7 @@ export default {
                 }
                 activeVoiceTimers.delete(voiceChannelId);
               },
-              breakTime * 60 * 1000,
+              breakTime * 60 * 1000
             );
             activeVoiceTimers.set(voiceChannelId, {
               breakTimeout,
@@ -239,7 +240,7 @@ export default {
             activeVoiceTimers.delete(voiceChannelId);
           }
         },
-        work * 60 * 1000,
+        work * 60 * 1000
       );
       activeVoiceTimers.set(voiceChannelId, {
         workTimeout,
@@ -252,10 +253,10 @@ export default {
       const embed = createErrorTemplate(
         "Timer Creation Failed",
         "An unexpected error occurred while starting your Pomodoro timer. Please try again in a moment.",
-        { helpText: "If this problem persists, contact support" },
+        { helpText: "If this problem persists, contact support" }
       );
 
       await safeErrorReply(interaction, embed);
     }
   },
-};
+} as Command;

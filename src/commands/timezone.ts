@@ -1,4 +1,8 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  type CustomInteraction,
+} from "discord.js";
 import timezoneService from "../services/timezoneService.ts";
 import { BotColors, StatusEmojis } from "../utils/constants.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
@@ -51,7 +55,7 @@ function createTimezoneEmbed(userTimezone, userLocalTime, nextResets) {
         name: "\u200B",
         value: "\u200B",
         inline: true,
-      },
+      }
     );
 
   if (nextResets) {
@@ -65,7 +69,7 @@ function createTimezoneEmbed(userTimezone, userLocalTime, nextResets) {
         name: "🗓️ Next Monthly Reset",
         value: nextResets.monthly,
         inline: true,
-      },
+      }
     );
   }
 
@@ -81,7 +85,7 @@ function createTimezoneListEmbed() {
     .setColor(BotColors.INFO)
     .setTitle(`${StatusEmojis.INFO} Common Timezones`)
     .setDescription(
-      "Here are some commonly used timezones. You can use any valid IANA timezone identifier.",
+      "Here are some commonly used timezones. You can use any valid IANA timezone identifier."
     );
 
   // Group timezones for better readability
@@ -120,7 +124,7 @@ function createTimezoneChangeEmbed(
   oldTimezone,
   newTimezone,
   userLocalTime,
-  impacts,
+  impacts
 ) {
   const embed = new EmbedBuilder()
     .setColor(BotColors.SUCCESS)
@@ -135,7 +139,7 @@ function createTimezoneChangeEmbed(
         name: "🕐 Your New Local Time",
         value: userLocalTime,
         inline: true,
-      },
+      }
     );
 
   if (impacts && impacts.length > 0) {
@@ -168,12 +172,12 @@ const timezoneCommand = {
   data: new SlashCommandBuilder()
     .setName("timezone")
     .setDescription(
-      "Manage your timezone settings for accurate daily/monthly resets",
+      "Manage your timezone settings for accurate daily/monthly resets"
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName("view")
-        .setDescription("View your current timezone settings"),
+        .setDescription("View your current timezone settings")
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -183,16 +187,16 @@ const timezoneCommand = {
           option
             .setName("timezone")
             .setDescription(
-              "Your timezone (e.g., America/New_York, Europe/London)",
+              "Your timezone (e.g., America/New_York, Europe/London)"
             )
-            .setRequired(true),
-        ),
+            .setRequired(true)
+        )
     )
     .addSubcommand((subcommand) =>
-      subcommand.setName("list").setDescription("View common timezone options"),
+      subcommand.setName("list").setDescription("View common timezone options")
     ),
 
-  async execute(interaction) {
+  async execute(interaction: CustomInteraction) {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -213,7 +217,7 @@ const timezoneCommand = {
           await timezoneCommand.handleSetTimezone(
             interaction,
             discordId,
-            timezone,
+            timezone
           );
           break;
         }
@@ -227,7 +231,7 @@ const timezoneCommand = {
       console.error("Error in timezone command:", error);
       await safeErrorReply(
         interaction,
-        "An error occurred while processing your timezone request. Please try again.",
+        "An error occurred while processing your timezone request. Please try again."
       );
     }
   },
@@ -244,21 +248,21 @@ const timezoneCommand = {
         daily: await timezoneCommand.getNextResetDisplay(discordId, "daily"),
         monthly: await timezoneCommand.getNextResetDisplay(
           discordId,
-          "monthly",
+          "monthly"
         ),
       };
 
       const embed = createTimezoneEmbed(
         userTimezone,
         userLocalTime,
-        nextResets,
+        nextResets
       );
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.error("Error viewing timezone:", error);
       await safeErrorReply(
         interaction,
-        "Failed to retrieve your timezone settings. Please try again.",
+        "Failed to retrieve your timezone settings. Please try again."
       );
     }
   },
@@ -292,7 +296,7 @@ const timezoneCommand = {
       const changeResult = await timezoneService.handleTimezoneChange(
         discordId,
         oldTimezone,
-        newTimezone,
+        newTimezone
       );
 
       const userLocalTime = dayjs()
@@ -309,7 +313,7 @@ const timezoneCommand = {
       }
       if (changeResult.dstAffected) {
         impacts.push(
-          "🌅 DST transition detected - times adjusted automatically",
+          "🌅 DST transition detected - times adjusted automatically"
         );
       }
 
@@ -317,14 +321,14 @@ const timezoneCommand = {
         oldTimezone,
         newTimezone,
         userLocalTime,
-        impacts,
+        impacts
       );
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.error("Error setting timezone:", error);
       await safeErrorReply(
         interaction,
-        "Failed to update your timezone. Please try again.",
+        "Failed to update your timezone. Please try again."
       );
     }
   },
@@ -337,7 +341,7 @@ const timezoneCommand = {
       console.error("Error listing timezones:", error);
       await safeErrorReply(
         interaction,
-        "Failed to load timezone list. Please try again.",
+        "Failed to load timezone list. Please try again."
       );
     }
   },
@@ -346,7 +350,7 @@ const timezoneCommand = {
     try {
       const nextResetTime = await timezoneService.getNextResetTimeForUser(
         discordId,
-        resetType,
+        resetType
       );
       const userTimezone = await timezoneService.getUserTimezone(discordId);
 

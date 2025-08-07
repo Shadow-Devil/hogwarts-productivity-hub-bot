@@ -5,6 +5,8 @@
 
 import queryCache from "./queryCache.ts";
 import voiceService from "../services/voiceService.ts";
+// Check if database and services are ready
+import { pool } from "../models/db.ts";
 
 class CacheWarming {
   public isWarming: boolean;
@@ -77,8 +79,6 @@ class CacheWarming {
     let warmedEntries = 0;
 
     try {
-      // Check if database and services are ready
-      const { pool } = require("../models/db");
       if (!pool) {
         console.log("🔄 Database not ready, skipping cache warming");
         return;
@@ -100,13 +100,13 @@ class CacheWarming {
               queryCache.set(key, data, "leaderboard");
               warmedEntries++;
               console.log(
-                `   🎯 Warmed ${type} leaderboard (${data.length} entries)`,
+                `   🎯 Warmed ${type} leaderboard (${data.length} entries)`
               );
             }
           } catch (error) {
             console.warn(
               `   ⚠️ Failed to warm ${type} leaderboard:`,
-              error.message,
+              error.message
             );
           }
         }
@@ -126,13 +126,13 @@ class CacheWarming {
               queryCache.set(key, data, "houseLeaderboard");
               warmedEntries++;
               console.log(
-                `   🏠 Warmed ${type} house leaderboard (${data.length} houses)`,
+                `   🏠 Warmed ${type} house leaderboard (${data.length} houses)`
               );
             }
           } catch (error) {
             console.warn(
               `   ⚠️ Failed to warm ${type} house leaderboard:`,
-              error.message,
+              error.message
             );
           }
         }
@@ -152,13 +152,13 @@ class CacheWarming {
               queryCache.set(key, data, "houseChampions");
               warmedEntries++;
               console.log(
-                `   👑 Warmed ${type} house champions (${data.length} champions)`,
+                `   👑 Warmed ${type} house champions (${data.length} champions)`
               );
             }
           } catch (error) {
             console.warn(
               `   ⚠️ Failed to warm ${type} house champions:`,
-              error.message,
+              error.message
             );
           }
         }
@@ -174,7 +174,7 @@ class CacheWarming {
         await queryCache.batchSet(batchEntries);
         warmedEntries += batchEntries.length;
         console.log(
-          `   📦 Batch warmed ${batchEntries.length} additional entries`,
+          `   📦 Batch warmed ${batchEntries.length} additional entries`
         );
       }
 
@@ -182,7 +182,7 @@ class CacheWarming {
       this.lastWarmTime = new Date();
 
       console.log(
-        `🔥 Cache warming completed: ${warmedEntries} entries warmed in ${duration}ms`,
+        `🔥 Cache warming completed: ${warmedEntries} entries warmed in ${duration}ms`
       );
     } catch (error) {
       console.error("❌ Cache warming failed:", error);
