@@ -21,23 +21,6 @@ class VoiceService extends BaseService {
   // Get or create user in database with caching
   async getOrCreateUser(discordId, username) {
     return measureDatabase("getOrCreateUser", async () => {
-      // Check cache first
-      const cachedUser = db.getCachedUser(discordId);
-      if (cachedUser) {
-        // Update username if it changed (but don't query DB every time)
-        if (cachedUser.username !== username) {
-          await db.executeWithResilience(async (client) => {
-            await client.query(
-              "UPDATE users SET username = $1, updated_at = CURRENT_TIMESTAMP WHERE discord_id = $2",
-              [username, discordId]
-            );
-            cachedUser.username = username;
-            db.setCachedUser(discordId, cachedUser);
-          });
-        }
-        return cachedUser;
-      }
-
       return db.executeWithResilience(async (client) => {
         // Try to find existing user
         const result = await client.query(
@@ -67,8 +50,6 @@ class VoiceService extends BaseService {
           user = newUserResult.rows[0];
         }
 
-        // Cache the user data
-        db.setCachedUser(discordId, user);
         return user;
       });
     })();
@@ -287,8 +268,6 @@ class VoiceService extends BaseService {
               "UPDATE users SET house = $1, updated_at = CURRENT_TIMESTAMP WHERE discord_id = $2",
               [userHouse, discordId]
             );
-            // Clear cache to force fresh data
-            db.clearUserCache(discordId);
           }
         }
 
@@ -322,8 +301,6 @@ class VoiceService extends BaseService {
           await db.updateHousePoints(userHouse, totalPointsEarned);
         }
 
-        // Clear user cache to force fresh data
-        db.clearUserCache(discordId);
 
         // Smart cache invalidation for user-related data
         CacheInvalidationService.invalidateAfterVoiceOperation(
@@ -1153,8 +1130,6 @@ class VoiceService extends BaseService {
           throw new Error(`User ${discordId} not found for daily reset`);
         }
 
-        // Clear cache for the user to ensure fresh data
-        db.clearUserCache(discordId);
         // Invalidate related caches
         CacheInvalidationService.invalidateUserCache(discordId);
 

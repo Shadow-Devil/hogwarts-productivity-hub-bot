@@ -98,11 +98,8 @@ function loadEvents() {
 }
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
-let healthMonitor = null; // Will be initialized after database connection
 let materializedViewManager = null; // Will be initialized after database connection
 let centralResetService = null; // Will be initialized after database connection
-
-// Bot login
 
 client.on(Events.ClientReady, async (c) => {
   console.log(`Bot User: ${c.user.tag}`);
@@ -118,8 +115,7 @@ client.on(Events.ClientReady, async (c) => {
     // Initialize health monitoring system
     console.log("🩺 Setting up health monitoring...");
     const dbResilience = getDbResilience();
-    healthMonitor = new BotHealthMonitor(client, dbResilience);
-    client.healthMonitor = healthMonitor; // Attach to client for command access
+    client.healthMonitor = new BotHealthMonitor(client, dbResilience); // Attach to client for command access
     console.log("✅ Health monitoring system active");
 
     // Initialize session recovery system
@@ -215,8 +211,8 @@ client.on(Events.ClientReady, async (c) => {
     // Trigger initial health check
     setTimeout(() => {
       console.log("🔍 Running initial health check...");
-      if (healthMonitor) {
-        healthMonitor.triggerHealthCheck();
+      if (client.healthMonitor) {
+        client.healthMonitor.triggerHealthCheck();
       }
     }, 5000); // Wait 5 seconds for everything to settle
   } catch (error) {
@@ -230,7 +226,7 @@ client.on(Events.ClientReady, async (c) => {
 });
 
 // Add voice state update logging for debugging (only when significant changes occur)
-client.on("voiceStateUpdate", (oldState, newState) => {
+client.on(Events.VoiceStateUpdate, (oldState, newState) => {
   const user =
     newState.member?.user?.tag || oldState.member?.user?.tag || "Unknown User";
   const oldChannel = oldState.channel?.name || null;
@@ -244,7 +240,7 @@ client.on("voiceStateUpdate", (oldState, newState) => {
   }
 });
 
-client.on("interactionCreate", async (interaction) => {
+client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isCommand()) return;
 
   const command = client.commands.get(interaction.commandName);
@@ -321,21 +317,16 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// Initialize bot asynchronously
-async function initializeBot() {
-  try {
-    loadCommands();
-    loadEvents();
-
-    await client.login(process.env.DISCORD_TOKEN);
-  } catch (error) {
-    console.error("Error initializing bot:", error);
-    process.exit(1);
-  }
-}
-
 // Start the bot
-initializeBot();
+try {
+  loadCommands();
+  loadEvents();
+
+  await client.login(process.env.DISCORD_TOKEN);
+} catch (error) {
+  console.error("Error initializing bot:", error);
+  process.exit(1);
+}
 
 // Graceful shutdown handlers
 process.on("SIGINT", () => {
@@ -370,7 +361,7 @@ async function shutdown() {
       await Promise.race([
         sessionRecovery.handleGracefulShutdown(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Session recovery timeout")), 3000),
+          setTimeout(() => reject(new Error("Session recovery timeout")), 3000)
         ),
       ]).catch((error) => {
         console.warn("⚠️  Session recovery timeout:", error.message);
@@ -380,11 +371,11 @@ async function shutdown() {
 
     // Stop health monitoring
     console.log("🩺 [2/5] Stopping health monitoring...");
-    if (healthMonitor) {
+    if (client.healthMonitor) {
       await Promise.race([
-        Promise.resolve(healthMonitor.shutdown()),
+        Promise.resolve(client.healthMonitor.shutdown()),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Health monitor timeout")), 2000),
+          setTimeout(() => reject(new Error("Health monitor timeout")), 2000)
         ),
       ]).catch((error) => {
         console.warn("⚠️  Health monitor shutdown timeout:", error.message);
@@ -422,10 +413,7 @@ async function shutdown() {
       await Promise.race([
         dbResilience.shutdown(),
         new Promise((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Database shutdown timeout")),
-            8000,
-          ),
+          setTimeout(() => reject(new Error("Database shutdown timeout")), 8000)
         ),
       ]).catch((error) => {
         console.warn("⚠️  Database shutdown timeout:", error.message);
@@ -439,7 +427,7 @@ async function shutdown() {
       await Promise.race([
         client.destroy(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Discord client timeout")), 2000),
+          setTimeout(() => reject(new Error("Discord client timeout")), 2000)
         ),
       ]).catch((error) => {
         console.warn("⚠️  Discord client shutdown timeout:", error.message);

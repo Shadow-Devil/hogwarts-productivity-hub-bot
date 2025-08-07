@@ -8,7 +8,7 @@ import type {
  * Reliably get the voice channel for a user from an interaction
  * This function handles the case where Discord's cached member data might be stale
  * @param {ChatInputCommandInteraction} interaction - The Discord interaction
- * @param {Object} options - Options for voice channel detection
+ * @param options - Options for voice channel detection
  * @returns {Promise<VoiceChannel|null>} - The voice channel or null if not found
  */
 export async function getUserVoiceChannel(

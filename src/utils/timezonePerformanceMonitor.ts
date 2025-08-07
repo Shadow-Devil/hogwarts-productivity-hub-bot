@@ -6,65 +6,58 @@
 import winston from "winston";
 
 class TimezonePerformanceMonitor {
-  public metrics: any;
-  public logger: winston.Logger;
-  public reportInterval: NodeJS.Timeout;
+  public metrics = {
+    timezoneConversions: {
+      count: 0,
+      totalDuration: 0,
+      failures: 0,
+    },
+    cacheOperations: {
+      hits: 0,
+      misses: 0,
+      invalidations: 0,
+    },
+    databaseQueries: {
+      count: 0,
+      totalDuration: 0,
+      failures: 0,
+    },
+    resetOperations: {
+      daily: { count: 0, totalDuration: 0, failures: 0 },
+      monthly: { count: 0, totalDuration: 0, failures: 0 },
+    },
+  };
 
-  constructor() {
-    this.metrics = {
-      timezoneConversions: {
-        count: 0,
-        totalDuration: 0,
-        failures: 0,
-      },
-      cacheOperations: {
-        hits: 0,
-        misses: 0,
-        invalidations: 0,
-      },
-      databaseQueries: {
-        count: 0,
-        totalDuration: 0,
-        failures: 0,
-      },
-      resetOperations: {
-        daily: { count: 0, totalDuration: 0, failures: 0 },
-        monthly: { count: 0, totalDuration: 0, failures: 0 },
-      },
-    };
+  public logger = winston.createLogger({
+    level: "info",
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.json()
+    ),
+    transports: [
+      new winston.transports.File({
+        filename: "logs/timezone-performance.log",
+        level: "info",
+      }),
+      new winston.transports.Console({
+        level: "warn",
+        format: winston.format.combine(
+          winston.format.colorize(),
+          winston.format.printf(({ timestamp, level, message, ...meta }) => {
+            return `${timestamp} [TimezonePerf] ${level}: ${message} ${JSON.stringify(meta)}`;
+          })
+        ),
+      }),
+    ],
+  });
 
-    // Winston logger for performance metrics
-    this.logger = winston.createLogger({
-      level: "info",
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json(),
-      ),
-      transports: [
-        new winston.transports.File({
-          filename: "logs/timezone-performance.log",
-          level: "info",
-        }),
-        new winston.transports.Console({
-          level: "warn",
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.printf(({ timestamp, level, message, ...meta }) => {
-              return `${timestamp} [TimezonePerf] ${level}: ${message} ${JSON.stringify(meta)}`;
-            }),
-          ),
-        }),
-      ],
-    });
-
-    // Report metrics every 5 minutes
-    this.reportInterval = setInterval(
-      () => {
-        this.reportMetrics();
-      },
-      5 * 60 * 1000,
-    ); // 5 minutes
-  }
+  // Report metrics every 5 minutes
+  public reportInterval = setInterval(
+    () => {
+      this.reportMetrics();
+    },
+    5 * 60 * 1000
+  ); // 5 minutes
 
   /**
    * Record timezone conversion performance
@@ -72,7 +65,11 @@ class TimezonePerformanceMonitor {
    * @param {boolean} success - Whether operation succeeded
    * @param {Object} metadata - Additional context
    */
-  recordTimezoneConversion(duration, success = true, metadata = {}) {
+  recordTimezoneConversion(
+    duration: number,
+    success: boolean = true,
+    metadata: object = {}
+  ) {
     this.metrics.timezoneConversions.count++;
     this.metrics.timezoneConversions.totalDuration += duration;
 
@@ -95,7 +92,7 @@ class TimezonePerformanceMonitor {
    * @param {string} operation - 'hit', 'miss', or 'invalidation'
    * @param {Object} metadata - Additional context
    */
-  recordCacheOperation(operation, metadata = {}) {
+  recordCacheOperation(operation: string, metadata: object = {}) {
     switch (operation) {
       case "hit":
         this.metrics.cacheOperations.hits++;
@@ -130,7 +127,11 @@ class TimezonePerformanceMonitor {
    * @param {boolean} success - Whether query succeeded
    * @param {Object} metadata - Additional context
    */
-  recordDatabaseQuery(duration, success = true, metadata = {}) {
+  recordDatabaseQuery(
+    duration: number,
+    success: boolean = true,
+    metadata: object = {}
+  ) {
     this.metrics.databaseQueries.count++;
     this.metrics.databaseQueries.totalDuration += duration;
 
@@ -155,7 +156,12 @@ class TimezonePerformanceMonitor {
    * @param {boolean} success - Whether operation succeeded
    * @param {Object} metadata - Additional context
    */
-  recordResetOperation(resetType, duration, success = true, metadata = {}) {
+  recordResetOperation(
+    resetType: string,
+    duration: number,
+    success: boolean = true,
+    metadata: object = {}
+  ) {
     if (this.metrics.resetOperations[resetType]) {
       this.metrics.resetOperations[resetType].count++;
       this.metrics.resetOperations[resetType].totalDuration += duration;

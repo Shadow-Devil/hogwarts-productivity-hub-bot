@@ -7,39 +7,6 @@ import DatabaseResilience from "../utils/databaseResilience.ts";
 // Use smart cache invalidation for user data
 import queryCache from "../utils/queryCache.ts";
 
-// Simple user cache for performance (replaced legacy functions)
-const userCache = new Map();
-
-// User cache functions
-function getCachedUser(discordId) {
-  const cached = userCache.get(discordId);
-  if (!cached) return null;
-
-  // Check if cache entry is expired (5 minutes)
-  const now = Date.now();
-  if (now - cached.timestamp > 5 * 60 * 1000) {
-    userCache.delete(discordId);
-    return null;
-  }
-
-  return cached.data;
-}
-
-function setCachedUser(discordId, userData) {
-  userCache.set(discordId, {
-    data: userData,
-    timestamp: Date.now(),
-  });
-}
-
-function clearUserCache(discordId) {
-  if (discordId) {
-    userCache.delete(discordId);
-  } else {
-    userCache.clear();
-  }
-}
-
 const pool = new Pool({
   user: process.env.DB_USER || "postgres",
   host: process.env.DB_HOST || "localhost",
@@ -51,11 +18,6 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   max: parseInt(process.env.DB_MAX_CONNECTIONS) || 50, // Scaled for 4000 members
   min: parseInt(process.env.DB_MIN_CONNECTIONS) || 5, // Higher minimum for better performance
-  //acquireTimeoutMillis: 60000, // Timeout for acquiring connections
-  //createTimeoutMillis: 30000,  // Timeout for creating connections
-  //destroyTimeoutMillis: 5000,  // Timeout for destroying connections
-  //reapIntervalMillis: 1000,    // Cleanup interval
-  //createRetryIntervalMillis: 200 // Retry interval for connection creation
 });
 
 // Monitor connection pool
@@ -676,7 +638,7 @@ async function checkAndPerformHouseMonthlyReset() {
       // Check if we need to perform monthly reset for this house
       if (!lastReset || lastReset.isBefore(currentMonth)) {
         console.log(
-          `🏠 Performing monthly reset for house ${house.name} (all-time stats now continuously updated)`,
+          `🏠 Performing monthly reset for house ${house.name} (all-time stats now continuously updated)`
         );
 
         // Store the monthly summary before reset (for historical tracking)
@@ -693,7 +655,7 @@ async function checkAndPerformHouseMonthlyReset() {
                             total_points = $4,
                             updated_at = CURRENT_TIMESTAMP
                     `,
-            [house.id, house.name, lastMonth, house.monthly_points],
+            [house.id, house.name, lastMonth, house.monthly_points]
           );
         }
 
@@ -706,7 +668,7 @@ async function checkAndPerformHouseMonthlyReset() {
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = $2
                 `,
-          [firstOfMonth, house.id],
+          [firstOfMonth, house.id]
         );
 
         console.log(`✅ Monthly reset completed for house ${house.name}`);
@@ -763,7 +725,7 @@ async function updateHousePoints(houseName, pointsEarned) {
             WHERE name = $2
             RETURNING monthly_points, all_time_points, total_points
         `,
-      [pointsEarned, houseName],
+      [pointsEarned, houseName]
     );
 
     if (result.rows.length === 0) {
@@ -771,7 +733,7 @@ async function updateHousePoints(houseName, pointsEarned) {
     }
 
     console.log(
-      `🏠 Added ${pointsEarned} points to ${houseName} (Monthly: ${result.rows[0].monthly_points}, All-time: ${result.rows[0].all_time_points}, Total: ${result.rows[0].total_points})`,
+      `🏠 Added ${pointsEarned} points to ${houseName} (Monthly: ${result.rows[0].monthly_points}, All-time: ${result.rows[0].all_time_points}, Total: ${result.rows[0].total_points})`
     );
     return result.rows[0];
   });
@@ -888,7 +850,7 @@ async function withAdvisoryLock(lockId, callback) {
     ]);
     if (!lockResult.rows[0].pg_try_advisory_lock) {
       throw new Error(
-        `Could not acquire lock ${lockId} - operation already in progress`,
+        `Could not acquire lock ${lockId} - operation already in progress`
       );
     }
 
@@ -939,14 +901,11 @@ export {
   withTransaction,
   withAdvisoryLock,
   generateLockId,
-  getCachedUser,
-  setCachedUser,
-  clearUserCache,
 };
 
 export async function executeWithResilience<T>(
   callback: (client: Client) => Promise<T>,
-  options = {},
+  options = {}
 ): Promise<T> {
   return await dbResilience.executeWithResilience(callback, options);
 }
@@ -956,14 +915,14 @@ export async function executeCachedQuery(
   operation,
   query,
   params = [],
-  cacheType = "default",
+  cacheType = "default"
 ) {
   return await databaseOptimizer.executeTrackedQuery(
     operation,
     query,
     params,
     true,
-    cacheType,
+    cacheType
   );
 }
 
@@ -972,7 +931,7 @@ export async function executeBatchQueries(operation, queries, batchSize = 50) {
   return await databaseOptimizer.executeBatchOperation(
     operation,
     queries,
-    batchSize,
+    batchSize
   );
 }
 
