@@ -1,4 +1,4 @@
-import { Pool, type PoolClient } from "pg";
+import { Pool } from "pg";
 import dayjs from "dayjs";
 
 const pool = new Pool({
@@ -23,7 +23,7 @@ pool.on("error", (err) => {
 });
 
 // Database migrations for schema updates
-async function runMigrations(client: PoolClient) {
+async function runMigrations() {
   try {
     // Migration 1: Add new columns to users table for points system
     const columnsToAdd = [
@@ -35,7 +35,7 @@ async function runMigrations(client: PoolClient) {
 
     for (const column of columnsToAdd) {
       try {
-        await client.query(`
+        await pool.query(`
                     ALTER TABLE users
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
@@ -53,7 +53,7 @@ async function runMigrations(client: PoolClient) {
 
     // Migration 2: Add points_earned column to daily_voice_stats
     try {
-      await client.query(`
+      await pool.query(`
                 ALTER TABLE daily_voice_stats
                 ADD COLUMN IF NOT EXISTS points_earned INTEGER DEFAULT 0
             `);
@@ -76,7 +76,7 @@ async function runMigrations(client: PoolClient) {
 
     for (const column of houseColumnsToAdd) {
       try {
-        await client.query(`
+        await pool.query(`
                     ALTER TABLE houses
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
@@ -101,11 +101,10 @@ async function runMigrations(client: PoolClient) {
 
     for (const column of sessionRecoveryColumns) {
       try {
-        await client.query(`
+        await pool.query(`
                     ALTER TABLE vc_sessions
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
-        console.log();
       } catch (error) {
         // Column might already exist, that's okay
         if (error.code !== "42701") {
@@ -126,7 +125,7 @@ async function runMigrations(client: PoolClient) {
 
     for (const column of taskColumnsToAdd) {
       try {
-        await client.query(`
+        await pool.query(`
                     ALTER TABLE tasks
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
@@ -144,7 +143,7 @@ async function runMigrations(client: PoolClient) {
 
     // Migration 5: Create daily_task_stats table for task limits
     try {
-      await client.query(`
+      await pool.query(`
                 CREATE TABLE IF NOT EXISTS daily_task_stats (
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -160,7 +159,7 @@ async function runMigrations(client: PoolClient) {
             `);
 
       // Create indexes
-      await client.query(`
+      await pool.query(`
                 CREATE INDEX IF NOT EXISTS idx_daily_task_stats_discord_id_date ON daily_task_stats(discord_id, date);
                 CREATE INDEX IF NOT EXISTS idx_daily_task_stats_date ON daily_task_stats(date);
             `);
@@ -181,7 +180,7 @@ async function runMigrations(client: PoolClient) {
 
     for (const column of timezoneColumnsToAdd) {
       try {
-        await client.query(`
+        await pool.query(`
                     ALTER TABLE users
                     ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}
                 `);
@@ -199,7 +198,7 @@ async function runMigrations(client: PoolClient) {
 
     // Migration 7: Create timezone-specific indexes for performance
     try {
-      await client.query(`
+      await pool.query(`
                 CREATE INDEX IF NOT EXISTS idx_users_timezone ON users(timezone);
                 CREATE INDEX IF NOT EXISTS idx_users_daily_reset_tz ON users(last_daily_reset_tz);
                 CREATE INDEX IF NOT EXISTS idx_users_timezone_daily ON users(timezone, last_daily_reset_tz);
@@ -219,13 +218,12 @@ async function runMigrations(client: PoolClient) {
 
 // Initialize database tables
 export async function initializeDatabase() {
-  const client = await pool.connect();
   try {
     // First, run any necessary migrations
-    await runMigrations(client);
+    await runMigrations();
 
     // Users table for basic user info and streaks
-    await client.query(`
+    await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 discord_id VARCHAR(255) UNIQUE NOT NULL,
@@ -247,13 +245,13 @@ export async function initializeDatabase() {
         `);
 
     // Create performance indexes
-    await client.query(`
+    await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_users_discord_id ON users(discord_id);
             CREATE INDEX IF NOT EXISTS idx_users_last_vc_date ON users(last_vc_date);
         `);
 
     // Voice channel sessions table for detailed tracking
-    await client.query(`
+    await pool.query(`
             CREATE TABLE IF NOT EXISTS vc_sessions (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -269,7 +267,7 @@ export async function initializeDatabase() {
         `);
 
     // Create performance indexes for vc_sessions
-    await client.query(`
+    await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_vc_sessions_discord_id ON vc_sessions(discord_id);
             CREATE INDEX IF NOT EXISTS idx_vc_sessions_date ON vc_sessions(date);
             CREATE INDEX IF NOT EXISTS idx_vc_sessions_user_id ON vc_sessions(user_id);
@@ -277,7 +275,7 @@ export async function initializeDatabase() {
         `);
 
     // Daily voice stats for quick aggregation
-    await client.query(`
+    await pool.query(`
             CREATE TABLE IF NOT EXISTS daily_voice_stats (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -294,13 +292,13 @@ export async function initializeDatabase() {
         `);
 
     // Add archived column if it doesn't exist (for existing databases)
-    await client.query(`
+    await pool.query(`
             ALTER TABLE daily_voice_stats
             ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false
         `);
 
     // Monthly voice summary for tracking monthly totals
-    await client.query(`
+    await pool.query(`
             CREATE TABLE IF NOT EXISTS monthly_voice_summary (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -315,19 +313,19 @@ export async function initializeDatabase() {
         `);
 
     // Create performance indexes for daily_voice_stats
-    await client.query(`
+    await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_daily_voice_stats_discord_id_date ON daily_voice_stats(discord_id, date);
             CREATE INDEX IF NOT EXISTS idx_daily_voice_stats_date ON daily_voice_stats(date);
         `);
 
     // Create performance indexes for monthly_voice_summary
-    await client.query(`
+    await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_monthly_voice_summary_discord_id_year_month ON monthly_voice_summary(discord_id, year_month);
             CREATE INDEX IF NOT EXISTS idx_monthly_voice_summary_year_month ON monthly_voice_summary(year_month);
         `);
 
     // Tasks table for task management features
-    await client.query(`
+    await pool.query(`
             CREATE TABLE IF NOT EXISTS tasks (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -341,14 +339,14 @@ export async function initializeDatabase() {
         `);
 
     // Create performance indexes for tasks
-    await client.query(`
+    await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_tasks_discord_id ON tasks(discord_id);
             CREATE INDEX IF NOT EXISTS idx_tasks_discord_id_complete ON tasks(discord_id, is_complete);
             CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
         `);
 
     // Houses table for leaderboards
-    await client.query(`
+    await pool.query(`
             CREATE TABLE IF NOT EXISTS houses (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(50) UNIQUE NOT NULL,
@@ -362,7 +360,7 @@ export async function initializeDatabase() {
         `);
 
     // House monthly summary for tracking monthly house totals
-    await client.query(`
+    await pool.query(`
             CREATE TABLE IF NOT EXISTS house_monthly_summary (
                 id SERIAL PRIMARY KEY,
                 house_id INTEGER REFERENCES houses(id) ON DELETE CASCADE,
@@ -376,7 +374,7 @@ export async function initializeDatabase() {
         `);
 
     // Insert default houses if they don't exist
-    await client.query(`
+    await pool.query(`
             INSERT INTO houses (name, total_points, monthly_points, all_time_points)
             VALUES
                 ('Gryffindor', 0, 0, 0),
@@ -387,13 +385,13 @@ export async function initializeDatabase() {
         `);
 
     // Create performance indexes for house tables
-    await client.query(`
+    await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_house_monthly_summary_house_year_month ON house_monthly_summary(house_name, year_month);
             CREATE INDEX IF NOT EXISTS idx_house_monthly_summary_year_month ON house_monthly_summary(year_month);
         `);
 
     // Daily task stats table for tracking daily task limits (10 per day)
-    await client.query(`
+    await pool.query(`
             CREATE TABLE IF NOT EXISTS daily_task_stats (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -409,15 +407,13 @@ export async function initializeDatabase() {
         `);
 
     // Create performance indexes for daily_task_stats
-    await client.query(`
+    await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_daily_task_stats_discord_id_date ON daily_task_stats(discord_id, date);
             CREATE INDEX IF NOT EXISTS idx_daily_task_stats_date ON daily_task_stats(date);
         `);
   } catch (error) {
     console.error("❌ Error initializing database:", error);
     throw error;
-  } finally {
-    client.release();
   }
 }
 
@@ -497,12 +493,11 @@ function calculatePointsForHours(startingHours, hoursToCalculate) {
 
 // Check and perform monthly reset for a user if needed
 async function checkAndPerformMonthlyReset(discordId) {
-  const client = await pool.connect();
   try {
     const firstOfMonth = dayjs().startOf("month").format("YYYY-MM-DD");
 
     // Get user data
-    const userResult = await client.query(
+    const userResult = await pool.query(
       "SELECT * FROM users WHERE discord_id = $1",
       [discordId]
     );
@@ -526,7 +521,7 @@ async function checkAndPerformMonthlyReset(discordId) {
         const lastMonth = lastReset
           ? lastReset.format("YYYY-MM")
           : dayjs().subtract(1, "month").format("YYYY-MM");
-        await client.query(
+        await pool.query(
           `
                     INSERT INTO monthly_voice_summary (user_id, discord_id, year_month, total_hours, total_points)
                     VALUES ($1, $2, $3, $4, $5)
@@ -547,7 +542,7 @@ async function checkAndPerformMonthlyReset(discordId) {
       }
 
       // Reset monthly stats only (all-time stats are continuously updated now)
-      await client.query(
+      await pool.query(
         `
                 UPDATE users SET
                     monthly_points = 0,
@@ -563,19 +558,16 @@ async function checkAndPerformMonthlyReset(discordId) {
   } catch (error) {
     console.error("Error performing monthly reset:", error);
     throw error;
-  } finally {
-    client.release();
   }
 }
 
 // Check and perform monthly reset for houses if needed
 async function checkAndPerformHouseMonthlyReset() {
-  const client = await pool.connect();
   try {
     const firstOfMonth = dayjs().startOf("month").format("YYYY-MM-DD");
 
     // Get houses data
-    const housesResult = await client.query("SELECT * FROM houses");
+    const housesResult = await pool.query("SELECT * FROM houses");
 
     for (const house of housesResult.rows) {
       const lastReset = house.last_monthly_reset
@@ -594,7 +586,7 @@ async function checkAndPerformHouseMonthlyReset() {
           const lastMonth = lastReset
             ? lastReset.format("YYYY-MM")
             : dayjs().subtract(1, "month").format("YYYY-MM");
-          await client.query(
+          await pool.query(
             `
                         INSERT INTO house_monthly_summary (house_id, house_name, year_month, total_points)
                         VALUES ($1, $2, $3, $4)
@@ -608,7 +600,7 @@ async function checkAndPerformHouseMonthlyReset() {
         }
 
         // Reset monthly stats only (all-time stats are continuously updated now)
-        await client.query(
+        await pool.query(
           `
                     UPDATE houses SET
                         monthly_points = 0,
@@ -625,8 +617,6 @@ async function checkAndPerformHouseMonthlyReset() {
   } catch (error) {
     console.error("Error performing house monthly reset:", error);
     throw error;
-  } finally {
-    client.release();
   }
 }
 
@@ -658,12 +648,12 @@ async function updateHousePoints(houseName, pointsEarned) {
 
   const lockId = generateLockId(`house_${houseName}`);
 
-  return await withAdvisoryLock(lockId, async (client) => {
+  return await withAdvisoryLock(lockId, async () => {
     // Check and perform monthly reset for houses if needed
     await checkAndPerformHouseMonthlyReset();
 
     // Update house points atomically (continuous all-time update system)
-    const result = await client.query(
+    const result = await pool.query(
       `
             UPDATE houses SET
                 monthly_points = monthly_points + $1,
@@ -689,7 +679,6 @@ async function updateHousePoints(houseName, pointsEarned) {
 
 // Get house leaderboard
 async function getHouseLeaderboard(type = "monthly") {
-  const client = await pool.connect();
   try {
     // Check and perform monthly reset for houses if needed
     await checkAndPerformHouseMonthlyReset();
@@ -710,19 +699,16 @@ async function getHouseLeaderboard(type = "monthly") {
             `;
     }
 
-    const result = await client.query(query);
+    const result = await pool.query(query);
     return result.rows;
   } catch (error) {
     console.error("Error getting house leaderboard:", error);
     throw error;
-  } finally {
-    client.release();
   }
 }
 
 // Get house champions (top contributing user per house)
 async function getHouseChampions(type = "monthly") {
-  const client = await pool.connect();
   try {
     let query;
 
@@ -762,38 +748,19 @@ async function getHouseChampions(type = "monthly") {
             `;
     }
 
-    const result = await client.query(query);
+    const result = await pool.query(query);
     return result.rows;
   } catch (error) {
     console.error("Error getting house champions:", error);
     throw error;
-  } finally {
-    client.release();
-  }
-}
-
-// High-concurrency transaction helper for critical operations
-async function withTransaction(callback) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const result = await callback(client);
-    await client.query("COMMIT");
-    return result;
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
   }
 }
 
 // Advisory lock helper for preventing race conditions
 async function withAdvisoryLock(lockId, callback) {
-  const client = await pool.connect();
   try {
     // Acquire advisory lock (non-blocking)
-    const lockResult = await client.query("SELECT pg_try_advisory_lock($1)", [
+    const lockResult = await pool.query("SELECT pg_try_advisory_lock($1)", [
       lockId,
     ]);
     if (!lockResult.rows[0].pg_try_advisory_lock) {
@@ -802,21 +769,19 @@ async function withAdvisoryLock(lockId, callback) {
       );
     }
 
-    const result = await callback(client);
+    const result = await callback();
 
     // Release advisory lock
-    await client.query("SELECT pg_advisory_unlock($1)", [lockId]);
+    await pool.query("SELECT pg_advisory_unlock($1)", [lockId]);
     return result;
   } catch (error) {
     // Ensure lock is released even on error
     try {
-      await client.query("SELECT pg_advisory_unlock($1)", [lockId]);
+      await pool.query("SELECT pg_advisory_unlock($1)", [lockId]);
     } catch (unlockError) {
       console.warn("Failed to release advisory lock:", unlockError);
     }
     throw error;
-  } finally {
-    client.release();
   }
 }
 
@@ -841,7 +806,6 @@ export {
   updateHousePoints,
   getHouseLeaderboard,
   getHouseChampions,
-  withTransaction,
   withAdvisoryLock,
   generateLockId,
 };

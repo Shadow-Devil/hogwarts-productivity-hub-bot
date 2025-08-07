@@ -18,7 +18,6 @@
  */
 
 import cron from "node-cron";
-import winston from "winston";
 import { pool } from "../models/db.ts";
 import timezoneService from "./timezoneService.ts";
 import voiceService from "./voiceService.ts";
@@ -37,7 +36,6 @@ class CentralResetService {
     dailyResets: { successful: number; failed: number; lastRun: Date | null };
     monthlyResets: { successful: number; failed: number; lastRun: Date | null };
   };
-  public logger: winston.Logger;
 
   constructor() {
     this.isRunning = false;
@@ -46,49 +44,6 @@ class CentralResetService {
       dailyResets: { successful: 0, failed: 0, lastRun: null },
       monthlyResets: { successful: 0, failed: 0, lastRun: null },
     };
-
-    // Initialize structured logger with timezone-aware timestamps
-    this.logger = winston.createLogger({
-      level: "info",
-      format: winston.format.combine(
-        winston.format.timestamp({
-          format: () => dayjs().utc().format("YYYY-MM-DD HH:mm:ss UTC"),
-        }),
-        winston.format.errors({ stack: true }),
-        winston.format.json(),
-        winston.format.colorize({ all: true })
-      ),
-      defaultMeta: { service: "CentralResetService" },
-      transports: [
-        new winston.transports.Console({
-          level: "info",
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.printf(
-              ({ timestamp, level, message, service, ...meta }) => {
-                const metaStr = Object.keys(meta).length
-                  ? JSON.stringify(meta, null, 2)
-                  : "";
-                return `${timestamp} [${service}] ${level}: ${message} ${metaStr}`;
-              }
-            )
-          ),
-        }),
-        // File transport for persistent logging
-        new winston.transports.File({
-          filename: "logs/timezone-resets.log",
-          level: "debug",
-          format: winston.format.json(),
-          maxsize: 10485760, // 10MB
-          maxFiles: 5,
-          tailable: true,
-        }),
-      ],
-      // Handle uncaught exceptions in reset operations
-      exceptionHandlers: [
-        new winston.transports.File({ filename: "logs/reset-exceptions.log" }),
-      ],
-    });
   }
 
   /**
@@ -97,11 +52,8 @@ class CentralResetService {
    */
   async start() {
     if (this.isRunning) {
-      this.logger.warn("CentralResetService already running");
       return;
     }
-
-    this.logger.info("Starting CentralResetService...");
 
     try {
       // Schedule daily reset checks - run every hour to catch all timezones
@@ -150,18 +102,10 @@ class CentralResetService {
 
       this.isRunning = true;
 
-      this.logger.info("CentralResetService started successfully", {
-        activeJobs: Array.from(this.scheduledJobs.keys()),
-        timezone: "UTC",
-        dailyResetCron: "0 * * * *", // Every hour
-        monthlyResetCron: "0 */6 1 * *", // Every 6 hours on 1st
-        healthCheckCron: "*/15 * * * *", // Every 15 minutes
-      });
-
       // Run initial health check
       await this.performHealthCheck();
     } catch (error) {
-      this.logger.error("Failed to start CentralResetService", {
+      console.error("Failed to start CentralResetService", {
         error: error.message,
         stack: error.stack,
       });
@@ -175,27 +119,19 @@ class CentralResetService {
    */
   async stop() {
     if (!this.isRunning) {
-      this.logger.warn("CentralResetService not running");
       return;
     }
 
-    this.logger.info("Stopping CentralResetService...");
-
     try {
       // Stop all scheduled jobs
-      for (const [jobName, job] of this.scheduledJobs.entries()) {
+      for (const [, job] of this.scheduledJobs.entries()) {
         job.destroy();
-        this.logger.debug("Stopped scheduled job", { jobName });
       }
 
       this.scheduledJobs.clear();
       this.isRunning = false;
-
-      this.logger.info("CentralResetService stopped successfully", {
-        resetStats: this.resetStats,
-      });
     } catch (error) {
-      this.logger.error("Error stopping CentralResetService", {
+      console.error("Error stopping CentralResetService", {
         error: error.message,
         stack: error.stack,
       });
@@ -209,20 +145,13 @@ class CentralResetService {
    */
   async processDailyResets() {
     const startTime = Date.now();
-    this.logger.info("Starting daily reset processing cycle");
 
     try {
       // Get all users who need daily reset (timezone-aware)
       const usersNeedingReset =
         await timezoneService.getUsersNeedingDailyReset();
 
-      this.logger.info("Found users needing daily reset", {
-        userCount: usersNeedingReset.length,
-        timezones: [...new Set(usersNeedingReset.map((u) => u.timezone))],
-      });
-
       if (usersNeedingReset.length === 0) {
-        this.logger.debug("No users need daily reset at this time");
         return;
       }
 
@@ -237,12 +166,6 @@ class CentralResetService {
       for (let i = 0; i < usersNeedingReset.length; i += batchSize) {
         const batch = usersNeedingReset.slice(i, i + batchSize);
 
-        this.logger.debug("Processing daily reset batch", {
-          batchNumber: Math.floor(i / batchSize) + 1,
-          batchSize: batch.length,
-          totalBatches: Math.ceil(usersNeedingReset.length / batchSize),
-        });
-
         await Promise.allSettled(
           batch.map(async (user) => {
             try {
@@ -251,12 +174,6 @@ class CentralResetService {
             } catch (error) {
               results.failed++;
               results.errors.push({
-                userId: user.discord_id,
-                timezone: user.timezone,
-                error: error.message,
-              });
-
-              this.logger.error("Failed to perform daily reset for user", {
                 userId: user.discord_id,
                 timezone: user.timezone,
                 error: error.message,
@@ -275,18 +192,8 @@ class CentralResetService {
       this.resetStats.dailyResets.successful += results.successful;
       this.resetStats.dailyResets.failed += results.failed;
       this.resetStats.dailyResets.lastRun = new Date();
-
-      const duration = Date.now() - startTime;
-
-      this.logger.info("Daily reset processing completed", {
-        duration: `${duration}ms`,
-        successful: results.successful,
-        failed: results.failed,
-        totalUsers: usersNeedingReset.length,
-        errors: results.errors.slice(0, 5), // Log first 5 errors for debugging
-      });
     } catch (error) {
-      this.logger.error("Critical error in daily reset processing", {
+      console.error("Critical error in daily reset processing", {
         error: error.message,
         stack: error.stack,
         duration: `${Date.now() - startTime}ms`,
@@ -319,16 +226,8 @@ class CentralResetService {
 
       // Update streak logic (preserve streaks appropriately)
       await this.updateUserStreak(user);
-
-      const duration = Date.now() - userStartTime;
-
-      this.logger.debug("Daily reset completed for user", {
-        userId: user.discord_id,
-        timezone: user.timezone,
-        duration: `${duration}ms`,
-      });
     } catch (error) {
-      this.logger.error("Error performing daily reset for user", {
+      console.error("Error performing daily reset for user", {
         userId: user.discord_id,
         timezone: user.timezone,
         error: error.message,
@@ -372,22 +271,9 @@ class CentralResetService {
                 `,
           [user.discord_id]
         );
-
-        this.logger.debug("Streak reset for user (no activity yesterday)", {
-          userId: user.discord_id,
-          timezone: user.timezone,
-        });
-      } else {
-        this.logger.debug(
-          "Streak preserved for user (had activity yesterday)",
-          {
-            userId: user.discord_id,
-            timezone: user.timezone,
-          }
-        );
       }
     } catch (error) {
-      this.logger.error("Error updating user streak", {
+      console.error("Error updating user streak", {
         userId: user.discord_id,
         error: error.message,
       });
@@ -400,20 +286,13 @@ class CentralResetService {
    */
   async processMonthlyResets() {
     const startTime = Date.now();
-    this.logger.info("Starting monthly reset processing cycle");
 
     try {
       // Get all users who need monthly reset
       const usersNeedingReset =
         await timezoneService.getUsersNeedingMonthlyReset();
 
-      this.logger.info("Found users needing monthly reset", {
-        userCount: usersNeedingReset.length,
-        timezones: [...new Set(usersNeedingReset.map((u) => u.timezone))],
-      });
-
       if (usersNeedingReset.length === 0) {
-        this.logger.debug("No users need monthly reset at this time");
         return;
       }
 
@@ -427,11 +306,6 @@ class CentralResetService {
       const batchSize = 25; // Smaller batches for monthly resets
       for (let i = 0; i < usersNeedingReset.length; i += batchSize) {
         const batch = usersNeedingReset.slice(i, i + batchSize);
-
-        this.logger.debug("Processing monthly reset batch", {
-          batchNumber: Math.floor(i / batchSize) + 1,
-          batchSize: batch.length,
-        });
 
         await Promise.allSettled(
           batch.map(async (user) => {
@@ -459,17 +333,8 @@ class CentralResetService {
       this.resetStats.monthlyResets.successful += results.successful;
       this.resetStats.monthlyResets.failed += results.failed;
       this.resetStats.monthlyResets.lastRun = new Date();
-
-      const duration = Date.now() - startTime;
-
-      this.logger.info("Monthly reset processing completed", {
-        duration: `${duration}ms`,
-        successful: results.successful,
-        failed: results.failed,
-        totalUsers: usersNeedingReset.length,
-      });
     } catch (error) {
-      this.logger.error("Critical error in monthly reset processing", {
+      console.error("Critical error in monthly reset processing", {
         error: error.message,
         stack: error.stack,
         duration: `${Date.now() - startTime}ms`,
@@ -495,13 +360,8 @@ class CentralResetService {
                 `,
         [user.discord_id]
       );
-
-      this.logger.debug("Monthly reset completed for user", {
-        userId: user.discord_id,
-        timezone: user.timezone,
-      });
     } catch (error) {
-      this.logger.error("Error performing monthly reset for user", {
+      console.error("Error performing monthly reset for user", {
         userId: user.discord_id,
         timezone: user.timezone,
         error: error.message,
@@ -530,33 +390,25 @@ class CentralResetService {
       try {
         await pool.query("SELECT 1");
         healthData.databaseConnected = true;
-      } catch (error) {
+      } catch (_error) {
         healthData.systemStatus = "degraded";
-        this.logger.warn("Database connectivity issue in health check", {
-          error: error.message,
-        });
       }
 
       // Check timezone service
       try {
         await timezoneService.getUserTimezone("health-check");
         healthData.timezoneServiceOk = true;
-      } catch (error) {
+      } catch (_error) {
         healthData.systemStatus = "degraded";
-        this.logger.warn("TimezoneService issue in health check", {
-          error: error.message,
-        });
       }
 
-      if (healthData.systemStatus === "healthy") {
-        this.logger.debug("Health check passed", healthData);
-      } else {
-        this.logger.warn("Health check detected issues", healthData);
+      if (healthData.systemStatus !== "healthy") {
+        console.warn("Health check detected issues", healthData);
       }
 
       return healthData;
     } catch (error) {
-      this.logger.error("Health check failed", {
+      console.error("Health check failed", {
         error: error.message,
         stack: error.stack,
       });
@@ -585,7 +437,6 @@ class CentralResetService {
    * Useful for testing and administrative purposes
    */
   async forceManualDailyReset() {
-    this.logger.info("Manual daily reset triggered");
     await this.processDailyResets();
   }
 
@@ -594,7 +445,6 @@ class CentralResetService {
    * Useful for testing and administrative purposes
    */
   async forceManualMonthlyReset() {
-    this.logger.info("Manual monthly reset triggered");
     await this.processMonthlyResets();
   }
 }

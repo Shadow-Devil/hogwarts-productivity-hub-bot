@@ -5,7 +5,6 @@
  */
 
 import { pool } from "../models/db.ts";
-import winston from "winston";
 import timezonePerformanceMonitor from "../utils/timezonePerformanceMonitor.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
@@ -16,53 +15,10 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 class TimezoneService {
-  public logger: winston.Logger;
   public timezoneCache: Map<string, any>;
   public validTimezones: Set<string>;
 
   constructor() {
-    // Production-grade winston logger with structured logging
-    this.logger = winston.createLogger({
-      level: process.env.LOG_LEVEL || "info",
-      format: winston.format.combine(
-        winston.format.timestamp({
-          format: "YYYY-MM-DD HH:mm:ss",
-        }),
-        winston.format.errors({ stack: true }),
-        winston.format.json(),
-        winston.format.colorize({ all: true })
-      ),
-      defaultMeta: { service: "TimezoneService" },
-      transports: [
-        new winston.transports.Console({
-          level: "info",
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.printf(
-              ({ timestamp, level, message, service, ...meta }) => {
-                const metaStr = Object.keys(meta).length
-                  ? JSON.stringify(meta, null, 2)
-                  : "";
-                return `${timestamp} [${service}] ${level}: ${message} ${metaStr}`;
-              }
-            )
-          ),
-        }),
-        new winston.transports.File({
-          filename: "logs/timezone-operations.log",
-          level: "info",
-          format: winston.format.json(),
-        }),
-        new winston.transports.File({
-          filename: "logs/timezone-errors.log",
-          level: "error",
-          format: winston.format.json(),
-        }),
-      ],
-      // Prevent winston from crashing the process on uncaught exceptions
-      exitOnError: false,
-    });
-
     // Cache for frequently accessed timezone data
     this.timezoneCache = new Map();
     this.validTimezones = null;
@@ -176,15 +132,8 @@ class TimezoneService {
         cachedAt: Date.now(),
       });
 
-      this.logger.info("User timezone updated", { userId, timezone });
       return true;
     } catch (error) {
-      // Fallback: log error and return false
-      this.logger.warn("Fallback: Could not set user timezone", {
-        userId,
-        timezone,
-        error: error.message,
-      });
       return false;
     }
   }
@@ -207,11 +156,6 @@ class TimezoneService {
       if (cached && Date.now() - cached.cachedAt < 3600000) {
         // 1 hour cache
         timezonePerformanceMonitor.recordCacheOperation("hit", { userId });
-        this.logger.info("Timezone cache hit", {
-          userId,
-          timezone: cached.timezone,
-          cacheAge: Date.now() - cached.cachedAt,
-        });
         return cached.timezone;
       }
 
@@ -235,10 +179,6 @@ class TimezoneService {
 
       // Validate timezone before caching
       if (!this.isValidTimezone(timezone)) {
-        this.logger.warn("Invalid timezone in database, falling back to UTC", {
-          userId,
-          invalidTimezone: timezone,
-        });
         timezone = "UTC";
       }
 
@@ -251,13 +191,6 @@ class TimezoneService {
 
       // Performance monitoring
       const totalDuration = Date.now() - startTime;
-      this.logger.info("getUserTimezone completed", {
-        userId,
-        timezone,
-        totalDuration,
-        queryDuration,
-        cacheHit: false,
-      });
 
       return timezone;
     } catch (error) {
@@ -268,15 +201,6 @@ class TimezoneService {
         userId,
         operation: "getUserTimezone",
         error: error.message,
-      });
-
-      // Structured error logging with context
-      this.logger.error("getUserTimezone failed, falling back to UTC", {
-        userId,
-        error: error.message,
-        stack: error.stack,
-        totalDuration,
-        fallbackUsed: "UTC",
       });
 
       // Graceful fallback to UTC
@@ -311,16 +235,9 @@ class TimezoneService {
         throw new Error(`Invalid time result for timezone ${userTimezone}`);
       }
 
-      this.logger.info("getCurrentTimeInUserTimezone completed", {
-        userId,
-        userTimezone,
-        userTime: userTime.format(),
-        duration: Date.now() - startTime,
-      });
-
       return userTime;
     } catch (error) {
-      this.logger.error(
+      console.error(
         "getCurrentTimeInUserTimezone failed, falling back to UTC",
         {
           userId,
@@ -413,7 +330,7 @@ class TimezoneService {
       return usersInResetWindow;
     } catch (error) {
       // Fallback: return empty array
-      this.logger.warn("Fallback: Could not get users in reset window", {
+      console.warn("Fallback: Could not get users in reset window", {
         error: error.message,
       });
       return [];
@@ -493,7 +410,7 @@ class TimezoneService {
           cachedAt: Date.now(),
         };
       }
-      this.logger.warn("Fallback: Could not batch get user timezones", {
+      console.warn("Fallback: Could not batch get user timezones", {
         error: error.message,
       });
       return fallbackResults;
@@ -514,7 +431,7 @@ class TimezoneService {
 
       return result.rows;
     } catch (error) {
-      this.logger.warn("Fallback: Could not get users in timezone", {
+      console.warn("Fallback: Could not get users in timezone", {
         timezone,
         error: error.message,
       });
@@ -559,7 +476,7 @@ class TimezoneService {
 
       return usersNeedingReset;
     } catch (error) {
-      this.logger.warn("Fallback: Could not get users needing daily reset", {
+      console.warn("Fallback: Could not get users needing daily reset", {
         error: error.message,
       });
       return [];
@@ -603,7 +520,7 @@ class TimezoneService {
 
       return usersNeedingReset;
     } catch (error) {
-      this.logger.warn("Fallback: Could not get users needing monthly reset", {
+      console.warn("Fallback: Could not get users needing monthly reset", {
         error: error.message,
       });
       return [];
@@ -649,14 +566,6 @@ class TimezoneService {
         now
       );
 
-      this.logger.info("User timezone changed", {
-        userId,
-        oldTimezone,
-        newTimezone,
-        streakAction,
-        changeTime: now.toISOString(),
-      });
-
       return {
         success: true,
         oldTimezone,
@@ -673,7 +582,7 @@ class TimezoneService {
         throw error;
       }
 
-      this.logger.warn("Fallback: Could not handle timezone change", {
+      console.warn("Fallback: Could not handle timezone change", {
         userId,
         oldTimezone,
         newTimezone,
@@ -705,7 +614,7 @@ class TimezoneService {
 
       return offsetBefore !== offsetCurrent || offsetCurrent !== offsetAfter;
     } catch (error) {
-      this.logger.warn("Error checking DST transition", {
+      console.warn("Error checking DST transition", {
         timezone,
         date,
         error: error.message,
@@ -813,21 +722,12 @@ class TimezoneService {
       const isTodayInNewTz = changeInNewTz.isSame(lastVcDate, "day");
 
       if (isTodayInOldTz || isTodayInNewTz) {
-        this.logger.info("Streak preserved during timezone change", {
-          userId,
-          oldTimezone,
-          newTimezone,
-          changeTime,
-          preservationReason: isTodayInOldTz
-            ? "same_day_old_tz"
-            : "same_day_new_tz",
-        });
         return "preserve";
       }
 
       return "reset";
     } catch (error) {
-      this.logger.warn("Error evaluating streak preservation", {
+      console.warn("Error evaluating streak preservation", {
         userId,
         error: error.message,
       });
@@ -855,11 +755,9 @@ class TimezoneService {
       if (result.rowCount === 0) {
         throw new Error("User not found");
       }
-
-      this.logger.info("User reset time updated", { userId, resetType });
       return true;
     } catch (error) {
-      this.logger.warn("Could not update reset time", {
+      console.warn("Could not update reset time", {
         userId,
         resetType,
         error: error.message,

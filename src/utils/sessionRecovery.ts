@@ -54,14 +54,13 @@ class SessionRecovery {
    * Recover incomplete sessions from database
    */
   async recoverIncompleteSessions() {
-    const client = await pool.connect();
     const now = new Date();
     const staleThreshold = new Date(
       now.getTime() - this.config.maxSessionDurationHours * 60 * 60 * 1000
     );
 
     // Find incomplete sessions (no left_at timestamp)
-    const result = await client.query(
+    const result = await pool.query(
       `
                     SELECT * FROM vc_sessions
                     WHERE left_at IS NULL
@@ -74,7 +73,7 @@ class SessionRecovery {
     let recoveredCount = 0;
     for (const session of result.rows) {
       try {
-        await this.processIncompleteSession(client, session, now);
+        await this.processIncompleteSession(session, now);
         recoveredCount++;
       } catch (error) {
         console.error(`❌ Error recovering session ${session.id}:`, error);
@@ -87,7 +86,7 @@ class SessionRecovery {
   /**
    * Process a single incomplete session
    */
-  async processIncompleteSession(client, session, now) {
+  async processIncompleteSession(session, now) {
     const sessionStartTime = new Date(session.joined_at);
     const sessionDurationMs = now.getTime() - sessionStartTime.getTime();
 
@@ -118,7 +117,7 @@ class SessionRecovery {
 
     // Don't award points for very short sessions (likely connection issues)
     if (sessionDurationMinutes < 1) {
-      await client.query(
+      await pool.query(
         `
                 UPDATE vc_sessions
                 SET left_at = $1, duration_minutes = 0, recovery_note = 'Recovered: Session too short'
@@ -134,7 +133,7 @@ class SessionRecovery {
     }
 
     // Update the session with estimated end time and duration
-    await client.query(
+    await pool.query(
       `
             UPDATE vc_sessions
             SET left_at = $1, duration_minutes = $2, recovery_note = 'Recovered from crash'
@@ -200,7 +199,6 @@ class SessionRecovery {
     if (!this.activeVoiceSessions || this.activeVoiceSessions.size === 0) {
       return;
     }
-    const client = await pool.connect();
     const now = new Date();
     const activeSessions = Array.from(this.activeVoiceSessions.entries());
 
@@ -211,7 +209,7 @@ class SessionRecovery {
         const durationMinutes = Math.floor(durationMs / (1000 * 60));
 
         // Update the session with current progress (heartbeat)
-        await client.query(
+        await pool.query(
           `
                             UPDATE vc_sessions
                             SET last_heartbeat = $1, current_duration_minutes = $2
@@ -260,7 +258,6 @@ class SessionRecovery {
       console.log("ℹ️ No active sessions to close");
       return;
     }
-    const client = await pool.connect();
     const now = new Date();
     const voiceService = require("../services/voiceService");
     let closedSessions = 0;
@@ -276,7 +273,7 @@ class SessionRecovery {
         const durationMinutes = Math.floor(durationMs / (1000 * 60));
 
         // Update session in database
-        await client.query(
+        await pool.query(
           `
                             UPDATE vc_sessions
                             SET left_at = $1, duration_minutes = $2, recovery_note = 'Graceful shutdown'

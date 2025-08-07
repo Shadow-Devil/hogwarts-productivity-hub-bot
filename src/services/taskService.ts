@@ -16,11 +16,10 @@ class TaskService {
       } as const;
     }
 
-    const client = await pool.connect();
     // First ensure user exists in database
     await this.ensureUserExists(discordId, client);
 
-    const result = await client.query(
+    const result = await pool.query(
       `INSERT INTO tasks (user_id, discord_id, title)
                   VALUES ((SELECT id FROM users WHERE discord_id = $1), $1, $2)
                   RETURNING id, title, created_at`,
@@ -40,9 +39,8 @@ class TaskService {
 
   // Remove a task by its number (position in user's task list)
   async removeTask(discordId, taskNumber) {
-    const client = await pool.connect();
     // Get all incomplete tasks for the user, ordered by creation date
-    const tasksResult = await client.query(
+    const tasksResult = await pool.query(
       `SELECT id, title, created_at FROM tasks
                   WHERE discord_id = $1 AND is_complete = FALSE
                   ORDER BY created_at ASC`,
@@ -69,7 +67,7 @@ class TaskService {
     );
 
     // Delete the task
-    await client.query("DELETE FROM tasks WHERE id = $1", [taskToRemove.id]);
+    await pool.query("DELETE FROM tasks WHERE id = $1", [taskToRemove.id]);
 
     // Get updated daily stats after potential slot reclaim
     const dailyStats = await DailyTaskManager.getUserDailyStats(discordId);
@@ -109,9 +107,8 @@ class TaskService {
       } as const;
     }
 
-    const client = await pool.connect();
     // Get all incomplete tasks for the user, ordered by creation date
-    const tasksResult = await client.query(
+    const tasksResult = await pool.query(
       `SELECT id, title, created_at FROM tasks
                   WHERE discord_id = $1 AND is_complete = FALSE
                   ORDER BY created_at ASC`,
@@ -143,7 +140,7 @@ class TaskService {
     const pointsAwarded = 2; // 2 points per completed task
 
     // Mark task as complete
-    await client.query(
+    await pool.query(
       `UPDATE tasks SET
                     is_complete = TRUE,
                     completed_at = CURRENT_TIMESTAMP,
@@ -174,9 +171,8 @@ class TaskService {
 
   // Validate voice channel requirements for task completion
   async validateVoiceChannelRequirements(discordId) {
-    const client = await pool.connect();
     // Check if user has an active voice session
-    const activeSessionResult = await client.query(
+    const activeSessionResult = await pool.query(
       `SELECT joined_at FROM vc_sessions
                 WHERE discord_id = $1 AND left_at IS NULL
                 ORDER BY joined_at DESC LIMIT 1`,
@@ -194,9 +190,8 @@ class TaskService {
   } // Validate task age requirements for task completion
 
   async validateTaskAge(taskId) {
-    const client = await pool.connect();
     // Check task creation time
-    const taskResult = await client.query(
+    const taskResult = await pool.query(
       "SELECT created_at FROM tasks WHERE id = $1",
       [taskId]
     );
@@ -225,7 +220,7 @@ class TaskService {
 
   // Ensure user exists in database
   async ensureUserExists(discordId, client) {
-    await client.query(
+    await pool.query(
       `INSERT INTO users (discord_id, username)
              VALUES ($1, $1)
              ON CONFLICT (discord_id) DO NOTHING`,
@@ -257,9 +252,8 @@ class TaskService {
 
   // Get task statistics using optimized view (replaces getTaskStats)
   async getTaskStatsOptimized(discordId) {
-    const client = await pool.connect();
     // Single query using optimized view - replaces aggregation query
-    const result = await client.query(
+    const result = await pool.query(
       "SELECT * FROM user_task_summary WHERE discord_id = $1",
       [discordId]
     );
@@ -291,9 +285,8 @@ class TaskService {
 
   // Get all user tasks with enhanced information using optimized approach
   async getUserTasksOptimized(discordId) {
-    const client = await pool.connect();
     // Get tasks with additional user context
-    const result = await client.query(
+    const result = await pool.query(
       `SELECT
                     t.id, t.title, t.is_complete, t.created_at,
                     t.completed_at, t.points_awarded,
@@ -314,8 +307,7 @@ class TaskService {
 
   // Fallback method for task statistics (used only if optimized version fails)
   async getTaskStatsOriginal(discordId) {
-    const client = await pool.connect();
-    const result = await client.query(
+    const result = await pool.query(
       `SELECT
                     COUNT(*) as total_tasks,
                     COUNT(*) FILTER (WHERE is_complete = TRUE) as completed_tasks,
@@ -330,8 +322,7 @@ class TaskService {
 
   // Fallback method for user tasks (used only if optimized version fails)
   async getUserTasksOriginal(discordId) {
-    const client = await pool.connect();
-    const result = await client.query(
+    const result = await pool.query(
       `SELECT id, title, is_complete, created_at, completed_at, points_awarded
                   FROM tasks
                   WHERE discord_id = $1

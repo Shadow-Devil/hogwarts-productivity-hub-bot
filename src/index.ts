@@ -39,7 +39,6 @@ client.on(Events.ClientReady, async (c) => {
   try {
     console.log("Initializing database connection...");
     await initializeDatabase();
-    console.log("Database connection established");
 
     const recoveryResults = await sessionRecovery.initialize(
       activeVoiceSessions,
@@ -51,27 +50,13 @@ client.on(Events.ClientReady, async (c) => {
       );
     }
 
-    // Start performance monitoring and monthly reset scheduler
-    console.log("⏰ Starting schedulers...");
-
-    // Initialize Central Reset Service for timezone-aware resets
-    console.log("🌍 Starting timezone-aware reset service...");
     await CentralResetService.start();
-    console.log("✅ Central reset service started");
-
-    // Initialize daily task manager
-    console.log("📅 Starting daily task manager...");
-    DailyTaskManager.setDiscordClient(client);
     DailyTaskManager.start();
-    console.log("✅ Daily task manager started");
 
-    // Scan for users already in voice channels and start tracking
-    console.log("🔍 Scanning for users already in voice channels...");
     const scanResults = await voiceStateScanner.scanAndStartTracking(
       client,
       activeVoiceSessions
     );
-    console.log("Voice state scanning completed");
 
     if (scanResults.trackingStarted > 0) {
       console.log(

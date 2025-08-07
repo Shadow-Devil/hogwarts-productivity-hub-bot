@@ -7,6 +7,7 @@
 import voiceService from "../services/voiceService.ts";
 // Get grace period sessions if available
 import { gracePeriodSessions } from "../events/voiceStateUpdate.ts";
+import type { Client } from "discord.js";
 
 class VoiceStateScanner {
   private isScanning: boolean;
@@ -33,7 +34,10 @@ class VoiceStateScanner {
    * @param {Map} activeVoiceSessions - Active voice sessions map from voiceStateUpdate
    * @returns {Object} Scan results
    */
-  async scanAndStartTracking(client, activeVoiceSessions) {
+  async scanAndStartTracking(
+    client: Client,
+    activeVoiceSessions: Map<string, any>
+  ) {
     if (this.isScanning) {
       console.log("🔄 Voice state scan already in progress, skipping...");
       return this.scanResults;
@@ -42,9 +46,6 @@ class VoiceStateScanner {
     this.isScanning = true;
     this.resetScanResults();
 
-    console.log(
-      "🔍 Starting voice state scan to detect users already in voice channels...",
-    );
     const startTime = Date.now();
 
     try {
@@ -115,14 +116,14 @@ class VoiceStateScanner {
   async scanGuildVoiceStates(
     guild,
     activeVoiceSessions,
-    gracePeriodSessions = null,
+    gracePeriodSessions = null
   ) {
     try {
       // Get all voice channels in the guild
       const voiceChannels = guild.channels.cache.filter(
         (channel) =>
           channel.type === 2 && // Voice channel type
-          channel.members.size > 0, // Has members
+          channel.members.size > 0 // Has members
       );
 
       console.log(`🎤 Found ${voiceChannels.size} voice channels with users`);
@@ -131,7 +132,7 @@ class VoiceStateScanner {
         await this.scanVoiceChannel(
           channel,
           activeVoiceSessions,
-          gracePeriodSessions,
+          gracePeriodSessions
         );
       }
     } catch (error) {
@@ -149,7 +150,7 @@ class VoiceStateScanner {
   async scanVoiceChannel(
     channel,
     activeVoiceSessions,
-    gracePeriodSessions = null,
+    gracePeriodSessions = null
   ) {
     try {
       const members = channel.members;
@@ -181,7 +182,7 @@ class VoiceStateScanner {
           // Check if user already has an active session or is in grace period
           if (activeVoiceSessions.has(memberId)) {
             console.log(
-              `⏭️  User ${member.user.username} already being tracked, skipping...`,
+              `⏭️  User ${member.user.username} already being tracked, skipping...`
             );
             continue;
           }
@@ -189,7 +190,7 @@ class VoiceStateScanner {
           // Check if user is in grace period - if so, resume their session
           if (gracePeriodSessions && gracePeriodSessions.has(memberId)) {
             console.log(
-              `🔄 User ${member.user.username} found in voice during grace period - resuming session`,
+              `🔄 User ${member.user.username} found in voice during grace period - resuming session`
             );
 
             const sessionData = gracePeriodSessions.get(memberId);
@@ -206,7 +207,7 @@ class VoiceStateScanner {
             this.scanResults.trackingStarted++;
             usersStarted.push(member.user.username);
             console.log(
-              `✅ Session resumed for ${member.user.username} in ${channel.name}`,
+              `✅ Session resumed for ${member.user.username} in ${channel.name}`
             );
             continue;
           }
@@ -216,7 +217,7 @@ class VoiceStateScanner {
             memberId,
             member.user.username,
             channel.id,
-            channel.name,
+            channel.name
           );
 
           // Add to active sessions tracking with last seen timestamp
@@ -231,12 +232,12 @@ class VoiceStateScanner {
           usersStarted.push(member.user.username);
 
           console.log(
-            `✅ Started tracking for ${member.user.username} in ${channel.name}`,
+            `✅ Started tracking for ${member.user.username} in ${channel.name}`
           );
         } catch (userError) {
           console.error(
             `❌ Error starting tracking for user ${member.user.username}:`,
-            userError,
+            userError
           );
           this.scanResults.errors++;
         }
@@ -245,7 +246,7 @@ class VoiceStateScanner {
       if (usersStarted.length > 0) {
         console.log(
           `🎯 Started tracking for ${usersStarted.length} users in ${channel.name}:`,
-          usersStarted.join(", "),
+          usersStarted.join(", ")
         );
       }
     } catch (error) {
