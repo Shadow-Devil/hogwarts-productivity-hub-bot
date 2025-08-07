@@ -137,6 +137,8 @@ try {
   console.log("Initializing database connection...");
   await initializeDatabase();
   await CentralResetService.start();
+  voiceStateUpdate.setClient(client);
+  DailyTaskManager.setClient(client);
   DailyTaskManager.start();
 
   await client.login(process.env.DISCORD_TOKEN);

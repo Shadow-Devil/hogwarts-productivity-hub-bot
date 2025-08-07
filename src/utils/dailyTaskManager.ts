@@ -11,11 +11,16 @@ import {
   gracePeriodSessions,
 } from "../events/voiceStateUpdate.ts";
 import voiceService from "../services/voiceService.ts";
-import { client } from "../index.ts";
+//import { client } from "../index.ts";
 
 const DAILY_TASK_LIMIT = 10;
 let cleanupInterval = null;
 let isRunning = false;
+let client = null; // Will be set when bot client is initialized
+
+export function setClient(botClient) {
+  client = botClient;
+}
 
 /**
  * Start the daily cleanup scheduler

@@ -22,7 +22,7 @@ function calculateDailyLimitInfo(
   dailyHours: number,
   dailyLimitHours: number = 15,
   userTimezone: string = null
-): object {
+) {
   // Calculate hours remaining in the daily allowance
   const allowanceHoursRemaining = Math.max(0, dailyLimitHours - dailyHours);
 

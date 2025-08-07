@@ -1,7 +1,6 @@
 import { type VoiceState } from "discord.js";
 import voiceService from "../services/voiceService.ts";
 import dayjs from "dayjs";
-import { client } from "../index.ts";
 
 /**
  * Voice State Update Handler with Smart Session Management
@@ -24,6 +23,11 @@ export const activeVoiceSessions = new Map<
 // Grace period configuration for users with unstable connections
 const GRACE_PERIOD_MS = 5 * 60 * 1000; // 5 minutes
 export const gracePeriodSessions = new Map(); // Track sessions in grace period
+let client = null; // Will be set in index.ts after client initialization
+
+export function setClient(c) {
+  client = c; // Set the Discord client for voice state updates
+}
 
 // Enhanced smart cleanup with grace period handling
 // Runs every 15 minutes and processes both active sessions and grace period sessions

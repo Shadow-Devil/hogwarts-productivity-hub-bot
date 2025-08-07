@@ -17,7 +17,7 @@ dayjs.extend(timezone);
  * @param {number} hours - Hours to round (can be decimal)
  * @returns {number} Rounded hours
  */
-function roundHoursFor55MinRule(hours) {
+function roundHoursFor55MinRule(hours: number): number {
   const minutes = (hours % 1) * 60; // Get the minutes portion
   return minutes >= 55 ? Math.ceil(hours) : Math.floor(hours);
 }
@@ -27,7 +27,7 @@ function roundHoursFor55MinRule(hours) {
  * @param {number|string} hours - Hours to format
  * @returns {string} Formatted hours (e.g., "2.5h")
  */
-function formatHours(hours) {
+function formatHours(hours: string): string {
   const numericHours = parseFloat(hours) || 0;
   return `${numericHours.toFixed(1)}h`;
 }
@@ -37,7 +37,7 @@ function formatHours(hours) {
  * @param {number} minutes - Minutes to convert
  * @returns {number} Hours as decimal
  */
-function minutesToHours(minutes) {
+function minutesToHours(minutes: number): number {
   return (minutes || 0) / 60;
 }
 
@@ -46,7 +46,7 @@ function minutesToHours(minutes) {
  * @param {number} hours - Hours to convert
  * @returns {number} Minutes
  */
-function hoursToMinutes(hours) {
+function hoursToMinutes(hours: number): number {
   return (hours || 0) * 60;
 }
 
@@ -56,7 +56,10 @@ function hoursToMinutes(hours) {
  * @param {Date} endTime - Session end time (default: now)
  * @returns {number} Duration in minutes
  */
-function calculateSessionDuration(startTime, endTime = new Date()) {
+function calculateSessionDuration(
+  startTime: Date,
+  endTime: Date = new Date()
+): number {
   return Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60));
 }
 
@@ -68,10 +71,10 @@ function calculateSessionDuration(startTime, endTime = new Date()) {
  * @returns {string} Formatted time in user's timezone
  */
 function formatTimeInUserTimezone(
-  time,
-  userTimezone,
-  format = "MMM D, h:mm A"
-) {
+  time: Date | string,
+  userTimezone: string,
+  format: string = "MMM D, h:mm A"
+): string {
   try {
     return dayjs(time).tz(userTimezone).format(format);
   } catch (_error) {
@@ -87,7 +90,11 @@ function formatTimeInUserTimezone(
  * @param {string} userTimezone - IANA timezone identifier
  * @returns {boolean} True if same day in user's timezone
  */
-function isSameDayInTimezone(date1, date2, userTimezone) {
+function isSameDayInTimezone(
+  date1: Date | string,
+  date2: Date | string,
+  userTimezone: string
+): boolean {
   try {
     const day1 = dayjs(date1).tz(userTimezone);
     const day2 = dayjs(date2).tz(userTimezone);
@@ -103,7 +110,7 @@ function isSameDayInTimezone(date1, date2, userTimezone) {
  * @param {string} userTimezone - IANA timezone identifier
  * @returns {string} Current date in user's timezone
  */
-function getCurrentDateInTimezone(userTimezone) {
+function getCurrentDateInTimezone(userTimezone: string): string {
   try {
     return dayjs().tz(userTimezone).format("YYYY-MM-DD");
   } catch (_error) {
@@ -117,7 +124,7 @@ function getCurrentDateInTimezone(userTimezone) {
  * @param {string} userTimezone - IANA timezone identifier
  * @returns {dayjs.Dayjs} Next midnight in user's timezone
  */
-function getNextMidnightInTimezone(userTimezone) {
+function getNextMidnightInTimezone(userTimezone: string): dayjs.Dayjs {
   try {
     return dayjs().tz(userTimezone).add(1, "day").startOf("day");
   } catch (_error) {
@@ -132,7 +139,10 @@ function getNextMidnightInTimezone(userTimezone) {
  * @param {string} resetType - 'daily' or 'monthly'
  * @returns {Object} Hours and formatted string until reset
  */
-function getTimeUntilReset(userTimezone, resetType = "daily") {
+function getTimeUntilReset(
+  userTimezone: string,
+  resetType: string = "daily"
+): object {
   try {
     const userTime = dayjs().tz(userTimezone);
     let nextReset;

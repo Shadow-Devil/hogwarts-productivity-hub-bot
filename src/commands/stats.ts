@@ -80,9 +80,9 @@ export default {
 
       // 2. Voice Channel Hours (today, this month, all-time)
       const voiceHoursText = [
-        `**Today:** ${formatHours(today.hours)}`,
-        `**This Month:** ${formatHours(thisMonth.hours)}`,
-        `**All-Time:** ${formatHours(allTime.hours)}`,
+        `**Today:** ${formatHours(today.hours.toString())}`,
+        `**This Month:** ${formatHours(thisMonth.hours.toString())}`,
+        `**All-Time:** ${formatHours(allTime.hours.toString())}`,
       ].join("\n");
 
       embed.addFields([

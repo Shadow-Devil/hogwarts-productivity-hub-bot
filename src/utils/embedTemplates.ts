@@ -11,12 +11,13 @@ import {
   createProgressSection,
   createStyledEmbed,
 } from "./visualHelpers.ts";
+import dayjs from "dayjs";
 
 // 📊 Enhanced Statistics Dashboard Template
 function createStatsTemplate(
   user,
   stats,
-  { showThumbnail = true, includeFooter = true, useEnhancedLayout = true } = {},
+  { showThumbnail = true, includeFooter = true, useEnhancedLayout = true } = {}
 ) {
   const embed = createStyledEmbed("info");
 
@@ -28,8 +29,8 @@ function createStatsTemplate(
           "Statistics Overview",
           `Performance metrics for **${user.username}**`,
           "📈",
-          "emphasis",
-        ),
+          "emphasis"
+        )
       );
   } else {
     embed
@@ -38,8 +39,8 @@ function createStatsTemplate(
         createHeader(
           "Statistics Overview",
           `Data for **${user.username}**`,
-          "📈",
-        ),
+          "📈"
+        )
       );
   }
 
@@ -70,7 +71,7 @@ function createTaskTemplate(
     useEnhancedLayout = true,
     useTableFormat = true,
     showDailyLimit = false,
-  } = {},
+  } = {}
 ) {
   const embed = createStyledEmbed("primary");
 
@@ -89,7 +90,7 @@ function createTaskTemplate(
       "Ready to get productive?" +
         (emptyStateMessage
           ? `\n\n${emptyStateMessage}`
-          : "\n\n### 💡 Getting Started\nUse `/addtask <description>` to create your first task!"),
+          : "\n\n### 💡 Getting Started\nUse `/addtask <description>` to create your first task!")
     );
     embed.setColor(BotColors.INFO);
 
@@ -112,8 +113,8 @@ function createTaskTemplate(
       "Task Overview",
       `Progress tracking for **${user.username}**`,
       "📋",
-      "emphasis",
-    ),
+      "emphasis"
+    )
   );
 
   // Add completion progress bar with enhanced layout
@@ -127,7 +128,7 @@ function createTaskTemplate(
         style: "detailed",
         showPercentage: true,
         showNumbers: true,
-      },
+      }
     );
 
     const extraInfo = `\n**Completion Rate:** ${stats.completionRate.toFixed(1)}% • **Points Earned:** ${stats.totalTaskPoints}`;
@@ -156,9 +157,8 @@ function createTaskTemplate(
       }
     );
 
-    const dayjs = require("dayjs");
     const resetTime = Math.floor(
-      dayjs().add(1, "day").startOf("day").valueOf() / 1000,
+      dayjs().add(1, "day").startOf("day").valueOf() / 1000
     );
     const limitInfo = `\n**Actions Used:** ${dailyStats.total_task_actions}/${dailyStats.limit} • **Remaining:** ${dailyStats.remaining} • **Resets:** <t:${resetTime}:R>`;
 
@@ -175,7 +175,7 @@ function createTaskTemplate(
   if (incompleteTasks.length > 0) {
     const taskList = incompleteTasks.slice(0, 10).map((task, index) => {
       const taskNumber = index + 1;
-      const createdDate = require("dayjs")(task.created_at).format("MMM DD");
+      const createdDate = dayjs(task.created_at).format("MMM DD");
 
       if (useTableFormat) {
         const numberPadded = taskNumber.toString().padStart(2, "0");
@@ -213,15 +213,13 @@ function createTaskTemplate(
       .sort(
         (a, b) =>
           new Date(b.completed_at).getTime() -
-          new Date(a.completed_at).getTime(),
+          new Date(a.completed_at).getTime()
       )
       .slice(0, maxRecentCompleted);
 
     if (useTableFormat) {
       const completedList = recentCompleted.map((task) => {
-        const completedDate = require("dayjs")(task.completed_at).format(
-          "MMM DD",
-        );
+        const completedDate = dayjs(task.completed_at).format("MMM DD");
         const points = task.points_awarded || 0;
         return [`✅ ${task.title}`, `${completedDate} (+${points} pts)`];
       });
@@ -236,9 +234,7 @@ function createTaskTemplate(
     } else {
       const completedList = recentCompleted
         .map((task) => {
-          const completedDate = require("dayjs")(task.completed_at).format(
-            "MMM DD",
-          );
+          const completedDate = dayjs(task.completed_at).format("MMM DD");
           const points = task.points_awarded || 0;
           return `✅ ${task.title}\n*Completed: ${completedDate}* (+${points} pts)`;
         })
