@@ -18,12 +18,12 @@
  */
 
 import cron from "node-cron";
-import { pool } from "../models/db.ts";
 import timezoneService from "./timezoneService.ts";
 import voiceService from "./voiceService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
+import { db } from "../models/db.ts";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
@@ -215,7 +215,7 @@ class CentralResetService {
       }
 
       // Reset daily task stats
-      await pool.query(
+      await db.$client.query(
         `
         DELETE FROM daily_task_stats
         WHERE discord_id = $1
@@ -248,7 +248,7 @@ class CentralResetService {
       const yesterday = userTime.subtract(1, "day");
 
       // Check if user had voice activity yesterday
-      const result = await pool.query(
+      const result = await db.$client.query(
         `
         SELECT EXISTS(
             SELECT 1 FROM daily_voice_stats
@@ -263,7 +263,7 @@ class CentralResetService {
 
       if (!hadActivityYesterday) {
         // Reset streak if no activity yesterday
-        await pool.query(
+        await db.$client.query(
           `
                     UPDATE users
                     SET current_streak = 0
@@ -349,7 +349,7 @@ class CentralResetService {
   async performMonthlyResetForUser(user) {
     try {
       // Reset monthly stats
-      await pool.query(
+      await db.$client.query(
         `
                     UPDATE users
                     SET
@@ -388,7 +388,7 @@ class CentralResetService {
 
       // Check database connectivity
       try {
-        await pool.query("SELECT 1");
+        await db.$client.query("SELECT 1");
         healthData.databaseConnected = true;
       } catch (_error) {
         healthData.systemStatus = "degraded";

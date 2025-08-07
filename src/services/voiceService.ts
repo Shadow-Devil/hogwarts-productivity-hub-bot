@@ -1,4 +1,3 @@
-import * as db from "../models/db.ts";
 import dayjs from "dayjs";
 import {
   calculateDailyLimitInfo,
@@ -7,7 +6,42 @@ import {
 import { roundHoursFor55MinRule, minutesToHours } from "../utils/timeUtils.ts";
 import timezoneService from "./timezoneService.ts";
 import type winston from "winston";
-import { pool } from "../models/db.ts";
+import {
+  checkAndPerformMonthlyReset,
+  db,
+  getHouseChampions1,
+  getUserHouse,
+  updateHousePoints,
+  getHouseLeaderboard1,
+} from "../models/db.ts";
+
+// Calculate points based on hours spent
+// First hour daily: 5 points, subsequent hours: 2 points each (daily cumulative system)
+// NOTE: Rounding is handled in the voice service, this function receives already-rounded hours
+function calculatePointsForHours(startingHours, hoursToCalculate) {
+  let points = 0;
+  let remainingHours = hoursToCalculate;
+  let currentTotal = startingHours;
+
+  while (remainingHours > 0) {
+    if (currentTotal < 1) {
+      // First hour territory (5 points per hour)
+      const firstHourPortion = Math.min(
+        remainingHours,
+        1 - Math.floor(currentTotal)
+      );
+      points += firstHourPortion * 5;
+      remainingHours -= firstHourPortion;
+      currentTotal += firstHourPortion;
+    } else {
+      // Subsequent hours territory (2 points per hour)
+      points += remainingHours * 2;
+      break;
+    }
+  }
+
+  return points;
+}
 
 class VoiceService {
   public logger: winston.Logger;
@@ -15,7 +49,7 @@ class VoiceService {
   // Get or create user in database with caching
   async getOrCreateUser(discordId, username) {
     // Try to find existing user
-    const result = await pool.query(
+    const result = await db.$client.query(
       "SELECT * FROM users WHERE discord_id = $1",
       [discordId]
     );
@@ -25,7 +59,7 @@ class VoiceService {
       user = result.rows[0];
       // Update username if it changed
       if (user.username !== username) {
-        await pool.query(
+        await db.$client.query(
           "UPDATE users SET username = $1, updated_at = CURRENT_TIMESTAMP WHERE discord_id = $2",
           [username, discordId]
         );
@@ -33,7 +67,7 @@ class VoiceService {
       }
     } else {
       // Create new user
-      const newUserResult = await pool.query(
+      const newUserResult = await db.$client.query(
         `INSERT INTO users (discord_id, username)
                       VALUES ($1, $2)
                       RETURNING *`,
@@ -59,7 +93,7 @@ class VoiceService {
     const today = await timezoneService.getTodayInUserTimezone(discordId);
 
     // Insert new session
-    const session = await pool.query(
+    const session = await db.$client.query(
       `INSERT INTO vc_sessions (user_id, discord_id, voice_channel_id, voice_channel_name, joined_at, date)
                      VALUES ($1, $2, $3, $4, $5, $6)
                      RETURNING *`,
@@ -77,7 +111,7 @@ class VoiceService {
     const now = new Date().getTime();
 
     // Find the active session
-    const result = await pool.query(
+    const result = await db.$client.query(
       `SELECT * FROM vc_sessions
                   WHERE discord_id = $1 AND voice_channel_id = $2 AND left_at IS NULL
                   ORDER BY joined_at DESC LIMIT 1`,
@@ -97,7 +131,7 @@ class VoiceService {
     const durationMinutes = Math.floor(durationMs / (1000 * 60));
 
     // Update the session with end time and duration
-    await pool.query(
+    await db.$client.query(
       `UPDATE vc_sessions
                   SET left_at = $1, duration_minutes = $2
                   WHERE id = $3`,
@@ -152,10 +186,10 @@ class VoiceService {
   ) {
     try {
       // Check and perform monthly reset if needed
-      await db.checkAndPerformMonthlyReset(discordId);
+      await checkAndPerformMonthlyReset(discordId);
 
       // Get current user data
-      const userResult = await pool.query(
+      const userResult = await db.$client.query(
         "SELECT * FROM users WHERE discord_id = $1",
         [discordId]
       );
@@ -167,7 +201,7 @@ class VoiceService {
 
       // Get daily stats for voice time points calculation (timezone-aware)
       const today = await timezoneService.getTodayInUserTimezone(discordId);
-      const dailyStats = await pool.query(
+      const dailyStats = await db.$client.query(
         "SELECT total_minutes, points_earned FROM daily_voice_stats WHERE discord_id = $1 AND date = $2",
         [discordId, today]
       );
@@ -188,11 +222,11 @@ class VoiceService {
       const roundedOldDailyHours = roundHoursFor55MinRule(currentDailyHours);
 
       // Points earned = difference between old and new daily cumulative points (recalculate from day start)
-      const cumulativePointsNew = db.calculatePointsForHours(
+      const cumulativePointsNew = calculatePointsForHours(
         0,
         roundedNewDailyHours
       );
-      const cumulativePointsOld = db.calculatePointsForHours(
+      const cumulativePointsOld = calculatePointsForHours(
         0,
         roundedOldDailyHours
       );
@@ -241,10 +275,10 @@ class VoiceService {
       // Determine user's house
       let userHouse = user.house;
       if (!userHouse && member) {
-        userHouse = await db.getUserHouse(member);
+        userHouse = await getUserHouse(member);
         // Update user's house in database if found
         if (userHouse) {
-          await pool.query(
+          await db.$client.query(
             "UPDATE users SET house = $1, updated_at = CURRENT_TIMESTAMP WHERE discord_id = $2",
             [userHouse, discordId]
           );
@@ -257,7 +291,7 @@ class VoiceService {
       const newAllTimeHours =
         parseFloat(user.all_time_hours) + actualSessionHours;
 
-      await pool.query(
+      await db.$client.query(
         `
                     UPDATE users SET
                         monthly_points = $1,
@@ -278,7 +312,7 @@ class VoiceService {
 
       // Award points to user's house if they have one
       if (userHouse && totalPointsEarned > 0) {
-        await db.updateHousePoints(userHouse, totalPointsEarned);
+        await updateHousePoints(userHouse, totalPointsEarned);
       }
 
       // Send daily limit notification if needed
@@ -336,7 +370,7 @@ class VoiceService {
       // rather than just adding session points, since points are now based on daily totals
 
       // First, get current daily stats (compatible with archival system)
-      const currentStats = await pool.query(
+      const currentStats = await db.$client.query(
         `SELECT total_minutes, points_earned FROM daily_voice_stats
                      WHERE discord_id = $1 AND date = $2
                      AND (archived IS NULL OR archived = false)`,
@@ -349,7 +383,7 @@ class VoiceService {
 
       // Recalculate points based on total daily hours with 55-minute rounding
       const roundedDailyHours = roundHoursFor55MinRule(newTotalHours);
-      const recalculatedDailyPoints = db.calculatePointsForHours(
+      const recalculatedDailyPoints = calculatePointsForHours(
         0,
         roundedDailyHours
       );
@@ -361,10 +395,10 @@ class VoiceService {
         const roundedLimitedHours = roundHoursFor55MinRule(
           Math.min(newTotalHours, 15)
         );
-        finalDailyPoints = db.calculatePointsForHours(0, roundedLimitedHours);
+        finalDailyPoints = calculatePointsForHours(0, roundedLimitedHours);
       }
 
-      await pool.query(
+      await db.$client.query(
         `INSERT INTO daily_voice_stats (discord_id, date, total_minutes, session_count, points_earned, user_id, archived)
                      VALUES ($1, $2, $3, 1, $4, (SELECT id FROM users WHERE discord_id = $5), false)
                      ON CONFLICT (discord_id, date)
@@ -398,7 +432,7 @@ class VoiceService {
     const startOfToday = userTime.startOf("day").toDate().getTime();
 
     // Find active session that started yesterday
-    const result = await pool.query(
+    const result = await db.$client.query(
       `SELECT * FROM vc_sessions
                      WHERE discord_id = $1 AND voice_channel_id = $2 AND left_at IS NULL
                      AND joined_at < $3
@@ -419,7 +453,7 @@ class VoiceService {
     );
 
     // End the yesterday session at midnight
-    await pool.query(
+    await db.$client.query(
       `UPDATE vc_sessions
                      SET left_at = $1, duration_minutes = $2
                      WHERE id = $3`,
@@ -493,7 +527,7 @@ class VoiceService {
 
       // COMPATIBLE WITH DAILY CUMULATIVE POINTS SYSTEM:
       // Query both current and archived daily stats to get accurate daily totals
-      const result = await pool.query(
+      const result = await db.$client.query(
         `SELECT total_minutes FROM daily_voice_stats
                      WHERE discord_id = $1 AND date = $2
                      AND (archived IS NULL OR archived = false)`,
@@ -524,7 +558,7 @@ class VoiceService {
   // Update user streak (only increment once per day) - timezone-aware
   async updateStreak(discordId, sessionDate, userTimezone = null) {
     try {
-      const user = await pool.query(
+      const user = await db.$client.query(
         "SELECT * FROM users WHERE discord_id = $1",
         [discordId]
       );
@@ -573,7 +607,7 @@ class VoiceService {
 
       // Only update if streak changed or it's a new day
       if (shouldUpdateLastVcDate) {
-        await pool.query(
+        await db.$client.query(
           `UPDATE users
                      SET current_streak = $1, longest_streak = $2, last_vc_date = $3, updated_at = CURRENT_TIMESTAMP
                      WHERE discord_id = $4`,
@@ -597,10 +631,10 @@ class VoiceService {
   // Get user voice stats using optimized view (replaces getUserStats)
   async getUserStatsOptimized(discordId: string) {
     // Check and perform monthly reset if needed
-    await db.checkAndPerformMonthlyReset(discordId);
+    await checkAndPerformMonthlyReset(discordId);
 
     // Single query using optimized view - replaces 4+ separate queries
-    const result = await pool.query(
+    const result = await db.$client.query(
       "SELECT * FROM user_complete_profile WHERE discord_id = $1",
       [discordId]
     );
@@ -670,10 +704,10 @@ class VoiceService {
 
     if (type === "monthly") {
       // Use monthly_leaderboard view - single optimized query
-      result = await pool.query("SELECT * FROM monthly_leaderboard");
+      result = await db.$client.query("SELECT * FROM monthly_leaderboard");
     } else {
       // Use alltime_leaderboard view - single optimized query
-      result = await pool.query("SELECT * FROM alltime_leaderboard");
+      result = await db.$client.query("SELECT * FROM alltime_leaderboard");
     }
 
     const optimizedResult = result.rows.map((entry) => ({
@@ -691,7 +725,7 @@ class VoiceService {
   // Get house leaderboard using optimized views
   async getHouseLeaderboardOptimized(type = "monthly") {
     // Use house_leaderboard_with_champions view - single optimized query
-    const result = await pool.query(
+    const result = await db.$client.query(
       "SELECT * FROM house_leaderboard_with_champions"
     );
 
@@ -717,7 +751,9 @@ class VoiceService {
   // Get active voice sessions using optimized view
   async getActiveVoiceSessionsOptimized() {
     // Use active_voice_sessions view - single optimized query
-    const result = await pool.query("SELECT * FROM active_voice_sessions");
+    const result = await db.$client.query(
+      "SELECT * FROM active_voice_sessions"
+    );
 
     return result.rows.map((session) => ({
       id: session.id,
@@ -735,7 +771,7 @@ class VoiceService {
   // Get daily voice activity summary using optimized view
   async getDailyVoiceActivityOptimized(days = 30) {
     // Use daily_voice_activity view with limit
-    const result = await pool.query(
+    const result = await db.$client.query(
       "SELECT * FROM daily_voice_activity ORDER BY date DESC LIMIT $1",
       [days]
     );
@@ -746,7 +782,7 @@ class VoiceService {
   // Refresh materialized views (call periodically)
   async refreshMaterializedViews() {
     // Call the database function to refresh materialized views
-    await pool.query("SELECT refresh_materialized_views()");
+    await db.$client.query("SELECT refresh_materialized_views()");
     console.log("✅ Materialized views refreshed successfully");
 
     return true;
@@ -797,7 +833,7 @@ class VoiceService {
 
   // Get house champions (top contributor per house)
   async getHouseChampions(type = "monthly") {
-    const result = await db.getHouseChampions(type);
+    const result = await getHouseChampions1(type);
 
     return result;
   }
@@ -810,10 +846,10 @@ class VoiceService {
   async getUserStatsOriginal(discordId) {
     try {
       // Check and perform monthly reset if needed
-      await db.checkAndPerformMonthlyReset(discordId);
+      await checkAndPerformMonthlyReset(discordId);
 
       // Get user basic info using cached query
-      const userResult = await pool.query(
+      const userResult = await db.$client.query(
         "SELECT * FROM users WHERE discord_id = $1",
         [discordId]
       );
@@ -827,13 +863,13 @@ class VoiceService {
       const thisMonth = dayjs().format("YYYY-MM");
 
       // Get today's stats using cached query
-      const todayStats = await pool.query(
+      const todayStats = await db.$client.query(
         "SELECT * FROM daily_voice_stats WHERE discord_id = $1 AND date = $2",
         [discordId, today]
       );
 
       // Get this month's stats using cached query
-      const monthlyStats = await pool.query(
+      const monthlyStats = await db.$client.query(
         `SELECT SUM(total_minutes) as total_minutes, SUM(session_count) as session_count, SUM(points_earned) as points_earned
                      FROM daily_voice_stats
                      WHERE discord_id = $1 AND date >= $2`,
@@ -841,7 +877,7 @@ class VoiceService {
       );
 
       // Get all-time stats using cached query
-      const allTimeStats = await pool.query(
+      const allTimeStats = await db.$client.query(
         `SELECT SUM(total_minutes) as total_minutes, SUM(session_count) as session_count, SUM(points_earned) as points_earned
                      FROM daily_voice_stats
                      WHERE discord_id = $1`,
@@ -897,7 +933,7 @@ class VoiceService {
 
       if (type === "monthly") {
         // Monthly leaderboard based on current month's hours and points
-        const result = await pool.query(`
+        const result = await db.$client.query(`
                         SELECT
                             u.discord_id,
                             u.username,
@@ -911,7 +947,7 @@ class VoiceService {
         leaderboardData = result.rows;
       } else {
         // All-time leaderboard based on total hours and points
-        const result = await pool.query(`
+        const result = await db.$client.query(`
                         SELECT
                             u.discord_id,
                             u.username,
@@ -950,7 +986,7 @@ class VoiceService {
    */
   async resetDailyStats(discordId: string): Promise<boolean> {
     // Reset daily voice stats and limits
-    const result = await pool.query(
+    const result = await db.$client.query(
       `
                     UPDATE users
                     SET
@@ -977,7 +1013,7 @@ class VoiceService {
 
   // Fallback method for house leaderboard (used only if optimized version fails)
   async getHouseLeaderboardOriginal(type = "monthly") {
-    const result = await db.getHouseLeaderboard(type);
+    const result = await getHouseLeaderboard1(type);
 
     return result;
   }

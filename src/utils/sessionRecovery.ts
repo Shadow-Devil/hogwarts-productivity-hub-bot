@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { pool } from "../models/db.ts";
+import { db } from "../models/db.ts";
 
 /**
  * Session Recovery System
@@ -60,7 +60,7 @@ class SessionRecovery {
     );
 
     // Find incomplete sessions (no left_at timestamp)
-    const result = await pool.query(
+    const result = await db.$client.query(
       `
                     SELECT * FROM vc_sessions
                     WHERE left_at IS NULL
@@ -117,7 +117,7 @@ class SessionRecovery {
 
     // Don't award points for very short sessions (likely connection issues)
     if (sessionDurationMinutes < 1) {
-      await pool.query(
+      await db.$client.query(
         `
                 UPDATE vc_sessions
                 SET left_at = $1, duration_minutes = 0, recovery_note = 'Recovered: Session too short'
@@ -133,7 +133,7 @@ class SessionRecovery {
     }
 
     // Update the session with estimated end time and duration
-    await pool.query(
+    await db.$client.query(
       `
             UPDATE vc_sessions
             SET left_at = $1, duration_minutes = $2, recovery_note = 'Recovered from crash'
@@ -209,7 +209,7 @@ class SessionRecovery {
         const durationMinutes = Math.floor(durationMs / (1000 * 60));
 
         // Update the session with current progress (heartbeat)
-        await pool.query(
+        await db.$client.query(
           `
                             UPDATE vc_sessions
                             SET last_heartbeat = $1, current_duration_minutes = $2
@@ -273,7 +273,7 @@ class SessionRecovery {
         const durationMinutes = Math.floor(durationMs / (1000 * 60));
 
         // Update session in database
-        await pool.query(
+        await db.$client.query(
           `
                             UPDATE vc_sessions
                             SET left_at = $1, duration_minutes = $2, recovery_note = 'Graceful shutdown'

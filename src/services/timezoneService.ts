@@ -4,7 +4,7 @@
  * Built on the existing solid database foundation for timezone support
  */
 
-import { pool } from "../models/db.ts";
+import { db } from "../models/db.ts";
 import timezonePerformanceMonitor from "../utils/timezonePerformanceMonitor.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
@@ -114,7 +114,7 @@ class TimezoneService {
         throw new Error(`Invalid timezone: ${timezone}`);
       }
 
-      const result = await pool.query(
+      const result = await db.$client.query(
         `UPDATE users
                  SET timezone = $1, timezone_set_at = CURRENT_TIMESTAMP
                  WHERE discord_id = $2`,
@@ -161,9 +161,9 @@ class TimezoneService {
 
       timezonePerformanceMonitor.recordCacheOperation("miss", { userId });
 
-      // Database query with connection pooling and timeout
+      // Database query with connection db.$clienting and timeout
       const queryStartTime = Date.now();
-      const result = await pool.query(
+      const result = await db.$client.query(
         "SELECT timezone FROM users WHERE discord_id = $1",
         [userId]
       );
@@ -312,7 +312,7 @@ class TimezoneService {
         params = [];
       }
 
-      const result = await pool.query(query, params);
+      const result = await db.$client.query(query, params);
 
       // Filter users who are actually in reset window (11 PM - 1 AM local time)
       const usersInResetWindow = [];
@@ -359,7 +359,7 @@ class TimezoneService {
 
       // Fetch uncached users from database
       if (uncachedUserIds.length > 0) {
-        const result = await pool.query(
+        const result = await db.$client.query(
           "SELECT discord_id, timezone, timezone_set_at, last_daily_reset_tz, last_monthly_reset_tz FROM users WHERE discord_id = ANY($1)",
           [uncachedUserIds]
         );
@@ -421,7 +421,7 @@ class TimezoneService {
    */
   async getUsersInTimezone(timezone) {
     try {
-      const result = await pool.query(
+      const result = await db.$client.query(
         "SELECT discord_id, username, timezone_set_at, last_daily_reset_tz, last_monthly_reset_tz FROM users WHERE timezone = $1",
         [timezone]
       );
@@ -442,7 +442,7 @@ class TimezoneService {
    */
   async getUsersNeedingDailyReset() {
     try {
-      const result = await pool.query(`
+      const result = await db.$client.query(`
                 SELECT
                     discord_id,
                     timezone,
@@ -486,7 +486,7 @@ class TimezoneService {
    */
   async getUsersNeedingMonthlyReset() {
     try {
-      const result = await pool.query(`
+      const result = await db.$client.query(`
                 SELECT
                     discord_id,
                     timezone,
@@ -541,7 +541,7 @@ class TimezoneService {
       const now = new Date();
 
       // Update timezone in database
-      const result = await pool.query(
+      const result = await db.$client.query(
         `UPDATE users
                  SET timezone = $1, timezone_set_at = $2
                  WHERE discord_id = $3`,
@@ -703,7 +703,7 @@ class TimezoneService {
       const changeInNewTz = dayjs(changeTime).tz(newTimezone);
 
       // Get user's last VC date
-      const result = await pool.query(
+      const result = await db.$client.query(
         "SELECT last_vc_date FROM users WHERE discord_id = $1",
         [userId]
       );
@@ -744,7 +744,7 @@ class TimezoneService {
       const column =
         resetType === "daily" ? "last_daily_reset_tz" : "last_monthly_reset_tz";
 
-      const result = await pool.query(
+      const result = await db.$client.query(
         `UPDATE users SET ${column} = $1 WHERE discord_id = $2`,
         [now, userId]
       );

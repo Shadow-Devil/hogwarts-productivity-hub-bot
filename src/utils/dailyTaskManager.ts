@@ -3,7 +3,7 @@
  * Handles 10 tasks per day limit, midnight cleanup, and daily voice stats reset
  */
 
-import { pool } from "../models/db.ts";
+import { db } from "../models/db.ts";
 import dayjs from "dayjs";
 // Get reference to active voice sessions and grace period sessions
 import {
@@ -75,7 +75,7 @@ async function performMidnightOperations() {
     await resetDailyVoiceStats();
 
     // Step 3: Get all users with pending tasks for cleanup
-    const usersWithTasks = await pool.query(`
+    const usersWithTasks = await db.$client.query(`
               SELECT DISTINCT discord_id,
                   COUNT(*) as pending_count,
                   ARRAY_AGG(title ORDER BY created_at) as pending_titles
@@ -105,7 +105,7 @@ async function performMidnightOperations() {
     }
 
     // Step 5: Reset daily task stats for all users (new day = new task limits)
-    await pool.query(`
+    await db.$client.query(`
               UPDATE daily_task_stats
               SET tasks_added = 0, tasks_completed = 0, total_task_actions = 0
               WHERE date < CURRENT_DATE
@@ -226,7 +226,7 @@ async function resetDailyVoiceStats() {
     queryParams.push(...usersInVoiceArray);
   }
 
-  const archiveResult = await pool.query(archiveQuery, queryParams);
+  const archiveResult = await db.$client.query(archiveQuery, queryParams);
   console.log(
     `📊 Archived ${archiveResult.rowCount} completed daily stats from yesterday`
   );
@@ -353,7 +353,7 @@ async function processUserMidnightReset(
 async function performMidnightCleanup() {
   try {
     // Get all users with pending tasks
-    const usersWithTasks = await pool.query(`
+    const usersWithTasks = await db.$client.query(`
               SELECT DISTINCT discord_id,
                   COUNT(*) as pending_count,
                   ARRAY_AGG(title ORDER BY created_at) as pending_titles
@@ -383,7 +383,7 @@ async function performMidnightCleanup() {
     }
 
     // Reset daily task stats for all users (new day = new limits)
-    await pool.query(`
+    await db.$client.query(`
               UPDATE daily_task_stats
               SET tasks_added = 0, tasks_completed = 0, total_task_actions = 0
               WHERE date < CURRENT_DATE
@@ -404,7 +404,7 @@ async function cleanupUserTasks(
   taskTitles: string[]
 ) {
   // Delete all pending tasks for this user
-  await pool.query(
+  await db.$client.query(
     "DELETE FROM tasks WHERE discord_id = $1 AND is_complete = FALSE",
     [discordId]
   );
@@ -477,7 +477,7 @@ export async function canUserAddTask(discordId: string) {
   const today = dayjs().format("YYYY-MM-DD");
 
   // Get today's task stats
-  const result = await pool.query(
+  const result = await db.$client.query(
     "SELECT total_task_actions FROM daily_task_stats WHERE discord_id = $1 AND date = $2",
     [discordId, today]
   );
@@ -507,7 +507,7 @@ export async function recordTaskAction(discordId: string, actionType: string) {
   const today = dayjs().format("YYYY-MM-DD");
 
   // Ensure user exists
-  await pool.query(
+  await db.$client.query(
     `INSERT INTO users (discord_id, username)
                     VALUES ($1, $1)
                     ON CONFLICT (discord_id) DO NOTHING`,
@@ -518,7 +518,7 @@ export async function recordTaskAction(discordId: string, actionType: string) {
   const incrementField =
     actionType === "add" ? "tasks_added" : "tasks_completed";
 
-  await pool.query(
+  await db.$client.query(
     `
     INSERT INTO daily_task_stats (user_id, discord_id, date, ${incrementField}, total_task_actions)
     VALUES ((SELECT id FROM users WHERE discord_id = $1), $1, $2, 1, 1)
@@ -538,7 +538,7 @@ export async function recordTaskAction(discordId: string, actionType: string) {
 export async function getUserDailyStats(discordId: string) {
   const today = dayjs().format("YYYY-MM-DD");
 
-  const result = await pool.query(
+  const result = await db.$client.query(
     `SELECT tasks_added, tasks_completed, total_task_actions
                     FROM daily_task_stats
                     WHERE discord_id = $1 AND date = $2`,
@@ -597,7 +597,7 @@ export async function reclaimTaskSlot(discordId, taskCreatedAt) {
   }
 
   // Check if user has daily stats for today
-  const result = await pool.query(
+  const result = await db.$client.query(
     "SELECT tasks_added, tasks_completed, total_task_actions FROM daily_task_stats WHERE discord_id = $1 AND date = $2",
     [discordId, today]
   );
@@ -633,7 +633,7 @@ export async function reclaimTaskSlot(discordId, taskCreatedAt) {
   }
 
   // Decrease the task counts (only if within recoverable limit)
-  await pool.query(
+  await db.$client.query(
     `
                   UPDATE daily_task_stats
                   SET tasks_added = GREATEST(0, tasks_added - 1),

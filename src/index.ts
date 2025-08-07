@@ -1,7 +1,6 @@
 import "dotenv/config";
 
 import { Client, IntentsBitField, MessageFlags, Events } from "discord.js";
-import { initializeDatabase } from "./models/db.ts";
 import sessionRecovery from "./utils/sessionRecovery.ts";
 import * as DailyTaskManager from "./utils/dailyTaskManager.ts";
 import CentralResetService from "./services/centralResetService.ts";
@@ -22,12 +21,6 @@ export const client = new Client({
     IntentsBitField.Flags.GuildVoiceStates, // Required for voice channel detection
   ],
 });
-
-function loadEvents() {
-  client.on(Events.VoiceStateUpdate, (oldState, newState) =>
-    voiceStateUpdate.execute(oldState, newState)
-  );
-}
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
 
@@ -131,11 +124,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 });
 
+client.on(Events.VoiceStateUpdate, (oldState, newState) =>
+  voiceStateUpdate.execute(oldState, newState)
+);
+
 // Start the bot
 try {
-  loadEvents();
-  console.log("Initializing database connection...");
-  await initializeDatabase();
   await CentralResetService.start();
   voiceStateUpdate.setClient(client);
   DailyTaskManager.setClient(client);
