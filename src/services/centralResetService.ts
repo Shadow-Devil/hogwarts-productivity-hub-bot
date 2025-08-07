@@ -528,7 +528,9 @@ class CentralResetService extends BaseService {
                 isRunning: this.isRunning,
                 activeJobs: this.scheduledJobs.size,
                 resetStats: this.resetStats,
-                systemStatus: 'healthy'
+                systemStatus: 'healthy',
+                databaseConnected: false,
+                timezoneServiceOk: false
             };
 
             // Check database connectivity
@@ -536,7 +538,6 @@ class CentralResetService extends BaseService {
                 await pool.query('SELECT 1');
                 healthData.databaseConnected = true;
             } catch (error) {
-                healthData.databaseConnected = false;
                 healthData.systemStatus = 'degraded';
                 this.logger.warn('Database connectivity issue in health check', {
                     error: error.message
@@ -548,7 +549,6 @@ class CentralResetService extends BaseService {
                 await timezoneService.getUserTimezone('health-check');
                 healthData.timezoneServiceOk = true;
             } catch (error) {
-                healthData.timezoneServiceOk = false;
                 healthData.systemStatus = 'degraded';
                 this.logger.warn('TimezoneService issue in health check', {
                     error: error.message
@@ -605,4 +605,4 @@ class CentralResetService extends BaseService {
 }
 
 // Export singleton instance
-module.exports = new CentralResetService();
+export default new CentralResetService();

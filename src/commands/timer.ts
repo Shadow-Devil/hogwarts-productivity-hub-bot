@@ -1,18 +1,18 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
-const { getUserVoiceChannel } = require('../utils/voiceUtils');
-const { createTimerTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { StatusEmojis } = require('../utils/constants');
-const { safeDeferReply, safeErrorReply, safeReply } = require('../utils/interactionUtils');
-const timezoneService = require('../services/timezoneService');
-const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc');
-const timezone = require('dayjs/plugin/timezone');
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { getUserVoiceChannel } from '../utils/voiceUtils';
+import { createTimerTemplate, createErrorTemplate } from '../utils/embedTemplates';
+import { StatusEmojis } from '../utils/constants';
+import { safeDeferReply, safeErrorReply, safeReply } from '../utils/interactionUtils';
+import timezoneService from '../services/timezoneService';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
 // Extend dayjs with timezone support for timer displays
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('timer')
         .setDescription('Start a Pomodoro timer in your voice channel')
@@ -58,7 +58,7 @@ module.exports = {
                     console.warn(`Corrupted timer data found for channel ${voiceChannelId}, cleaning up...`);
                     activeVoiceTimers.delete(voiceChannelId);
                 } else {
-                    const timeRemaining = Math.ceil((existingTimer.endTime - new Date()) / 60000);
+                    const timeRemaining = Math.ceil((existingTimer.endTime - new Date().getTime()) / 60000);
 
                     // If timer has already expired, clean it up
                     if (timeRemaining <= 0) {

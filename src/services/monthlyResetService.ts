@@ -3,11 +3,14 @@
  * Consolidates all monthly reset logic to prevent duplication
  */
 
-const { pool, checkAndPerformMonthlyReset } = require('../models/db');
-const CacheInvalidationService = require('../utils/cacheInvalidationService');
-const dayjs = require('dayjs');
+import { pool, checkAndPerformMonthlyReset } from '../models/db';
+import CacheInvalidationService from '../utils/cacheInvalidationService';
+import dayjs from 'dayjs';
 
 class MonthlyResetService {
+    public isRunning: boolean;
+    public intervalId: NodeJS.Timeout | null;
+
     constructor() {
         this.isRunning = false;
         this.intervalId = null;
@@ -190,4 +193,4 @@ class MonthlyResetService {
 // Create singleton instance
 const monthlyResetService = new MonthlyResetService();
 
-module.exports = monthlyResetService;
+export default monthlyResetService;

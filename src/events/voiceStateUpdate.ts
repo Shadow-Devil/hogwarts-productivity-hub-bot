@@ -1,5 +1,5 @@
-const voiceService = require('../services/voiceService');
-const dayjs = require('dayjs');
+import voiceService from '../services/voiceService';
+import dayjs from 'dayjs';
 
 /**
  * Voice State Update Handler with Smart Session Management
@@ -14,11 +14,11 @@ const dayjs = require('dayjs');
  */
 
 // Track active voice sessions with grace period support for unstable connections
-const activeVoiceSessions = new Map(); // key: userId, value: { channelId, joinTime, sessionId, gracePeriodStart?, lastSeen? }
+export const activeVoiceSessions = new Map<string, { channelId, joinTime, sessionId, gracePeriodStart?, lastSeen? }>(); // key: userId, value: { channelId, joinTime, sessionId, gracePeriodStart?, lastSeen? }
 
 // Grace period configuration for users with unstable connections
 const GRACE_PERIOD_MS = 5 * 60 * 1000; // 5 minutes
-const gracePeriodSessions = new Map(); // Track sessions in grace period
+export const gracePeriodSessions = new Map(); // Track sessions in grace period
 
 // Store client reference for cleanup operations
 let discordClient = null;
@@ -210,13 +210,13 @@ setInterval(async() => {
 }, 3600000); // Run every hour
 
 // Function to set the Discord client reference (called from main bot file)
-function setDiscordClient(client) {
+export function setDiscordClient(client) {
     discordClient = client;
     console.log('✅ Discord client reference set for smart session cleanup');
 }
 
 // Manual cleanup function for debugging/admin purposes
-async function manualCleanup() {
+export async function manualCleanup() {
     if (!discordClient) {
         console.log('❌ Cannot run manual cleanup: Discord client not set');
         return { error: 'Discord client not available' };
@@ -295,7 +295,7 @@ async function manualCleanup() {
     return results;
 }
 
-module.exports = {
+export default {
     name: 'voiceStateUpdate',
     async execute(oldState, newState) {
         try {
@@ -388,9 +388,3 @@ module.exports = {
         }
     }
 };
-
-// Export active sessions and utility functions
-module.exports.activeVoiceSessions = activeVoiceSessions;
-module.exports.gracePeriodSessions = gracePeriodSessions;
-module.exports.setDiscordClient = setDiscordClient;
-module.exports.manualCleanup = manualCleanup;

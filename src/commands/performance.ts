@@ -1,11 +1,12 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { performanceMonitor } = require('../utils/performanceMonitor');
-const queryCache = require('../utils/queryCache');
-const databaseOptimizer = require('../utils/databaseOptimizer');
-const { createHeader, formatDataTable, createStatsCard, createProgressSection } = require('../utils/visualHelpers');
-const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
+import { SlashCommandBuilder, EmbedBuilder, type CustomInteraction } from 'discord.js';
+import { performanceMonitor } from '../utils/performanceMonitor';
+import queryCache from '../utils/queryCache';
+import databaseOptimizer from '../utils/databaseOptimizer';
+import { createHeader, formatDataTable, createStatsCard, createProgressSection } from '../utils/visualHelpers';
+import { safeDeferReply, safeErrorReply } from '../utils/interactionUtils';
+import type { HealthReport } from '../utils/botHealthMonitor';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('performance')
         .setDescription('Comprehensive bot performance and health monitoring')
@@ -20,7 +21,7 @@ module.exports = {
                     { name: 'Database Health', value: 'database' },
                     { name: 'System Health', value: 'health' }
                 )),
-    async execute(interaction) {
+    async execute(interaction: CustomInteraction) {
         try {
             // Immediately defer to prevent timeout
             const deferred = await safeDeferReply(interaction);
@@ -476,7 +477,7 @@ function createDatabaseView(summary, optimizationReport) {
 /**
  * Create system health view
  */
-function createHealthView(healthReport, wsLatency, apiLatency) {
+function createHealthView(healthReport: HealthReport, wsLatency, apiLatency) {
     const overallStatus = healthReport && healthReport.current ? healthReport.current.status : (healthReport && healthReport.status ? healthReport.status : 'unknown');
     const statusIcon = overallStatus === 'healthy' ? '🟢' : overallStatus === 'degraded' ? '🟡' : '🔴';
 

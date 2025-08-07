@@ -1,11 +1,41 @@
-const { HealthChecker } = require('./faultTolerance');
-const { performanceMonitor } = require('./performanceMonitor');
+import type { Client } from 'discord.js';
+import { HealthChecker } from './faultTolerance';
+import { performanceMonitor } from './performanceMonitor';
+
+export type HealthReport = {
+    current?: any; // Current health status
+    uptime?: {
+        percent: string; // Uptime percentage
+        healthy: number; // Number of healthy checks
+        total: number; // Total checks in the period
+    };
+    checks?: {status: any}; // Detailed check results
+    trends?: any; // Trends in health metrics
+    lastUpdate?: Date; // Timestamp of the last update
+    status?: string; // Overall status (healthy, degraded, critical)
+    message?: string; // Optional message for status
+}
 
 /**
  * Comprehensive Health Monitoring System
  * Monitors Discord bot health, database, memory, and performance
  */
 class BotHealthMonitor {
+    public client: Client; // Discord client instance
+    public databaseResilience: any;
+    public healthChecker: HealthChecker;
+    public healthHistory: any[];
+    public maxHistorySize: number;
+    public alertThresholds: {
+        heapUsagePercent: number; // Increased threshold for Discord bots
+        rssMemoryMB: number; // Added RSS memory threshold
+        responseTimeMs: number;
+        errorRatePercent: number;
+        dbConnectionUtilization: number;
+    };
+    public healthCheckInterval: NodeJS.Timeout | null;
+    public healthSummaryInterval: NodeJS.Timeout | null;
+
     constructor(client, databaseResilience) {
         this.client = client;
         this.databaseResilience = databaseResilience;
@@ -70,7 +100,11 @@ class BotHealthMonitor {
             const capacityPercent = (memUsage.heapUsed / heapStats.heap_size_limit) * 100;
 
             // Get system memory for context (but don't use it for health checks)
-            let systemMemory = { used: 0, total: 0, usagePercent: 0 };
+            let systemMemory: {
+                used: number;
+                total: number;
+                usagePercent: number | string;
+            } = { used: 0, total: 0, usagePercent: 0 };
             try {
                 const os = require('os');
                 const totalMemory = os.totalmem();
@@ -153,16 +187,16 @@ class BotHealthMonitor {
             const summary = performanceMonitor.getPerformanceSummary();
 
             // Check average response times
-            const commandStats = Object.values(summary.commands);
+            const commandStats = summary.commands.slowest.map(([,cmd]) => cmd);
             if (commandStats.length > 0) {
-                const avgResponseTime = commandStats.reduce((sum, cmd) => sum + cmd.averageTime, 0) / commandStats.length;
+                const avgResponseTime = commandStats.reduce((sum, cmd) => sum + cmd.avgResponseTime, 0) / commandStats.length;
 
                 if (avgResponseTime > this.alertThresholds.responseTimeMs) {
                     throw new Error(`Slow command responses: ${avgResponseTime.toFixed(0)}ms average`);
                 }
 
                 // Check error rates
-                const totalCommands = commandStats.reduce((sum, cmd) => sum + cmd.count, 0);
+                const totalCommands = commandStats.reduce((sum, cmd) => sum + cmd.totalExecutions, 0);
                 const totalErrors = commandStats.reduce((sum, cmd) => sum + cmd.errors, 0);
                 const errorRate = totalCommands > 0 ? (totalErrors / totalCommands) * 100 : 0;
 
@@ -174,7 +208,7 @@ class BotHealthMonitor {
                     averageResponseTime: Math.round(avgResponseTime),
                     totalCommands,
                     errorRate: errorRate.toFixed(1),
-                    slowCommands: commandStats.filter(cmd => cmd.averageTime > 2000).length
+                    slowCommands: commandStats.filter(cmd => cmd.avgResponseTime > 2000).length
                 };
             }
 
@@ -327,7 +361,7 @@ class BotHealthMonitor {
     /**
      * Get comprehensive health report
      */
-    getHealthReport() {
+    getHealthReport(): HealthReport {
         if (this.healthHistory.length === 0) {
             return { status: 'no_data', message: 'No health data available yet' };
         }
@@ -378,7 +412,10 @@ class BotHealthMonitor {
         if (this.healthHistory.length < 2) return {};
 
         const recent = this.healthHistory.slice(-5);
-        const trends = {};
+        const trends = {
+            memory: 'stable',
+            responseTime: 'stable'
+        };
 
         // Memory trend
         const memoryValues = recent
@@ -425,4 +462,4 @@ class BotHealthMonitor {
     }
 }
 
-module.exports = BotHealthMonitor;
+export default BotHealthMonitor;

@@ -1,9 +1,9 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
-const voiceStateScanner = require('../utils/voiceStateScanner');
-const { createHeader, formatDataTable, createStatsCard } = require('../utils/visualHelpers');
-const { safeDeferReply } = require('../utils/interactionUtils');
+import { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import voiceStateScanner from '../utils/voiceStateScanner';
+import { createHeader, formatDataTable, createStatsCard } from '../utils/visualHelpers';
+import { safeDeferReply } from '../utils/interactionUtils';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('voicescan')
         .setDescription('Scan voice channels and start tracking for users already in voice')
@@ -63,7 +63,16 @@ module.exports = {
 
                 // Run the scan with timeout protection
                 const scanPromise = voiceStateScanner.scanAndStartTracking(interaction.client, activeVoiceSessions);
-                const timeoutPromise = new Promise((_, reject) =>
+                const timeoutPromise = new Promise<{
+                    totalUsersFound: number;
+                    trackingStarted: number;
+                    errors: number;
+                    channels: Array<{
+                        id: string;
+                        name: string;
+                        userCount: number;
+                    }>;
+                }>((_, reject) =>
                     setTimeout(() => reject(new Error('SCAN_TIMEOUT')), 10000) // 10 second scan timeout
                 );
 

@@ -1,18 +1,18 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { getUserVoiceChannel } = require('../utils/voiceUtils');
-const { createTimerTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { StatusEmojis } = require('../utils/constants');
-const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
-const timezoneService = require('../services/timezoneService');
-const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc');
-const timezone = require('dayjs/plugin/timezone');
+import { SlashCommandBuilder } from 'discord.js';
+import { getUserVoiceChannel } from '../utils/voiceUtils';
+import { createTimerTemplate, createErrorTemplate } from '../utils/embedTemplates';
+import { StatusEmojis } from '../utils/constants';
+import { safeDeferReply, safeErrorReply } from '../utils/interactionUtils';
+import timezoneService from '../services/timezoneService';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('time')
         .setDescription('Check your active Pomodoro timer status'),
@@ -53,7 +53,7 @@ module.exports = {
 
             // Get timer info
             const timer = activeVoiceTimers.get(voiceChannelId);
-            const now = new Date();
+            const now = new Date().getTime();
             const timeRemaining = Math.max(0, Math.ceil((timer.endTime - now) / 1000 / 60));
 
             const embed = createTimerTemplate('status', {

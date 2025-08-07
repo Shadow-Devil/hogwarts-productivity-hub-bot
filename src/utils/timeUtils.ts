@@ -3,9 +3,9 @@
  * Consolidates rounding logic and points calculations
  */
 
-const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc');
-const timezone = require('dayjs/plugin/timezone');
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
@@ -57,7 +57,7 @@ function hoursToMinutes(hours) {
  * @returns {number} Duration in minutes
  */
 function calculateSessionDuration(startTime, endTime = new Date()) {
-    return Math.floor((endTime - startTime) / (1000 * 60));
+    return Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60));
 }
 
 /**
@@ -164,7 +164,7 @@ function getTimeUntilReset(userTimezone, resetType = 'daily') {
     }
 }
 
-module.exports = {
+export {
     roundHoursFor55MinRule,
     formatHours,
     minutesToHours,

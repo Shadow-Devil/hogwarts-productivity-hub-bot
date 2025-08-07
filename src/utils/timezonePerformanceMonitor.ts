@@ -3,10 +3,13 @@
  * Tracks performance metrics for timezone operations in production
  * Part of Phase 7: Production Hardening
  */
-
-const winston = require('winston');
+import winston from 'winston';
 
 class TimezonePerformanceMonitor {
+    public metrics: any;
+    public logger: winston.Logger;
+    public reportInterval: NodeJS.Timeout;
+
     constructor() {
         this.metrics = {
             timezoneConversions: {
@@ -276,4 +279,4 @@ class TimezonePerformanceMonitor {
 // Create singleton instance
 const timezonePerformanceMonitor = new TimezonePerformanceMonitor();
 
-module.exports = timezonePerformanceMonitor;
+export default timezonePerformanceMonitor;

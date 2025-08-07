@@ -4,9 +4,17 @@
  * for users already in voice channels
  */
 
-const voiceService = require('../services/voiceService');
+import voiceService from '../services/voiceService';
 
 class VoiceStateScanner {
+    private isScanning: boolean;
+    private scanResults: {
+        totalUsersFound: number;
+        trackingStarted: number;
+        errors: number;
+        channels: Array<{ id: string; name: string; userCount: number }>;
+    };
+
     constructor() {
         this.isScanning = false;
         this.scanResults = {
@@ -47,7 +55,7 @@ class VoiceStateScanner {
                 return this.scanResults;
             }
 
-            for (const [_guildId, guild] of guilds) {
+            for (const [, guild] of guilds) {
                 console.log(`🏰 Scanning guild: ${guild.name} (${guild.id})`);
                 await this.scanGuildVoiceStates(guild, activeVoiceSessions, gracePeriodSessions);
             }
@@ -235,4 +243,4 @@ class VoiceStateScanner {
     }
 }
 
-module.exports = new VoiceStateScanner();
+export default new VoiceStateScanner();

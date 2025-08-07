@@ -5,14 +5,26 @@ const EventEmitter = require('events');
  * Prevents cascading failures by temporarily blocking requests to failing services
  */
 class CircuitBreaker extends EventEmitter {
-    constructor(options = {}) {
+    public options: {
+        failureThreshold: number; // Number of failures before opening
+        recoveryTimeout: number; // Time to wait before allowing half-open state
+        monitorTimeout: number; // Timeout for monitoring operations
+        name: string; // Name of the circuit breaker
+    };
+
+    constructor({
+        failureThreshold = 5,      // Failures before opening
+        recoveryTimeout = 30000,   // 30 seconds
+        monitorTimeout = 2000,     // 2 seconds
+        name = 'circuit-breaker'
+    } = {}) {
         super();
 
         this.options = {
-            failureThreshold: options.failureThreshold || 5,      // Failures before opening
-            recoveryTimeout: options.recoveryTimeout || 30000,   // 30 seconds
-            monitorTimeout: options.monitorTimeout || 2000,      // 2 seconds
-            name: options.name || 'circuit-breaker'
+            failureThreshold,
+            recoveryTimeout,
+            monitorTimeout,
+            name
         };
 
         this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
@@ -99,13 +111,27 @@ class CircuitBreaker extends EventEmitter {
  * Retry with Exponential Backoff
  */
 class RetryHandler {
-    constructor(options = {}) {
+    public options: {
+        maxRetries: number; // Maximum number of retries
+        baseDelay: number; // Base delay in milliseconds
+        maxDelay: number; // Maximum delay in milliseconds
+        backoffFactor: number; // Factor to increase delay each retry
+        jitter: boolean; // Whether to add randomness to delay
+    };
+
+    constructor({
+        maxRetries = 3,
+        baseDelay = 1000,      // 1 second
+        maxDelay = 30000,     // 30 seconds
+        backoffFactor = 2,
+        jitter = true          // Add randomness to delay
+    } = {}) {
         this.options = {
-            maxRetries: options.maxRetries || 3,
-            baseDelay: options.baseDelay || 1000,      // 1 second
-            maxDelay: options.maxDelay || 30000,       // 30 seconds
-            backoffFactor: options.backoffFactor || 2,
-            jitter: options.jitter !== false           // Add randomness
+            maxRetries,
+            baseDelay,
+            maxDelay,
+            backoffFactor,
+            jitter
         };
     }
 
@@ -183,17 +209,24 @@ class TimeoutHandler {
  * Health Check System
  */
 class HealthChecker {
+    public checks: Map<string, { check: Function, timeout: number, interval: number, critical: boolean }>;
+    public lastResults: Map<string, any>;
+
     constructor() {
         this.checks = new Map();
         this.lastResults = new Map();
     }
 
-    registerCheck(name, checkFunction, options = {}) {
+    registerCheck(name, checkFunction, {
+        timeout = 5000, // Default 5 seconds
+        interval = 30000, // Default 30 seconds
+        critical = true // Default critical check
+    } = {}) {
         this.checks.set(name, {
             check: checkFunction,
-            timeout: options.timeout || 5000,
-            interval: options.interval || 30000,
-            critical: options.critical !== false
+            timeout,
+            interval,
+            critical
         });
     }
 
@@ -268,7 +301,7 @@ class HealthChecker {
     }
 }
 
-module.exports = {
+export {
     CircuitBreaker,
     RetryHandler,
     TimeoutHandler,

@@ -1,18 +1,18 @@
-const { SlashCommandBuilder } = require('discord.js');
-const voiceService = require('../services/voiceService');
-const timezoneService = require('../services/timezoneService');
-const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc');
-const timezone = require('dayjs/plugin/timezone');
-const { createLeaderboardTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { StatusEmojis } = require('../utils/constants');
-const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
+import { SlashCommandBuilder } from 'discord.js';
+import voiceService from '../services/voiceService';
+import timezoneService from '../services/timezoneService';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import { createLeaderboardTemplate, createErrorTemplate } from '../utils/embedTemplates';
+import { StatusEmojis } from '../utils/constants';
+import { safeDeferReply, safeErrorReply } from '../utils/interactionUtils';
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('leaderboard')
         .setDescription('View voice channel time leaderboards')

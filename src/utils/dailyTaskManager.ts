@@ -9,6 +9,11 @@ const CacheInvalidationService = require('./cacheInvalidationService');
 const dayjs = require('dayjs');
 
 class DailyTaskManager {
+    public DAILY_TASK_LIMIT: number;
+    public cleanupInterval: NodeJS.Timeout | null;
+    public isRunning: boolean;
+    public discordClient: any; // Reference to Discord client for notifications
+
     constructor() {
         this.DAILY_TASK_LIMIT = 10;
         this.cleanupInterval = null;
@@ -614,4 +619,4 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
     }
 }
 
-module.exports = DailyTaskManager;
+export default DailyTaskManager;

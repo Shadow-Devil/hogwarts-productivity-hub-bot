@@ -1,11 +1,21 @@
 // Materialized View Manager Service
 // Handles periodic refresh of materialized views for optimal performance
 
-const { executeWithResilience } = require('../models/db');
-const { measureDatabase } = require('../utils/performanceMonitor');
-const queryCache = require('../utils/queryCache');
+import { executeWithResilience } from '../models/db';
+import { measureDatabase } from '../utils/performanceMonitor';
+import queryCache from '../utils/queryCache';
 
 class MaterializedViewManager {
+    public refreshInterval: NodeJS.Timeout | null;
+    public isRefreshing: boolean;
+    public lastRefreshTime: Date | null;
+    public refreshStats: {
+        totalRefreshes: number;
+        successfulRefreshes: number;
+        failedRefreshes: number;
+        lastError: string | null;
+    };
+
     constructor() {
         this.refreshInterval = null;
         this.isRefreshing = false;
@@ -177,10 +187,10 @@ class MaterializedViewManager {
                         managerStats: this.getRefreshStats()
                     };
                 });
-            });
+            })();
         } catch (error) {
             console.error('❌ Error getting view freshness:', error);
-            return { error: error.message };
+            return { error: error.message, isPopulated: false };
         }
     }
 
@@ -235,4 +245,4 @@ class MaterializedViewManager {
     }
 }
 
-module.exports = { MaterializedViewManager };
+export { MaterializedViewManager };

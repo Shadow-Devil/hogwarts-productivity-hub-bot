@@ -1,3 +1,5 @@
+import type { ChatInputCommandInteraction, GuildMember, VoiceBasedChannel } from 'discord.js';
+
 /**
  * Reliably get the voice channel for a user from an interaction
  * This function handles the case where Discord's cached member data might be stale
@@ -5,19 +7,19 @@
  * @param {Object} options - Options for voice channel detection
  * @returns {Promise<VoiceChannel|null>} - The voice channel or null if not found
  */
-async function getUserVoiceChannel(interaction, options = {}) {
-    const { useForceFetch = false, timeout = 3000 } = options;
+export async function getUserVoiceChannel(interaction: ChatInputCommandInteraction, { useForceFetch = false, timeout = 3000 } = {}): Promise<VoiceBasedChannel | null> {
 
     try {
         if (!interaction.guild) {
             console.warn('No guild found in interaction');
             return null;
         }
+        const member = interaction.member as GuildMember;
 
         // Method 1: Try cached member data first (fastest)
-        if (interaction.member?.voice?.channel) {
-            console.log(`Voice channel found via cached member: ${interaction.member.voice.channel.name} (${interaction.member.voice.channel.id})`);
-            return interaction.member.voice.channel;
+        if (member.voice?.channel) {
+            console.log(`Voice channel found via cached member: ${member.voice.channel.name} (${member.voice.channel.id})`);
+            return member.voice.channel;
         }
 
         // Method 2: Try fetching from voice states directly (fast, no API call)
@@ -40,7 +42,7 @@ async function getUserVoiceChannel(interaction, options = {}) {
                     force: true // This forces Discord to fetch fresh data instead of using cache
                 });
 
-                const timeoutPromise = new Promise((_, reject) =>
+                const timeoutPromise: Promise<GuildMember> = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('Member fetch timeout')), timeout)
                 );
 
@@ -63,6 +65,3 @@ async function getUserVoiceChannel(interaction, options = {}) {
     }
 }
 
-module.exports = {
-    getUserVoiceChannel
-};

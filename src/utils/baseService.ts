@@ -6,6 +6,8 @@
 const { measureDatabase } = require('./performanceMonitor');
 
 class BaseService {
+    public serviceName: string;
+
     constructor(serviceName) {
         this.serviceName = serviceName;
     }
@@ -76,4 +78,4 @@ class BaseService {
     }
 }
 
-module.exports = BaseService;
+export default BaseService;

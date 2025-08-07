@@ -1,10 +1,10 @@
-const { SlashCommandBuilder } = require('discord.js');
-const voiceService = require('../services/voiceService');
-const { createHouseTemplate, createChampionTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { StatusEmojis } = require('../utils/constants');
-const { safeDeferReply, safeErrorReply, fastMemberFetch } = require('../utils/interactionUtils');
+import { SlashCommandBuilder } from 'discord.js';
+import voiceService from '../services/voiceService';
+import { createHouseTemplate, createChampionTemplate, createErrorTemplate } from '../utils/embedTemplates';
+import { StatusEmojis } from '../utils/constants';
+import { safeDeferReply, safeErrorReply, fastMemberFetch } from '../utils/interactionUtils';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('housepoints')
         .setDescription('View house point leaderboards and champions')

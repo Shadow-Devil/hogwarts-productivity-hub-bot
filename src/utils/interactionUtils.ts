@@ -102,8 +102,7 @@ async function safeErrorReply(interaction, errorEmbed) {
  * @param {Function} commandFunction - Command function to execute
  * @param {Object} options - Execution options
  */
-async function executeWithTimeout(interaction, commandFunction, options = {}) {
-    const { timeout = 10000, errorTemplate } = options;
+async function executeWithTimeout(interaction, commandFunction, { timeout = 10000, errorTemplate = null } = {}) {
 
     let deferred = false;
 
@@ -188,7 +187,7 @@ async function fastMemberFetch(guild, userId, useCache = true) {
     }
 }
 
-module.exports = {
+export {
     safeDeferReply,
     safeReply,
     safeErrorReply,

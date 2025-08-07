@@ -1,8 +1,9 @@
-const { SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
-const { getUserVoiceChannel } = require('../utils/voiceUtils');
-const { createHeader, formatDataTable, createStatsCard } = require('../utils/visualHelpers');
+import { SlashCommandBuilder, MessageFlags, EmbedBuilder } from 'discord.js';
+import { getUserVoiceChannel } from '../utils/voiceUtils';
+import { createHeader, formatDataTable, createStatsCard } from '../utils/visualHelpers';
+import { activeVoiceSessions, gracePeriodSessions } from '../events/voiceStateUpdate';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('debug')
         .setDescription('Debug voice channel detection'),
@@ -14,7 +15,6 @@ module.exports = {
             console.log(`Debug command triggered by ${interaction.user.tag}`);
 
             // Get session tracking information
-            const { activeVoiceSessions, gracePeriodSessions } = require('../events/voiceStateUpdate');
             const userSession = activeVoiceSessions.get(interaction.user.id);
             const userInGracePeriod = gracePeriodSessions.get(interaction.user.id);
 
@@ -31,7 +31,7 @@ module.exports = {
 
                 if (activeVoiceTimers.has(voiceChannel.id)) {
                     const timer = activeVoiceTimers.get(voiceChannel.id);
-                    timeRemaining = Math.ceil((timer.endTime - new Date()) / 60000);
+                    timeRemaining = Math.ceil((timer.endTime - (new Date()).getTime()) / 60000);
                     timerStatus = 'Active timer detected';
                     timerPhase = timer.phase.toUpperCase();
                 }

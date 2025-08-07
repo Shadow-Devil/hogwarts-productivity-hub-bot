@@ -223,8 +223,8 @@ class TaskService extends BaseService {
                 };
             }
 
-            const createdAt = new Date(taskResult.rows[0].created_at);
-            const now = new Date();
+            const createdAt = new Date(taskResult.rows[0].created_at).getTime();
+            const now = new Date().getTime();
             const minutesSinceCreation = (now - createdAt) / (1000 * 60);
 
             if (minutesSinceCreation < 20) {
@@ -411,4 +411,4 @@ class TaskService extends BaseService {
     }
 }
 
-module.exports = new TaskService();
+export default new TaskService();

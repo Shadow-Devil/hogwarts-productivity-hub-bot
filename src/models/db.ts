@@ -1,9 +1,9 @@
-const { Pool } = require('pg');
-const dayjs = require('dayjs');
+import { ClientBase, Pool } from 'pg';
+import dayjs from 'dayjs';
 require('dotenv').config();
-const { performanceMonitor } = require('../utils/performanceMonitor');
-const databaseOptimizer = require('../utils/databaseOptimizer');
-const DatabaseResilience = require('../utils/databaseResilience');
+import { performanceMonitor } from '../utils/performanceMonitor';
+import databaseOptimizer from '../utils/databaseOptimizer';
+import DatabaseResilience from '../utils/databaseResilience';
 
 // Simple user cache for performance (replaced legacy functions)
 const userCache = new Map();
@@ -43,17 +43,17 @@ const pool = new Pool({
     host: process.env.DB_HOST || 'localhost',
     database: process.env.DB_NAME || 'discord_bot',
     password: process.env.DB_PASSWORD || 'postgres',
-    port: process.env.DB_PORT || 5432,
+    port: Number(process.env.DB_PORT) || 5432,
     ssl: false,
     connectionTimeoutMillis: 10000, // Increased for high load
     idleTimeoutMillis: 30000,
     max: parseInt(process.env.DB_MAX_CONNECTIONS) || 50, // Scaled for 4000 members
-    min: parseInt(process.env.DB_MIN_CONNECTIONS) || 5,  // Higher minimum for better performance
-    acquireTimeoutMillis: 60000, // Timeout for acquiring connections
-    createTimeoutMillis: 30000,  // Timeout for creating connections
-    destroyTimeoutMillis: 5000,  // Timeout for destroying connections
-    reapIntervalMillis: 1000,    // Cleanup interval
-    createRetryIntervalMillis: 200 // Retry interval for connection creation
+    min: parseInt(process.env.DB_MIN_CONNECTIONS) || 5  // Higher minimum for better performance
+    //acquireTimeoutMillis: 60000, // Timeout for acquiring connections
+    //createTimeoutMillis: 30000,  // Timeout for creating connections
+    //destroyTimeoutMillis: 5000,  // Timeout for destroying connections
+    //reapIntervalMillis: 1000,    // Cleanup interval
+    //createRetryIntervalMillis: 200 // Retry interval for connection creation
 });
 
 // Monitor connection pool
@@ -266,7 +266,7 @@ async function runMigrations(client) {
 }
 
 // Initialize database tables
-async function initializeDatabase() {
+export async function initializeDatabase() {
     const client = await pool.connect();
     try {
         // First, run any necessary migrations
@@ -844,9 +844,13 @@ function generateLockId(str) {
     return Math.abs(hash);
 }
 
-module.exports = {
+// Export database resilience instance for health monitoring
+export function getDbResilience() {
+    return dbResilience;
+}
+
+export {
     pool,
-    initializeDatabase,
     addToBatch,
     calculatePointsForHours,
     checkAndPerformMonthlyReset,
@@ -860,34 +864,24 @@ module.exports = {
     generateLockId,
     getCachedUser,
     setCachedUser,
-    clearUserCache,
-    executeWithResilience: async(callback, options = {}) => {
-        return await dbResilience.executeWithResilience(callback, options);
-    },
-
-    // Enhanced query execution with optimization tracking
-    async executeCachedQuery(operation, query, params = [], cacheType = 'default') {
-        return await databaseOptimizer.executeTrackedQuery(operation, query, params, true, cacheType);
-    },
-
-    // Batch operations using optimizer
-    async executeBatchQueries(operation, queries, batchSize = 50) {
-        return await databaseOptimizer.executeBatchOperation(operation, queries, batchSize);
-    },
-
-    // Get performance insights
-    getOptimizationReport() {
-        return databaseOptimizer.getPerformanceReport();
-    }
-
+    clearUserCache
 };
 
-// Export database resilience instance for health monitoring
-function getDbResilience() {
-    return dbResilience;
+export async function executeWithResilience<T>(callback: (client: ClientBase) => Promise<T>, options = {}): Promise<T> {
+    return await dbResilience.executeWithResilience(callback, options);
 }
 
-module.exports = {
-    ...module.exports,
-    getDbResilience
-};
+// Enhanced query execution with optimization tracking
+export async function executeCachedQuery(operation, query, params = [], cacheType = 'default') {
+    return await databaseOptimizer.executeTrackedQuery(operation, query, params, true, cacheType);
+}
+
+// Batch operations using optimizer
+export async function executeBatchQueries(operation, queries, batchSize = 50) {
+    return await databaseOptimizer.executeBatchOperation(operation, queries, batchSize);
+}
+
+// Get performance insights
+export function getOptimizationReport() {
+    return databaseOptimizer.getPerformanceReport();
+}

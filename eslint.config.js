@@ -1,12 +1,13 @@
-const js = require('@eslint/js');
+import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
 
-module.exports = [
-    js.configs.recommended,
-    {
-        files: ['**/*.js'],
+export default tseslint.config([
+  eslint.configs.recommended,
+      {
+        files: ['**/*.ts'],
         languageOptions: {
             ecmaVersion: 2022,
-            sourceType: 'commonjs',
+            sourceType: 'module',
             globals: {
                 console: 'readonly',
                 process: 'readonly',
@@ -20,8 +21,9 @@ module.exports = [
                 setTimeout: 'readonly',
                 clearTimeout: 'readonly',
                 setInterval: 'readonly',
-                clearInterval: 'readonly'
-            }
+                clearInterval: 'readonly',
+                "NodeJS": true
+            },
         },
         rules: {
             'no-unused-vars': ['error', {
@@ -46,6 +48,8 @@ module.exports = [
             'prefer-const': 'error'
         }
     },
+    tseslint.configs.base,
+
     {
         files: ['**/*.test.js', '**/*.spec.js', 'tests/**/*.js'],
         languageOptions: {
@@ -62,4 +66,4 @@ module.exports = [
             }
         }
     }
-];
+]);

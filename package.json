@@ -2,6 +2,7 @@
   "name": "botd",
   "version": "1.0.0",
   "main": "src/index.js",
+  "type": "module",
   "scripts": {
     "start": "node src/index.ts",
     "dev": "nodemon src/index.js",
@@ -11,7 +12,7 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint src/ --max-warnings=0",
     "lint:fix": "eslint src/ --fix",
-    "build": "echo 'Build step placeholder - add if needed'",
+    "typecheck": "tsc --noEmit",
     "validate": "npm run lint && npm run test",
     "precommit": "npm run validate",
     "bot-health": "node scripts/bot-health/functional-health-check.js",
@@ -52,9 +53,15 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",
+    "@types/node": "^24.2.0",
+    "@types/pg": "^8.15.5",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "@typescript-eslint/parser": "^8.39.0",
     "eslint": "^8.57.1",
     "eslint-config-standard": "^17.1.0",
     "jest": "^30.0.0",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.0"
   }
 }

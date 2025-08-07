@@ -1,8 +1,8 @@
 // Visual Helper Utilities for Discord Bot
 // Provides consistent visual formatting across all commands
 
-const { EmbedBuilder } = require('discord.js');
-const { BotColors } = require('./constants');
+import { EmbedBuilder } from 'discord.js';
+import { BotColors } from './constants';
 
 // 📊 Progress Bar Generator
 function createProgressBar(current, max, length = 10, fillChar = '▓', emptyChar = '░') {
@@ -91,16 +91,15 @@ function createInfoBox(title, content, style = 'default') {
 }
 
 // 📊 Enhanced Data Grid with Table-Like Structure
-function formatDataGrid(data, options = {}) {
-    const {
-        columns = 2,
-        separator = ' • ',
-        prefix = '├─',
-        spacing = true,
-        style = 'compact',
-        useTable = false,
-        columnWidths = null
-    } = options;
+function formatDataGrid(data, {
+    columns = 2,
+    separator = ' • ',
+    prefix = '├─',
+    spacing = true,
+    style = 'compact',
+    useTable = false,
+    columnWidths = null
+} = {}) {
 
     const items = Array.isArray(data) ? data : Object.entries(data).map(([k, v]) => `${k}: ${v}`);
 
@@ -155,14 +154,13 @@ function formatDataTable(data, columnWidths = null) {
 }
 
 // 📊 Enhanced Centered Data Table with Better Spacing
-function formatCenteredDataTable(data, options = {}) {
-    const {
-        columnWidths = null,
-        addPadding = true,
-        useBoxFormat = false,
-        centerAlign = true,
-        spacing = 'normal' // 'compact', 'normal', 'spacious'
-    } = options;
+function formatCenteredDataTable(data, {
+    columnWidths = null,
+    addPadding = true,
+    useBoxFormat = false,
+    centerAlign = true,
+    spacing = 'normal' // 'compact', 'normal', 'spacious'
+} = {}) {
 
     if (!Array.isArray(data) || data.length === 0) return '';
 
@@ -228,15 +226,14 @@ function formatCenteredDataTable(data, options = {}) {
 }
 
 // 📋 Create Stats Section with Enhanced Layout and Padding
-function createStatsSection(title, data, options = {}) {
-    const {
-        emoji = '📊',
-        useTable = true,
-        addSpacing = true,
-        centerContent = true,
-        style = 'enhanced', // 'basic', 'enhanced', 'premium'
-        columnWidths = null
-    } = options;
+function createStatsSection(title, data, {
+    emoji = '📊',
+    useTable = true,
+    addSpacing = true,
+    centerContent = true,
+    style = 'enhanced', // 'basic', 'enhanced', 'premium'
+    columnWidths = null
+} = {}) {
 
     let content = '';
 
@@ -268,12 +265,11 @@ function createStatsSection(title, data, options = {}) {
 }
 
 // 🎯 Create Centered Field Layout for Discord Embeds
-function createCenteredLayout(sections, options = {}) {
-    const {
-        maxColumnsPerRow = 3,
-        addSpacers = true,
-        spacerValue = '\u200b'
-    } = options;
+function createCenteredLayout(sections, {
+    maxColumnsPerRow = 3,
+    addSpacers = true,
+    spacerValue = '\u200b'
+} = {}) {
 
     const fields = [];
 
@@ -349,12 +345,11 @@ function getLoadingText(step = 0) {
 }
 
 // 🎯 User Status Formatter
-function formatUserStatus(user, status = {}) {
-    const {
-        points = 0,
-        streak = 0,
-        house = null
-    } = status;
+function formatUserStatus(user, {
+    points = 0,
+    streak = 0,
+    house = null
+} = {}) {
 
     const houseEmojis = {
         'Gryffindor': '🦁',
@@ -376,13 +371,13 @@ function formatUserStatus(user, status = {}) {
 }
 
 // 📊 Create Stats Card with Enhanced Typography
-function createStatsCard(title, stats, options = {}) {
-    const {
-        emoji = '📊',
-        style = 'card',
-        highlightMain = false,
-        emphasizeFirst = false
-    } = options;
+function createStatsCard(title, stats, {
+    emoji = '📊',
+    style = 'card',
+    highlightMain = false,
+    emphasizeFirst = false,
+    showBigNumbers = false
+} = {}) {
 
     let card = '';
 
@@ -436,7 +431,7 @@ function createStatsCard(title, stats, options = {}) {
 }
 
 // 🎖️ Create Achievement Badge with Enhanced Typography
-function createAchievementBadge(title, value, emoji = '🏆', style = 'default') {
+function createAchievementBadge(title: string, value: string, emoji = '🏆', style = 'default') {
     const badges = {
         default: `${emoji} **${title}:** ${value}`,
         highlighted: `✨ ${emoji} **${title}:** ▓▓▓ ${value} ▓▓▓`,
@@ -450,14 +445,13 @@ function createAchievementBadge(title, value, emoji = '🏆', style = 'default')
 }
 
 // 📋 Create Info Section with Enhanced Layout
-function createInfoSection(title, items, options = {}) {
-    const {
-        emoji = '📋',
-        style = 'list',
-        useTable = false,
-        showNumbers = false,
-        spacing = 'normal'
-    } = options;
+function createInfoSection(title: any, items: any[], {
+    emoji = '📋',
+    style = 'list',
+    useTable = false,
+    showNumbers = false,
+    spacing = 'normal'
+} = {}) {
 
     let section = `### ${emoji} **${title}**\n`;
 
@@ -480,14 +474,15 @@ function createInfoSection(title, items, options = {}) {
 }
 
 // 📊 Create Progress Section with Visual Enhancement
-function createProgressSection(title, current, max, options = {}) {
-    const {
-        emoji = '📊',
-        showPercentage = true,
-        showNumbers = true,
-        barLength = 12,
-        style = 'default'
-    } = options;
+function createProgressSection(title: string, current: any, max: number, {
+    emoji = '📊',
+    showPercentage = true,
+    showNumbers = true,
+    barLength = 12,
+    style = 'default',
+    warningThreshold = 0.75,
+    dangerThreshold = 0.9
+} = {}) {
 
     const progress = createProgressBar(current, max, barLength);
 
@@ -530,7 +525,7 @@ function getTrendEmoji(trend) {
     return trends[trend.toLowerCase()] || '➡️';
 }
 
-module.exports = {
+export {
     createProgressBar,
     getStatusColor,
     createHeader,

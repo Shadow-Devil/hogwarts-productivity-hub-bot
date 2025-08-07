@@ -192,4 +192,4 @@ class CacheInvalidationService {
     }
 }
 
-module.exports = CacheInvalidationService;
+export default CacheInvalidationService;

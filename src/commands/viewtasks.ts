@@ -1,10 +1,10 @@
-const { SlashCommandBuilder } = require('discord.js');
-const taskService = require('../services/taskService');
-const { createTaskTemplate, createErrorTemplate } = require('../utils/embedTemplates');
-const { StatusEmojis } = require('../utils/constants');
-const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
+import { SlashCommandBuilder } from 'discord.js';
+import taskService from '../services/taskService';
+import { createTaskTemplate, createErrorTemplate } from '../utils/embedTemplates';
+import { StatusEmojis } from '../utils/constants';
+import { safeDeferReply, safeErrorReply } from '../utils/interactionUtils';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('viewtasks')
         .setDescription('View all your tasks with their numbers'),

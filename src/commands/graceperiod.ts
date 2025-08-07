@@ -1,8 +1,10 @@
-const { SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
-const { createHeader, formatDataTable, createStatsCard } = require('../utils/visualHelpers');
-const { BotColors } = require('../utils/constants');
+import { SlashCommandBuilder, MessageFlags, EmbedBuilder } from 'discord.js';
+import { createHeader, formatDataTable, createStatsCard } from '../utils/visualHelpers';
+import { BotColors } from '../utils/constants';
+// Get grace period and active sessions
+import { activeVoiceSessions, gracePeriodSessions } from '../events/voiceStateUpdate';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('graceperiod')
         .setDescription('View grace period sessions for users with connection issues'),
@@ -11,8 +13,6 @@ module.exports = {
             // Defer reply immediately
             await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
-            // Get grace period and active sessions
-            const { activeVoiceSessions, gracePeriodSessions } = require('../events/voiceStateUpdate');
 
             const embed = new EmbedBuilder()
                 .setTitle(createHeader('Grace Period Status', 'Connection Stability Monitor', '⏸️', 'large'))

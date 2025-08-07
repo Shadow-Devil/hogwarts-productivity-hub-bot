@@ -96,7 +96,7 @@ class VoiceService extends BaseService {
     async endVoiceSession(discordId, voiceChannelId, member = null) {
         return measureDatabase('endVoiceSession', async() => {
             return executeWithResilience(async(client) => {
-                const now = new Date();
+                const now = new Date().getTime();
 
                 // Find the active session
                 const result = await client.query(
@@ -112,7 +112,7 @@ class VoiceService extends BaseService {
                 }
 
                 const session = result.rows[0];
-                const joinedAt = new Date(session.joined_at);
+                const joinedAt = new Date(session.joined_at).getTime();
                 const durationMs = now - joinedAt;
                 const durationMinutes = Math.floor(durationMs / (1000 * 60));
 
@@ -365,7 +365,7 @@ class VoiceService extends BaseService {
                 }
 
                 const yesterdaySession = result.rows[0];
-                const joinedAt = new Date(yesterdaySession.joined_at);
+                const joinedAt = new Date(yesterdaySession.joined_at).getTime();
 
                 // Calculate duration from join time to midnight
                 const durationUntilMidnight = Math.floor((startOfToday - joinedAt) / (1000 * 60));
@@ -1034,4 +1034,4 @@ class VoiceService extends BaseService {
     }
 }
 
-module.exports = new VoiceService();
+export default new VoiceService();

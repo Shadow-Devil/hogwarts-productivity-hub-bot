@@ -1,11 +1,24 @@
-const { CircuitBreaker, RetryHandler, TimeoutHandler } = require('./faultTolerance');
-const { performanceMonitor } = require('./performanceMonitor');
+import type { Client } from 'discord.js';
+import { CircuitBreaker, RetryHandler, TimeoutHandler } from './faultTolerance';
+import { performanceMonitor } from './performanceMonitor';
+import type { ClientBase, Pool } from 'pg';
 
 /**
  * Enhanced Database Resilience Module
  * Provides fault-tolerant database operations with automatic retries, circuit breakers, and deadlock detection
  */
 class DatabaseResilience {
+    public pool: Pool; // Database connection pool
+    public circuitBreakers: Record<string, CircuitBreaker>;
+    public retryHandler: RetryHandler;
+    public connectionMetrics: {
+        activeConnections: number;
+        totalQueries: number;
+        failedQueries: number;
+        deadlocks: number;
+        timeouts: number;
+    };
+
     constructor(pool) {
         this.pool = pool;
 
@@ -84,9 +97,10 @@ class DatabaseResilience {
      * Execute a database operation with resilience (callback receives client)
      * This is the main function used throughout the codebase for database operations
      */
-    async executeWithResilience(callback, options = {}) {
+    async executeWithResilience<T>(callback: (client: ClientBase) => Promise<T>, {
+        timeout = 30000 // Default timeout 30 seconds
+    } = {}): Promise<T> {
         const startTime = Date.now();
-        const timeout = options.timeout || 30000; // 30 seconds default
 
         try {
             return await this.circuitBreakers.query.execute(async() => {
@@ -138,9 +152,10 @@ class DatabaseResilience {
     /**
      * Execute a query with full fault tolerance
      */
-    async executeQuery(text, params = [], options = {}) {
+    async executeQuery(text, params = [], {
+        timeout = 30000 // Default 30 seconds
+    } = {}) {
         const startTime = Date.now();
-        const timeout = options.timeout || 30000; // 30 seconds default
 
         try {
             return await this.circuitBreakers.query.execute(async() => {
@@ -174,9 +189,10 @@ class DatabaseResilience {
     /**
      * Execute transaction with deadlock detection and retry
      */
-    async executeTransaction(callback, options = {}) {
+    async executeTransaction(callback, {
+        timeout = 60000 // Default 60 seconds
+    } = {}) {
         const startTime = Date.now();
-        const timeout = options.timeout || 60000; // 60 seconds for transactions
 
         try {
             return await this.circuitBreakers.transaction.execute(async() => {
@@ -384,4 +400,4 @@ class DatabaseResilience {
     }
 }
 
-module.exports = DatabaseResilience;
+export default DatabaseResilience;

@@ -1,18 +1,34 @@
 require('dotenv').config();
-const { Client, IntentsBitField, MessageFlags } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-const { Collection } = require('discord.js');
-const { initializeDatabase, getDbResilience } = require('./models/db');
-const { measureCommand, performanceMonitor } = require('./utils/performanceMonitor');
-const monthlyResetService = require('./services/monthlyResetService');
-const BotHealthMonitor = require('./utils/botHealthMonitor');
-const sessionRecovery = require('./utils/sessionRecovery');
-const DailyTaskManager = require('./utils/dailyTaskManager');
-const CentralResetService = require('./services/centralResetService');
+import { Client, IntentsBitField, MessageFlags, Collection, type Interaction } from 'discord.js';
+import fs from 'fs';
+import path from 'path';
+import { initializeDatabase, getDbResilience } from './models/db';
+import { measureCommand, performanceMonitor } from './utils/performanceMonitor';
+import monthlyResetService from './services/monthlyResetService';
+import BotHealthMonitor from './utils/botHealthMonitor';
+import sessionRecovery from './utils/sessionRecovery';
+import DailyTaskManager from './utils/dailyTaskManager';
+import CentralResetService from './services/centralResetService';
+
+class CustomClient extends Client {
+    public commands = new Collection<string, any>();
+    public healthMonitor: BotHealthMonitor | null = null;
+    public dailyTaskManager: DailyTaskManager | null = null;
+    public centralResetService: typeof CentralResetService | null = null;
+}
+
+declare module 'discord.js' {
+    type CustomInteraction = Interaction & {
+        client: CustomClient;
+        options: any;
+        editReply: (options: any) => Promise<any>;
+    }
+}
+
 const dailyTaskManager = new DailyTaskManager();
 
-const client = new Client({
+
+const client: CustomClient = new CustomClient({
     intents: [
         IntentsBitField.Flags.Guilds,
         IntentsBitField.Flags.GuildMessages,
@@ -21,9 +37,6 @@ const client = new Client({
         IntentsBitField.Flags.GuildVoiceStates // Required for voice channel detection
     ]
 });
-
-// Load commands asynchronously
-client.commands = new Collection();
 
 async function loadCommands() {
     const commandsPath = path.join(__dirname, 'commands');
@@ -131,8 +144,8 @@ client.on('ready', async(c) => {
 
         const recoveryResults = await sessionRecovery.initialize(activeVoiceSessions, gracePeriodSessions);
         console.log('✅ Session recovery system initialized');
-        if (recoveryResults.recoveredSessions > 0) {
-            console.log(`📈 Recovered ${recoveryResults.recoveredSessions} incomplete sessions from previous runs`);
+        if (recoveryResults > 0) {
+            console.log(`📈 Recovered ${recoveryResults} incomplete sessions from previous runs`);
         }
 
         // Start performance monitoring and monthly reset scheduler

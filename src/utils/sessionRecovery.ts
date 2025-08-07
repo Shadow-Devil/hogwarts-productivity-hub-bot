@@ -1,6 +1,6 @@
-const { executeWithResilience } = require('../models/db');
-const { measureDatabase } = require('./performanceMonitor');
-const dayjs = require('dayjs');
+import { executeWithResilience } from '../models/db';
+import { measureDatabase } from './performanceMonitor';
+import dayjs from 'dayjs';
 
 /**
  * Session Recovery System
@@ -8,17 +8,29 @@ const dayjs = require('dayjs');
  * Enhanced with grace period session support for unstable connections
  */
 class SessionRecovery {
+    private isShuttingDown: boolean;
+    private periodicSaveInterval: NodeJS.Timeout | null;
+    private activeVoiceSessions: Map<string, any> | null; // Will be set from voiceStateUpdate
+    private gracePeriodSessions: Map<string, any> | null; // Will be set from voiceStateUpdate
+
+    // Configuration
+    private config: {
+        saveIntervalMs: number;      // Save every 2 minutes
+        maxSessionDurationHours: number; // Consider sessions over 24h as stale (increased for long study sessions)
+        recoveryGracePeriodMs: number; // 5 minutes grace period for recovery
+    };
+
     constructor() {
         this.isShuttingDown = false;
         this.periodicSaveInterval = null;
-        this.activeVoiceSessions = null; // Will be set from voiceStateUpdate
-        this.gracePeriodSessions = null; // Will be set from voiceStateUpdate
+        this.activeVoiceSessions = null;
+        this.gracePeriodSessions = null;
 
         // Configuration
         this.config = {
-            saveIntervalMs: 2 * 60 * 1000,      // Save every 2 minutes
-            maxSessionDurationHours: 24,        // Consider sessions over 24h as stale (increased for long study sessions)
-            recoveryGracePeriodMs: 5 * 60 * 1000 // 5 minutes grace period for recovery
+            saveIntervalMs: 2 * 60 * 1000,
+            maxSessionDurationHours: 24,
+            recoveryGracePeriodMs: 5 * 60 * 1000
         };
 
         this.setupGracefulShutdown();
@@ -331,13 +343,14 @@ class SessionRecovery {
     getRecoveryStats() {
         return {
             isShuttingDown: this.isShuttingDown,
-            periodicSavingActive: !!this.periodicSaveInterval,
+            isPeriodicSavingActive: !!this.periodicSaveInterval,
             activeSessions: this.activeVoiceSessions ? this.activeVoiceSessions.size : 0,
             gracePeriodSessions: this.gracePeriodSessions ? this.gracePeriodSessions.size : 0,
-            saveIntervalMs: this.config.saveIntervalMs,
-            maxSessionDurationHours: this.config.maxSessionDurationHours
+            saveInterval: this.config.saveIntervalMs,
+            maxSessionDurationHours: this.config.maxSessionDurationHours,
+            isInitialized: false
         };
     }
 }
 
-module.exports = new SessionRecovery();
+export default new SessionRecovery();

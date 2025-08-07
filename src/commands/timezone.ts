@@ -1,11 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const timezoneService = require('../services/timezoneService');
-const { BotColors, StatusEmojis } = require('../utils/constants');
-const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
-const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc');
-const timezone = require('dayjs/plugin/timezone');
-const relativeTime = require('dayjs/plugin/relativeTime');
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import timezoneService from '../services/timezoneService';
+import { BotColors, StatusEmojis } from '../utils/constants';
+import { safeDeferReply, safeErrorReply } from '../utils/interactionUtils';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import relativeTime from 'dayjs/plugin/relativeTime';
 
 // Extend dayjs with timezone and relative time support
 dayjs.extend(utc);
@@ -156,7 +156,7 @@ function createTimezoneChangeEmbed(oldTimezone, newTimezone, userLocalTime, impa
     return embed;
 }
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('timezone')
         .setDescription('Manage your timezone settings for accurate daily/monthly resets')

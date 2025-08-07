@@ -69,7 +69,7 @@ const VisualPatterns = {
     }
 };
 
-module.exports = {
+export {
     BotColors,
     StatusEmojis,
     VisualPatterns

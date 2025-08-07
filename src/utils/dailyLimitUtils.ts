@@ -87,7 +87,7 @@ function generateDailyLimitMessage(limitInfo, actualSessionHours, voiceTimePoint
     }
 }
 
-module.exports = {
+export {
     calculateDailyLimitInfo,
     formatDailyLimitStatus,
     generateDailyLimitMessage

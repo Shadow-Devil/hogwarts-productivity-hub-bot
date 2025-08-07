@@ -1,21 +1,21 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const voiceService = require('../services/voiceService');
-const taskService = require('../services/taskService');
-const timezoneService = require('../services/timezoneService');
-const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc');
-const timezone = require('dayjs/plugin/timezone');
-const { BotColors, StatusEmojis } = require('../utils/constants');
-const { createErrorTemplate } = require('../utils/embedTemplates');
-const { safeDeferReply, safeErrorReply } = require('../utils/interactionUtils');
-const { formatDailyLimitStatus } = require('../utils/dailyLimitUtils');
-const { formatHours } = require('../utils/timeUtils');
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import voiceService from '../services/voiceService';
+import taskService from '../services/taskService';
+import timezoneService from '../services/timezoneService';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import { BotColors, StatusEmojis } from '../utils/constants';
+import { createErrorTemplate } from '../utils/embedTemplates';
+import { safeDeferReply, safeErrorReply } from '../utils/interactionUtils';
+import { formatDailyLimitStatus } from '../utils/dailyLimitUtils';
+import { formatHours } from '../utils/timeUtils';
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('stats')
         .setDescription('View your productivity statistics'),

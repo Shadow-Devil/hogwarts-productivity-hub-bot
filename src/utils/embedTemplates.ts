@@ -1,24 +1,15 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
 
-const { BotColors, StatusEmojis } = require('./constants');
-const {
-    createHeader,
-    createProgressBar,
-    formatDataGrid,
-    formatDataTable,
-    createStatsCard,
-    createProgressSection,
-    createStyledEmbed
-} = require('./visualHelpers');
+import { BotColors, StatusEmojis } from './constants';
+import { createHeader, createProgressBar, formatDataGrid, formatDataTable, createStatsCard, createProgressSection, createStyledEmbed } from './visualHelpers';
 
 // 📊 Enhanced Statistics Dashboard Template
-function createStatsTemplate(user, stats, options = {}) {
-    const {
-        showThumbnail = true,
-        includeFooter = true,
-        useEnhancedLayout = true
-    } = options;
+function createStatsTemplate(user, stats, {
+    showThumbnail = true,
+    includeFooter = true,
+    useEnhancedLayout = true
+} = {}) {
 
     const embed = createStyledEmbed('info');
 
@@ -44,18 +35,17 @@ function createStatsTemplate(user, stats, options = {}) {
 }
 
 // 📋 Enhanced Task Management Template
-function createTaskTemplate(user, tasks, options = {}) {
-    const {
-        emptyState = false,
-        emptyStateMessage = '',
-        showProgress = false,
-        includeRecentCompleted = false,
-        maxRecentCompleted = 5,
-        helpText = '',
-        useEnhancedLayout = true,
-        useTableFormat = true,
-        showDailyLimit = false
-    } = options;
+function createTaskTemplate(user, tasks, {
+    emptyState = false,
+    emptyStateMessage = '',
+    showProgress = false,
+    includeRecentCompleted = false,
+    maxRecentCompleted = 5,
+    helpText = '',
+    useEnhancedLayout = true,
+    useTableFormat = true,
+    showDailyLimit = false
+} = {}) {
 
     const embed = createStyledEmbed('primary');
 
@@ -175,7 +165,7 @@ function createTaskTemplate(user, tasks, options = {}) {
     // Add recently completed tasks with enhanced formatting
     if (includeRecentCompleted && completedTasks.length > 0) {
         const recentCompleted = completedTasks
-            .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+            .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
             .slice(0, maxRecentCompleted);
 
         if (useTableFormat) {
@@ -234,15 +224,14 @@ function createTaskTemplate(user, tasks, options = {}) {
 }
 
 // 🏆 Enhanced Leaderboard Template
-function createLeaderboardTemplate(type, data, currentUser, options = {}) {
-    const {
-        maxEntries = 10,
-        showUserPosition = true,
-        includeMedals = true,
-        includeStats = true,
-        useEnhancedLayout = true,
-        useTableFormat = true
-    } = options;
+function createLeaderboardTemplate(type, data, currentUser, {
+    maxEntries = 10,
+    showUserPosition = true,
+    includeMedals = true,
+    includeStats = true,
+    useEnhancedLayout = true,
+    useTableFormat = true
+} = {}) {
 
     const isMonthly = type === 'monthly';
     const title = isMonthly ? '📅 Monthly Voice Leaderboard' : '🌟 All-Time Voice Leaderboard';
@@ -389,14 +378,13 @@ function createLeaderboardTemplate(type, data, currentUser, options = {}) {
 
 // ⏱️ Enhanced Timer Status Template
 // 🏠 Enhanced House Points Template
-function createHouseTemplate(houses, type, options = {}) {
-    const {
-        showEmojis = true,
-        includeStats = true,
-        useEnhancedLayout = true,
-        useTableFormat = true,
-        currentUser = null
-    } = options;
+function createHouseTemplate(houses, type, {
+    showEmojis = true,
+    includeStats = true,
+    useEnhancedLayout = true,
+    useTableFormat = true,
+    currentUser = null
+} = {}) {
 
     const houseEmojis = {
         'Gryffindor': '🦁',
@@ -519,14 +507,13 @@ function createHouseTemplate(houses, type, options = {}) {
 }
 
 // 🩺 Enhanced Health Report Template
-function createHealthTemplate(title, healthData, options = {}) {
-    const {
-        includeMetrics = true,
-        useEnhancedLayout = true,
-        useTableFormat = true,
-        showBigNumbers = true,
-        includeTimestamp = true
-    } = options;
+function createHealthTemplate(title, healthData, {
+    includeMetrics = true,
+    useEnhancedLayout = true,
+    useTableFormat = true,
+    showBigNumbers = true,
+    includeTimestamp = true
+} = {}) {
 
     // Handle both old and new parameter formats for backwards compatibility
     let data, type = 'overview';
@@ -735,16 +722,18 @@ function createHealthTemplate(title, healthData, options = {}) {
 }
 
 // 🎯 Enhanced Achievement/Success Template
-function createSuccessTemplate(title, message, options = {}) {
-    const {
-        celebration = false,
-        points = null,
-        streak = null,
-        includeEmoji = true,
-        useEnhancedLayout = true,
-        useTableFormat = true,
-        showBigNumbers = false
-    } = options;
+function createSuccessTemplate(title, message, {
+    celebration = false,
+    points = null,
+    streak = null,
+    includeEmoji = true,
+    useEnhancedLayout = true,
+    useTableFormat = true,
+    showBigNumbers = false,
+    helpText = '',
+    rewards = null,
+    additionalInfo = null
+} = {}) {
 
     const emoji = celebration ? '🎉' : '✅';
     const embed = createStyledEmbed('success');
@@ -798,11 +787,12 @@ function createSuccessTemplate(title, message, options = {}) {
 }
 
 // ⏱️ Timer Template
-function createTimerTemplate(action, data, options = {}) {
-    const {
-        showProgress = true,
-        includeMotivation = true
-    } = options;
+function createTimerTemplate(action, data, {
+    showProgress = true,
+    includeMotivation = true,
+    style = 'default',
+    customFooter = null
+} = {}) {
 
     const { workTime, breakTime, voiceChannel, phase, timeRemaining } = data;
 
@@ -931,13 +921,12 @@ function createTimerTemplate(action, data, options = {}) {
 }
 
 // ❌ Error Template
-function createErrorTemplate(title, message, options = {}) {
-    const {
-        includeHelp = true,
-        helpText = 'Please try again or contact support if the issue persists.',
-        additionalInfo = null,
-        showEmoji = true
-    } = options;
+function createErrorTemplate(title, message, {
+    includeHelp = true,
+    helpText = 'Please try again or contact support if the issue persists.',
+    additionalInfo = null,
+    showEmoji = true
+} = {}) {
 
     const embed = createStyledEmbed('error')
         .setTitle(`${showEmoji ? '❌ ' : ''}${title}`)
@@ -960,12 +949,11 @@ function createErrorTemplate(title, message, options = {}) {
 }
 
 // 👑 Enhanced House Champions Template
-function createChampionTemplate(monthlyChampions, allTimeChampions, currentUser, options = {}) {
-    const {
-        useEnhancedLayout = true,
-        useTableFormat = true,
-        showUserInfo = true
-    } = options;
+function createChampionTemplate(monthlyChampions, allTimeChampions, currentUser, {
+    useEnhancedLayout = true,
+    useTableFormat = true,
+    showUserInfo = true
+} = {}) {
 
     const houseEmojis = {
         'Gryffindor': '🦁',
@@ -1118,7 +1106,7 @@ function createChampionTemplate(monthlyChampions, allTimeChampions, currentUser,
     return embed;
 }
 
-module.exports = {
+export {
     createStatsTemplate,
     createTaskTemplate,
     createLeaderboardTemplate,

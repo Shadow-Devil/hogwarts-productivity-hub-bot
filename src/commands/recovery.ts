@@ -1,9 +1,9 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
-const sessionRecovery = require('../utils/sessionRecovery');
-const { createHeader, formatDataTable, createStatsCard } = require('../utils/visualHelpers');
-const { safeDeferReply } = require('../utils/interactionUtils');
+import { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import sessionRecovery from '../utils/sessionRecovery';
+import { createHeader, formatDataTable, createStatsCard } from '../utils/visualHelpers';
+import { safeDeferReply } from '../utils/interactionUtils';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('recovery')
         .setDescription('View session recovery system status and force operations')

@@ -7,6 +7,10 @@ const queryCache = require('./queryCache');
 const voiceService = require('../services/voiceService');
 
 class CacheWarming {
+    public isWarming: boolean;
+    public lastWarmTime: Date | null;
+    public warmingInterval: NodeJS.Timeout | null;
+
     constructor() {
         this.isWarming = false;
         this.lastWarmTime = null;
@@ -204,4 +208,4 @@ class CacheWarming {
     }
 }
 
-module.exports = new CacheWarming();
+export default new CacheWarming();

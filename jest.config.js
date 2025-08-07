@@ -1,4 +1,4 @@
-module.exports = {
+export {
     testEnvironment: 'node',
     roots: ['<rootDir>/src', '<rootDir>/tests'],
     testMatch: [

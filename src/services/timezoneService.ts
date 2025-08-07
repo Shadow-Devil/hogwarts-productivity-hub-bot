@@ -598,7 +598,10 @@ class TimezoneService extends BaseService {
                 oldTimezone,
                 newTimezone,
                 streakAction,
-                changeTime: now
+                changeTime: now,
+                resetTimesChanged: null,
+                streakPreserved: null,
+                dstAffected: null
             };
 
         } catch (error) {
@@ -799,4 +802,4 @@ class TimezoneService extends BaseService {
     }
 }
 
-module.exports = new TimezoneService();
+export default new TimezoneService();

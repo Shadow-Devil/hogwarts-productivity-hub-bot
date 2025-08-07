@@ -4,6 +4,22 @@
  */
 
 class QueryCache {
+    public cache: Map<string, any>;
+    public stats: {
+        hits: number;
+        misses: number;
+        total: number;
+    };
+    public ttlSettings: {
+        userStats: number;
+        leaderboard: number;
+        houseLeaderboard: number;
+        houseChampions: number;
+        userTasks: number;
+        taskStats: number;
+        default: number;
+    };
+
     constructor() {
         this.cache = new Map();
         this.stats = {
@@ -334,4 +350,4 @@ class QueryCache {
 
 }
 
-module.exports = new QueryCache();
+export default new QueryCache();

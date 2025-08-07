@@ -4,6 +4,16 @@
  */
 
 class PerformanceMonitor {
+    public metrics: {
+        commands: Map<string, { totalExecutions: number, totalTime: number, errors: number, avgResponseTime: number, minTime: number, maxTime: number }>;
+        database: Map<string, { count: number, totalTime: number, errors: number, avgTime: number, minTime: number, maxTime: number }>;
+        memory: Array<{ timestamp: number, rss: number, heapUsed: number, heapTotal: number, external: number }>;
+        activeConnections: number;
+        startup: Date | null;
+    };
+    public startTime: number;
+    public memoryInterval: NodeJS.Timeout;
+
     constructor() {
         this.metrics = {
             commands: new Map(), // command name -> { totalExecutions, totalTime, errors, avgResponseTime }
@@ -243,13 +253,18 @@ class PerformanceMonitor {
             clearInterval(this.memoryInterval);
         }
     }
+
+    recordEvent(eventType, data) {
+        // This method can be used to log specific events like command usage, errors, etc.
+        console.log(`Event recorded: ${eventType}`, data);
+    }
 }
 
 // Create singleton instance
-const performanceMonitor = new PerformanceMonitor();
+export const performanceMonitor = new PerformanceMonitor();
 
 // Helper functions for easy usage
-function measureCommand(commandName, fn) {
+export function measureCommand(commandName, fn) {
     return async(...args) => {
         const startTime = Date.now();
         let error = null;
@@ -267,7 +282,7 @@ function measureCommand(commandName, fn) {
     };
 }
 
-function measureDatabase(operation, fn) {
+export function measureDatabase<T>(operation, fn: () => Promise<T>) {
     return async() => {
         const startTime = Date.now();
         let error = null;
@@ -284,9 +299,3 @@ function measureDatabase(operation, fn) {
         }
     };
 }
-
-module.exports = {
-    performanceMonitor,
-    measureCommand,
-    measureDatabase
-};

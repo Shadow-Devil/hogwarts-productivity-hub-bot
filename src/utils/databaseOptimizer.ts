@@ -7,6 +7,17 @@ const { performanceMonitor } = require('./performanceMonitor');
 const queryCache = require('./queryCache');
 
 class DatabaseOptimizer {
+    private pool: any | null;
+    private queryTracker: Map<string, { count: number, totalTime: number, errors: number, cacheHits: number }>;
+    private slowQueryThreshold: number; // in milliseconds
+    private connectionMonitor: {
+        peakConnections: number;
+        totalQueries: number;
+        slowQueries: number;
+        queryTimeouts: number;
+    };
+    private monitoringIntervals: NodeJS.Timeout[]; // Store interval IDs for cleanup
+
     constructor() {
         this.pool = null; // Will be set via setPool method
         this.queryTracker = new Map();
@@ -222,7 +233,13 @@ class DatabaseOptimizer {
     /**
      * Apply targeted database optimizations
      */
-    async applyOptimizations(options = {}) {
+    async applyOptimizations({
+        enablePlanCache = false,
+        optimizeWorkMem = false,
+        enableParallel = false,
+        createIndexes = false,
+        analyzeStats = false
+    } = {}) {
         if (!this.pool) {
             throw new Error('Database pool not initialized. Call setPool() first.');
         }
@@ -233,31 +250,31 @@ class DatabaseOptimizer {
             console.log('🔧 Applying database optimizations...');
 
             // Enable query plan caching for repeated queries
-            if (options.enablePlanCache !== false) {
+            if (enablePlanCache !== false) {
                 await client.query('SET plan_cache_mode = \'force_generic_plan\'');
                 results.push('✅ Enabled query plan caching');
             }
 
             // Optimize work memory for complex queries
-            if (options.optimizeWorkMem !== false) {
+            if (optimizeWorkMem !== false) {
                 await client.query('SET work_mem = \'16MB\'');
                 results.push('✅ Optimized work memory for complex queries');
             }
 
             // Enable parallel queries for aggregations
-            if (options.enableParallel !== false) {
+            if (enableParallel !== false) {
                 await client.query('SET max_parallel_workers_per_gather = 2');
                 results.push('✅ Enabled parallel query execution');
             }
 
             // Create missing indexes based on query patterns
-            if (options.createIndexes !== false) {
+            if (createIndexes !== false) {
                 const indexResults = await this.createOptimalIndexes(client);
                 results.push(...indexResults);
             }
 
             // Analyze tables for updated statistics
-            if (options.analyzeStats !== false) {
+            if (analyzeStats !== false) {
                 await client.query('ANALYZE users, vc_sessions, daily_voice_stats, tasks, houses');
                 results.push('✅ Updated table statistics for query optimization');
             }
@@ -508,4 +525,4 @@ class DatabaseOptimizer {
     }
 }
 
-module.exports = new DatabaseOptimizer();
+export default new DatabaseOptimizer();
