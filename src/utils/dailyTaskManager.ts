@@ -515,14 +515,14 @@ export async function recordTaskAction(discordId: string, actionType: string) {
 
   await pool.query(
     `
-                  INSERT INTO daily_task_stats (user_id, discord_id, date, ${incrementField}, total_task_actions)
-                  VALUES ((SELECT id FROM users WHERE discord_id = $1), $1, $2, 1, 1)
-                  ON CONFLICT (discord_id, date)
-                  DO UPDATE SET
-                      ${incrementField} = daily_task_stats.${incrementField} + 1,
-                      total_task_actions = daily_task_stats.total_task_actions + 1,
-                      updated_at = CURRENT_TIMESTAMP
-              `,
+    INSERT INTO daily_task_stats (user_id, discord_id, date, ${incrementField}, total_task_actions)
+    VALUES ((SELECT id FROM users WHERE discord_id = $1), $1, $2, 1, 1)
+    ON CONFLICT (discord_id, date)
+    DO UPDATE SET
+        ${incrementField} = daily_task_stats.${incrementField} + 1,
+        total_task_actions = daily_task_stats.total_task_actions + 1,
+        updated_at = CURRENT_TIMESTAMP
+    `,
     [discordId, today]
   );
 }

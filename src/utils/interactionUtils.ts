@@ -3,7 +3,12 @@
  * Prevents timeout and acknowledgment errors
  */
 
-import type { CommandInteraction, Guild, GuildMember } from "discord.js";
+import type {
+  CommandInteraction,
+  Guild,
+  GuildMember,
+  InteractionDeferReplyOptions,
+} from "discord.js";
 
 /**
  * Safely defer an interaction reply with timeout protection
@@ -13,7 +18,7 @@ import type { CommandInteraction, Guild, GuildMember } from "discord.js";
  */
 async function safeDeferReply(
   interaction: CommandInteraction,
-  options: object = {}
+  options: InteractionDeferReplyOptions = {}
 ): Promise<boolean> {
   try {
     // Check if interaction is still valid and not expired

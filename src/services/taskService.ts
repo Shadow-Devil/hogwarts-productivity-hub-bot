@@ -4,7 +4,7 @@ import { pool } from "../models/db.ts";
 
 class TaskService {
   // Add a new task for a user
-  async addTask(discordId, title) {
+  async addTask(discordId: string, title: string) {
     // Check daily task limit first
     const limitCheck = await DailyTaskManager.canUserAddTask(discordId);
     if (!limitCheck.canAdd) {
@@ -41,9 +41,9 @@ class TaskService {
   async removeTask(discordId, taskNumber) {
     // Get all incomplete tasks for the user, ordered by creation date
     const tasksResult = await pool.query(
-      `SELECT id, title, created_at FROM tasks
-                  WHERE discord_id = $1 AND is_complete = FALSE
-                  ORDER BY created_at ASC`,
+      ` SELECT id, title, created_at FROM tasks
+        WHERE discord_id = $1 AND is_complete = FALSE
+        ORDER BY created_at ASC`,
       [discordId]
     );
 
