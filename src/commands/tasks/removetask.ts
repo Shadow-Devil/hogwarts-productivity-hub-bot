@@ -45,7 +45,6 @@ export default {
 
         // Create slot information with reclaim status
         let slotInfo = "";
-        let additionalInfo = "";
 
         if (result.stats) {
           const slotReclaimedText = result.slotReclaimed
@@ -56,28 +55,10 @@ export default {
           slotInfo = `\n\n**Daily Task Slots:** ${result.stats.remaining}/${result.stats.limit} remaining • **Resets:** <t:${resetTime}:R>${slotReclaimedText}`;
         }
 
-        // Enhanced additional info based on reclaim status
-        if (result.slotReclaimed) {
-          additionalInfo =
-            "Since this task was added today, you've regained a task slot!";
-        } else if (
-          result.slotReclaimed === false &&
-          "maxRecoverableSlots" in result &&
-          "tasksCompleted" in result
-        ) {
-          additionalInfo = `**Slot Recovery Limit:** You can only recover up to ${result.maxRecoverableSlots} slots today (you've completed ${result.tasksCompleted} tasks). This prevents exceeding your daily limit after earning points.`;
-        } else {
-          additionalInfo =
-            "Consider completing tasks instead of removing them to earn points!";
-        }
-
         const embed = createSuccessTemplate(
           `${StatusEmojis.COMPLETED} Task Removed Successfully`,
           `**${result.message}**\n\n${StatusEmojis.INFO} The task has been permanently removed from your to-do list.${slotInfo}`,
-          {
-            helpText: `${StatusEmojis.INFO} Use \`/viewtasks\` to see your updated task list`,
-            additionalInfo: additionalInfo,
-          }
+          {}
         );
         await interaction.editReply({ embeds: [embed] });
         return;

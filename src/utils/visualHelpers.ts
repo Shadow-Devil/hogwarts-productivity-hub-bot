@@ -400,8 +400,7 @@ function createStatsCard(
     style = "card",
     highlightMain = false,
     emphasizeFirst = false,
-    showBigNumbers = false,
-  } = {},
+  } = {}
 ) {
   let card = "";
 
@@ -517,9 +516,7 @@ function createProgressSection(
     showNumbers = true,
     barLength = 12,
     style = "default",
-    warningThreshold = 0.75,
-    dangerThreshold = 0.9,
-  } = {},
+  } = {}
 ) {
   const progress = createProgressBar(current, max, barLength);
 

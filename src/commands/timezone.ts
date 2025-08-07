@@ -272,7 +272,7 @@ const timezoneCommand = {
       // Validate timezone
       try {
         dayjs().tz(newTimezone);
-      } catch (error) {
+      } catch (_error) {
         const embed = new EmbedBuilder()
           .setColor(BotColors.ERROR)
           .setTitle(`${StatusEmojis.ERROR} Invalid Timezone`)

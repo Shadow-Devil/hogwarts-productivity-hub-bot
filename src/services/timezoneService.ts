@@ -189,9 +189,6 @@ class TimezoneService {
         cachedAt: Date.now(),
       });
 
-      // Performance monitoring
-      const totalDuration = Date.now() - startTime;
-
       return timezone;
     } catch (error) {
       const totalDuration = Date.now() - startTime;

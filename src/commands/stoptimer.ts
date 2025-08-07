@@ -74,11 +74,7 @@ export default {
       const embed = createSuccessTemplate(
         `${StatusEmojis.COMPLETED} Timer Stopped Successfully`,
         `Your Pomodoro timer in <#${voiceChannelId}> has been stopped. ${StatusEmojis.READY} No worries - every session counts towards building your productivity habits!`,
-        {
-          helpText: `${StatusEmojis.INFO} Use \`/timer <work_minutes>\` when you're ready for another session`,
-          additionalInfo:
-            "Remember: Consistency is key to building productive habits.",
-        }
+        {}
       );
 
       // Add timezone context showing when timer was stopped

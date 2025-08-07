@@ -17,7 +17,7 @@ class TaskService {
     }
 
     // First ensure user exists in database
-    await this.ensureUserExists(discordId, client);
+    await this.ensureUserExists(discordId);
 
     const result = await pool.query(
       `INSERT INTO tasks (user_id, discord_id, title)
@@ -219,7 +219,7 @@ class TaskService {
   }
 
   // Ensure user exists in database
-  async ensureUserExists(discordId, client) {
+  async ensureUserExists(discordId: string) {
     await pool.query(
       `INSERT INTO users (discord_id, username)
              VALUES ($1, $1)
@@ -229,7 +229,7 @@ class TaskService {
   }
 
   // Get task statistics for a user (using optimized/fallback pattern)
-  async getTaskStats(discordId) {
+  async getTaskStats(discordId: string) {
     try {
       return await this.getTaskStatsOptimized(discordId);
     } catch (error) {
@@ -242,7 +242,7 @@ class TaskService {
   }
 
   // Get user's daily task limit information
-  async getDailyTaskStats(discordId) {
+  async getDailyTaskStats(discordId: string) {
     return await DailyTaskManager.getUserDailyStats(discordId);
   }
 

@@ -153,9 +153,7 @@ function createTaskTemplate(
         style: "detailed",
         showPercentage: true,
         showNumbers: true,
-        warningThreshold: 80, // Show warning at 8/10
-        dangerThreshold: 95, // Show danger at 10/10
-      },
+      }
     );
 
     const dayjs = require("dayjs");
@@ -660,7 +658,7 @@ function createHealthTemplate(
     useTableFormat = true,
     showBigNumbers = true,
     includeTimestamp = true,
-  } = {},
+  } = {}
 ) {
   // Handle both old and new parameter formats for backwards compatibility
   let data,
@@ -724,14 +722,14 @@ function createHealthTemplate(
             ? BotColors.WARNING
             : status === "initializing"
               ? BotColors.INFO
-              : BotColors.ERROR,
+              : BotColors.ERROR
     );
 
   if (useEnhancedLayout) {
     embed.setDescription(`${finalStatusEmoji} ${status.toUpperCase()}`);
   } else {
     embed.setDescription(
-      `**Status:** ${finalStatusEmoji} ${status.toUpperCase()}`,
+      `**Status:** ${finalStatusEmoji} ${status.toUpperCase()}`
     );
   }
 
@@ -804,7 +802,6 @@ function createHealthTemplate(
 
     if (statsData.length > 0) {
       const statsCard = createStatsCard("System Health Overview", statsData, {
-        showBigNumbers: true,
         emphasizeFirst: true,
         emoji: "📊",
       });
@@ -893,7 +890,7 @@ function createHealthTemplate(
       .map((issue) =>
         typeof issue === "string"
           ? `• ${issue}`
-          : `• **${issue.name}**: ${issue.error}`,
+          : `• **${issue.name}**: ${issue.error}`
       )
       .join("\n");
 
@@ -938,10 +935,7 @@ function createSuccessTemplate(
     useEnhancedLayout = true,
     useTableFormat = true,
     showBigNumbers = false,
-    helpText = "",
-    rewards = null,
-    additionalInfo = null,
-  } = {},
+  } = {}
 ) {
   const emoji = celebration ? "🎉" : "✅";
   const embed = createStyledEmbed("success");
@@ -1005,12 +999,7 @@ function createSuccessTemplate(
 function createTimerTemplate(
   action,
   data,
-  {
-    showProgress = true,
-    includeMotivation = true,
-    style = "default",
-    customFooter = null,
-  } = {},
+  { showProgress = true, includeMotivation = true } = {}
 ) {
   const { workTime, breakTime, voiceChannel, phase, timeRemaining } = data;
 
@@ -1024,8 +1013,8 @@ function createTimerTemplate(
           createHeader(
             "Focus Session Active",
             "Time to boost your productivity!",
-            "🎯",
-          ),
+            "🎯"
+          )
         );
 
       // Add timer configuration
@@ -1078,8 +1067,8 @@ function createTimerTemplate(
           createHeader(
             "Great Work!",
             "You've successfully completed your focus session",
-            "🎉",
-          ),
+            "🎉"
+          )
         );
 
       if (breakTime > 0) {
@@ -1109,8 +1098,8 @@ function createTimerTemplate(
           createHeader(
             "Back to Work!",
             "Time to get back to your productive flow",
-            "💪",
-          ),
+            "💪"
+          )
         );
 
       embed.addFields([
@@ -1127,14 +1116,14 @@ function createTimerTemplate(
       const isBreak = phase === "break";
       embed = createStyledEmbed(isBreak ? "warning" : "primary")
         .setTitle(
-          `⏰ Timer Status - ${phase.charAt(0).toUpperCase() + phase.slice(1)} Phase`,
+          `⏰ Timer Status - ${phase.charAt(0).toUpperCase() + phase.slice(1)} Phase`
         )
         .setDescription(
           createHeader(
             "Active Session",
             `Currently in ${phase} phase`,
-            isBreak ? "☕" : "🎯",
-          ),
+            isBreak ? "☕" : "🎯"
+          )
         );
 
       if (showProgress && timeRemaining !== undefined) {
@@ -1168,8 +1157,8 @@ function createTimerTemplate(
           createHeader(
             "No Active Timer",
             `No Pomodoro timer is currently running in <#${voiceChannel.id}>`,
-            "💤",
-          ),
+            "💤"
+          )
         );
 
       embed.addFields([

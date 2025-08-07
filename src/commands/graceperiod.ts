@@ -57,7 +57,6 @@ export default {
               : "0%",
         },
         {
-          showBigNumbers: true,
           emphasizeFirst: true,
         }
       );
@@ -91,7 +90,7 @@ export default {
                 user.username.length > 12
                   ? user.username.substring(0, 9) + "..."
                   : user.username;
-            } catch (error) {
+            } catch (_error) {
               username = `User ${userId.substring(0, 6)}...`;
             }
 

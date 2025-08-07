@@ -70,11 +70,11 @@ function calculateSessionDuration(startTime, endTime = new Date()) {
 function formatTimeInUserTimezone(
   time,
   userTimezone,
-  format = "MMM D, h:mm A",
+  format = "MMM D, h:mm A"
 ) {
   try {
     return dayjs(time).tz(userTimezone).format(format);
-  } catch (error) {
+  } catch (_error) {
     // Fallback to UTC if timezone conversion fails
     return dayjs(time).utc().format(format) + " UTC";
   }
@@ -92,7 +92,7 @@ function isSameDayInTimezone(date1, date2, userTimezone) {
     const day1 = dayjs(date1).tz(userTimezone);
     const day2 = dayjs(date2).tz(userTimezone);
     return day1.isSame(day2, "day");
-  } catch (error) {
+  } catch (_error) {
     // Fallback to UTC comparison
     return dayjs(date1).utc().isSame(dayjs(date2).utc(), "day");
   }
@@ -106,7 +106,7 @@ function isSameDayInTimezone(date1, date2, userTimezone) {
 function getCurrentDateInTimezone(userTimezone) {
   try {
     return dayjs().tz(userTimezone).format("YYYY-MM-DD");
-  } catch (error) {
+  } catch (_error) {
     // Fallback to UTC
     return dayjs().utc().format("YYYY-MM-DD");
   }
@@ -120,7 +120,7 @@ function getCurrentDateInTimezone(userTimezone) {
 function getNextMidnightInTimezone(userTimezone) {
   try {
     return dayjs().tz(userTimezone).add(1, "day").startOf("day");
-  } catch (error) {
+  } catch (_error) {
     // Fallback to UTC
     return dayjs().utc().add(1, "day").startOf("day");
   }
@@ -153,7 +153,7 @@ function getTimeUntilReset(userTimezone, resetType = "daily") {
       formatted: resetTimeFormatted,
       resetTime: nextReset,
     };
-  } catch (error) {
+  } catch (_error) {
     // Fallback to UTC calculations
     const utcTime = dayjs().utc();
     const nextReset =

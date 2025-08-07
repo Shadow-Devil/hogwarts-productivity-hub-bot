@@ -159,7 +159,6 @@ export default {
         {
           showProgress: true,
           includeMotivation: true,
-          style: "pomodoro",
         }
       );
 
@@ -167,9 +166,6 @@ export default {
 
       // Add timezone context to timer start message
       try {
-        const sessionEndTime = dayjs().tz(userTimezone).add(work, "minute");
-        const timerFooter = `🌍 Session ends at: ${sessionEndTime.format("h:mm A")} (${userTimezone})`;
-
         // Update the embed footer with timezone info
         const updatedEmbed = createTimerTemplate(
           "start",
@@ -182,8 +178,6 @@ export default {
           {
             showProgress: true,
             includeMotivation: true,
-            style: "pomodoro",
-            customFooter: timerFooter,
           }
         );
 

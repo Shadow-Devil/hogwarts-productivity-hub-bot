@@ -32,6 +32,7 @@ export default tseslint.config([
         {
           varsIgnorePattern: "^_",
           argsIgnorePattern: "^_",
+          caughtErrors: "none",
         },
       ],
       "no-console": "off", // Allow console for Discord bot logging

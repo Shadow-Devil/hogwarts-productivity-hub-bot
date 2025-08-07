@@ -100,7 +100,6 @@ export default {
             Phase: timerPhase,
           },
           {
-            showBigNumbers: true,
             emphasizeFirst: true,
           }
         );
@@ -189,7 +188,6 @@ export default {
             "Commands Available": "Limited",
           },
           {
-            showBigNumbers: true,
             emphasizeFirst: true,
           }
         );

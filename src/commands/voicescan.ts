@@ -117,7 +117,6 @@ export default {
             Errors: `${scanResults.errors}`,
           },
           {
-            showBigNumbers: true,
             emphasizeFirst: true,
           }
         );

@@ -90,12 +90,9 @@ export default {
         `${StatusEmojis.COMPLETED} Task Added Successfully!`,
         `**${result.task.title}**\n\n${StatusEmojis.READY} Your task has been added to your personal to-do list and is ready for completion.`,
         {
-          helpText: `Use \`/viewtasks\` to see all your tasks ${StatusEmojis.INFO}`,
-          rewards: `Complete this task to earn **2 points**! ${StatusEmojis.IN_PROGRESS}`,
-          additionalInfo: `**Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`,
           celebration: true,
           points: 2,
-        },
+        }
       );
 
       await interaction.editReply({ embeds: [embed] });

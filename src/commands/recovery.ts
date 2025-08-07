@@ -67,7 +67,6 @@ export default {
             "Save Interval": `${stats.saveInterval}s`,
           },
           {
-            showBigNumbers: true,
             emphasizeFirst: true,
           }
         );

@@ -81,7 +81,6 @@ export default {
             useEnhancedLayout: true,
             useTableFormat: true,
             showBigNumbers: true,
-            additionalInfo: `${StatusEmojis.IN_PROGRESS} **Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`,
           }
         );
         await interaction.editReply({ embeds: [embed] });
