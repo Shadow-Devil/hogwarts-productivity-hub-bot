@@ -3,7 +3,7 @@
  * Prevents timeout and acknowledgment errors
  */
 
-import type { CommandInteraction } from "discord.js";
+import type { CommandInteraction, Guild, GuildMember } from "discord.js";
 
 /**
  * Safely defer an interaction reply with timeout protection
@@ -91,7 +91,7 @@ async function safeReply(
  */
 async function safeErrorReply(
   interaction: CommandInteraction,
-  errorEmbed: object
+  errorEmbed: object | string
 ): Promise<boolean> {
   try {
     return await safeReply(interaction, { embeds: [errorEmbed] });
@@ -127,7 +127,7 @@ async function safeErrorReply(
 async function executeWithTimeout(
   interaction: CommandInteraction,
   commandFunction: Function,
-  { timeout = 10000, errorTemplate = null }: object = {}
+  { timeout = 10000, errorTemplate = null } = {}
 ) {
   let deferred = false;
 
@@ -209,11 +209,8 @@ async function fastMemberFetch(
 
     // Fallback to API fetch with timeout
     const fetchPromise = guild.members.fetch(userId);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Member fetch timeout")), 3000)
-    );
 
-    return await Promise.race([fetchPromise, timeoutPromise]);
+    return await fetchPromise;
   } catch (error) {
     console.warn(`Failed to fetch member ${userId}:`, error.message);
     return null;

@@ -1,7 +1,7 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
-  type CustomInteraction,
+  ChatInputCommandInteraction,
 } from "discord.js";
 import timezoneService from "../services/timezoneService.ts";
 import { BotColors, StatusEmojis } from "../utils/constants.ts";
@@ -196,7 +196,7 @@ const timezoneCommand = {
       subcommand.setName("list").setDescription("View common timezone options")
     ),
 
-  async execute(interaction: CustomInteraction) {
+  async execute(interaction: ChatInputCommandInteraction) {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);

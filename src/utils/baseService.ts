@@ -24,7 +24,7 @@ class BaseService {
   async executeWithFallback(methodName: string, optimizedFn: Function, fallbackFn: Function, ...args: Array<any>): Promise<any> {
     try {
       // Try optimized version first
-      return await measureDatabase(`${methodName}Optimized`, async () => {
+      return measureDatabase(`${methodName}Optimized`, async () => {
         return await optimizedFn(...args);
       });
     } catch (error) {
@@ -51,35 +51,6 @@ class BaseService {
     return await measureDatabase(methodName, async () => {
       return await fn(...args);
     });
-  }
-
-  /**
-   * Log service operation for debugging
-   * @param {string} operation - Operation name
-   * @param {string} details - Additional details
-   */
-  log(operation, details = "") {
-    console.log(
-      `🔧 [${this.serviceName}] ${operation}${details ? ": " + details : ""}`,
-    );
-  }
-
-  /**
-   * Log service warning
-   * @param {string} operation - Operation name
-   * @param {string} warning - Warning message
-   */
-  warn(operation, warning) {
-    console.warn(`⚠️ [${this.serviceName}] ${operation}: ${warning}`);
-  }
-
-  /**
-   * Log service error
-   * @param {string} operation - Operation name
-   * @param {Error} error - Error object
-   */
-  error(operation, error) {
-    console.error(`❌ [${this.serviceName}] ${operation}:`, error);
   }
 }
 

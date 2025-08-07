@@ -104,7 +104,7 @@ export default {
             );
 
             if (!interaction.replied && !interaction.deferred) {
-              return safeReply(interaction, {
+              await safeReply(interaction, {
                 embeds: [embed],
                 flags: MessageFlags.Ephemeral,
               });
@@ -126,7 +126,7 @@ export default {
           }
         );
 
-        return safeReply(interaction, {
+        await safeReply(interaction, {
           embeds: [embed],
           flags: MessageFlags.Ephemeral,
         });

@@ -1,7 +1,7 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
-  type CustomInteraction,
+  ChatInputCommandInteraction,
 } from "discord.js";
 import { performanceMonitor } from "../utils/performanceMonitor.ts";
 import queryCache from "../utils/queryCache.ts";
@@ -13,7 +13,7 @@ import {
   createProgressSection,
 } from "../utils/visualHelpers.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
-import type { HealthReport } from "../utils/botHealthMonitor.ts";
+import { getHealthReport, type HealthReport } from "../utils/botHealthMonitor.ts";
 // Get Node.js memory limits
 import v8 from "v8";
 
@@ -31,10 +31,10 @@ export default {
           { name: "Memory Details", value: "memory" },
           { name: "Cache Analysis", value: "cache" },
           { name: "Database Health", value: "database" },
-          { name: "System Health", value: "health" },
-        ),
+          { name: "System Health", value: "health" }
+        )
     ),
-  async execute(interaction: CustomInteraction) {
+  async execute(interaction: ChatInputCommandInteraction) {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -46,8 +46,6 @@ export default {
       const view = interaction.options.getString("view") || "overview";
       const startTime = Date.now();
 
-      // Get health monitor from client
-      const healthMonitor = interaction.client.healthMonitor;
 
       // Gather all performance data
       const summary = performanceMonitor.getPerformanceSummary();
@@ -56,9 +54,7 @@ export default {
       const apiLatency = Date.now() - startTime;
       const cacheStats = queryCache.getStats();
       const optimizationReport = databaseOptimizer.getPerformanceReport();
-      const healthReport = healthMonitor
-        ? healthMonitor.getHealthReport()
-        : null;
+      const healthReport = getHealthReport();
 
       let embed;
 
@@ -87,7 +83,7 @@ export default {
             apiLatency,
             cacheStats,
             optimizationReport,
-            healthReport,
+            healthReport
           );
       }
 

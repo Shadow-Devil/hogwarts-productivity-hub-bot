@@ -13,7 +13,7 @@ import type {
  */
 export async function getUserVoiceChannel(
   interaction: ChatInputCommandInteraction,
-  { useForceFetch = false, timeout = 3000 } = {},
+  { useForceFetch = false, timeout = 3000 } = {}
 ): Promise<VoiceBasedChannel | null> {
   try {
     if (!interaction.guild) {
@@ -25,7 +25,7 @@ export async function getUserVoiceChannel(
     // Method 1: Try cached member data first (fastest)
     if (member.voice?.channel) {
       console.log(
-        `Voice channel found via cached member: ${member.voice.channel.name} (${member.voice.channel.id})`,
+        `Voice channel found via cached member: ${member.voice.channel.name} (${member.voice.channel.id})`
       );
       return member.voice.channel;
     }
@@ -33,11 +33,11 @@ export async function getUserVoiceChannel(
     // Method 2: Try fetching from voice states directly (fast, no API call)
     try {
       const voiceState = interaction.guild.voiceStates.cache.get(
-        interaction.user.id,
+        interaction.user.id
       );
       if (voiceState?.channel) {
         console.log(
-          `Voice channel found via voice states cache: ${voiceState.channel.name} (${voiceState.channel.id})`,
+          `Voice channel found via voice states cache: ${voiceState.channel.name} (${voiceState.channel.id})`
         );
         return voiceState.channel;
       }
@@ -55,21 +55,21 @@ export async function getUserVoiceChannel(
         });
 
         const timeoutPromise: Promise<GuildMember> = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Member fetch timeout")), timeout),
+          setTimeout(() => reject(new Error("Member fetch timeout")), timeout)
         );
 
         const member = await Promise.race([fetchPromise, timeoutPromise]);
 
         if (member?.voice?.channel) {
           console.log(
-            `Voice channel found via fresh fetch: ${member.voice.channel.name} (${member.voice.channel.id})`,
+            `Voice channel found via fresh fetch: ${member.voice.channel.name} (${member.voice.channel.id})`
           );
           return member.voice.channel;
         }
       } catch (fetchError) {
         console.warn(
           "Error fetching member with force (timed out or failed):",
-          fetchError.message,
+          fetchError.message
         );
       }
     }

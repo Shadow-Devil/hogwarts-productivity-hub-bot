@@ -1,20 +1,13 @@
 import "dotenv/config";
 
-import {
-  Client,
-  IntentsBitField,
-  MessageFlags,
-  Collection,
-  type Interaction,
-  Events,
-} from "discord.js";
+import { Client, IntentsBitField, MessageFlags, Events } from "discord.js";
 import { initializeDatabase, getDbResilience } from "./models/db.ts";
 import {
   measureCommand,
   performanceMonitor,
 } from "./utils/performanceMonitor.ts";
 import monthlyResetService from "./services/monthlyResetService.ts";
-import BotHealthMonitor from "./utils/botHealthMonitor.ts";
+import * as BotHealthMonitor from "./utils/botHealthMonitor.ts";
 import sessionRecovery from "./utils/sessionRecovery.ts";
 import DailyTaskManager from "./utils/dailyTaskManager.ts";
 import CentralResetService from "./services/centralResetService.ts";
@@ -29,24 +22,9 @@ import { MaterializedViewManager } from "./services/materializedViewManager.ts";
 import voiceStateScanner from "./utils/voiceStateScanner.ts";
 import { commands } from "./commands.ts";
 
-class CustomClient extends Client {
-  public commands = new Collection<string, any>();
-  public healthMonitor: BotHealthMonitor | null = null;
-  public dailyTaskManager: DailyTaskManager | null = null;
-  public centralResetService: typeof CentralResetService | null = null;
-}
-
-declare module "discord.js" {
-  type CustomInteraction = CommandInteraction & {
-    client: CustomClient;
-    options: any;
-    editReply: (options: any) => Promise<any>;
-  };
-}
-
 const dailyTaskManager = new DailyTaskManager();
 
-const client: CustomClient = new CustomClient({
+const client = new Client({
   intents: [
     IntentsBitField.Flags.Guilds,
     IntentsBitField.Flags.GuildMessages,
@@ -55,10 +33,6 @@ const client: CustomClient = new CustomClient({
     IntentsBitField.Flags.GuildVoiceStates, // Required for voice channel detection
   ],
 });
-
-function loadCommands() {
-  client.commands = commands;
-}
 
 function loadEvents() {
   client.on(Events.VoiceStateUpdate, (oldState, newState) =>
@@ -72,23 +46,18 @@ let centralResetService = null; // Will be initialized after database connection
 
 client.on(Events.ClientReady, async (c) => {
   console.log(`Bot User: ${c.user.tag}`);
-  console.log(`lient ID: ${c.user.id}`);
-  console.log(`Commands Loaded: ${client.commands.size}`);
+  console.log(`Client ID: ${c.user.id}`);
+  console.log(`Commands Loaded: ${commands.size}`);
 
   try {
-    // Initialize database with enhanced fault tolerance
     console.log("Initializing database connection...");
     await initializeDatabase();
     console.log("Database connection established");
 
-    // Initialize health monitoring system
     console.log("🩺 Setting up health monitoring...");
     const dbResilience = getDbResilience();
-    client.healthMonitor = new BotHealthMonitor(client, dbResilience); // Attach to client for command access
+    BotHealthMonitor.initialize(client, dbResilience); // Attach to client for command access
     console.log("✅ Health monitoring system active");
-
-    // Initialize session recovery system
-    console.log("🛡️  Initializing session recovery...");
 
     // Set Discord client reference for smart session cleanup
     setDiscordClient(client);
@@ -109,9 +78,7 @@ client.on(Events.ClientReady, async (c) => {
 
     // Initialize Central Reset Service for timezone-aware resets
     console.log("🌍 Starting timezone-aware reset service...");
-    centralResetService = CentralResetService;
-    await centralResetService.start();
-    client.centralResetService = centralResetService; // Attach to client for command access
+    await CentralResetService.start();
     console.log("✅ Central reset service started");
 
     monthlyResetService.start();
@@ -121,7 +88,6 @@ client.on(Events.ClientReady, async (c) => {
     console.log("📅 Starting daily task manager...");
     dailyTaskManager.setDiscordClient(client);
     dailyTaskManager.start();
-    client.dailyTaskManager = dailyTaskManager; // Attach to client for command access
     console.log("✅ Daily task manager started");
 
     // Initialize cache warming strategy
@@ -168,7 +134,7 @@ client.on(Events.ClientReady, async (c) => {
     console.log("");
     console.log("🎉 Bot is fully operational!");
     console.log(
-      `🎯 Serving commands: ${Array.from(client.commands.keys()).join(", ")}`
+      `🎯 Serving commands: ${Array.from(commands.keys()).join(", ")}`
     );
     if (scanResults.trackingStarted > 0) {
       console.log(
@@ -180,9 +146,7 @@ client.on(Events.ClientReady, async (c) => {
     // Trigger initial health check
     setTimeout(() => {
       console.log("🔍 Running initial health check...");
-      if (client.healthMonitor) {
-        client.healthMonitor.triggerHealthCheck();
-      }
+      BotHealthMonitor.triggerHealthCheck();
     }, 5000); // Wait 5 seconds for everything to settle
   } catch (error) {
     console.log("❌ Bot Initialization Failed");
@@ -212,7 +176,7 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  const command = client.commands.get(interaction.commandName);
+  const command = commands.get(interaction.commandName);
   if (!command) {
     console.warn(
       `⚠️ Unknown command attempted: /${interaction.commandName} by ${interaction.user.tag}`
@@ -280,7 +244,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 // Start the bot
 try {
-  loadCommands();
   loadEvents();
 
   await client.login(process.env.DISCORD_TOKEN);
@@ -332,16 +295,14 @@ async function shutdown() {
 
     // Stop health monitoring
     console.log("🩺 [2/5] Stopping health monitoring...");
-    if (client.healthMonitor) {
-      await Promise.race([
-        Promise.resolve(client.healthMonitor.shutdown()),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Health monitor timeout")), 2000)
-        ),
-      ]).catch((error) => {
-        console.warn("⚠️  Health monitor shutdown timeout:", error.message);
-      });
-    }
+    await Promise.race([
+      Promise.resolve(BotHealthMonitor.shutdown()),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Health monitor timeout")), 2000)
+      ),
+    ]).catch((error) => {
+      console.warn("⚠️  Health monitor shutdown timeout:", error.message);
+    });
     console.log("✅ Health monitoring stopped");
 
     // Stop schedulers and optimizations

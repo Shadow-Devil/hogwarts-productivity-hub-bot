@@ -1,11 +1,11 @@
 import { SlashCommandBuilder } from "discord.js";
-import taskService from "../services/taskService.ts";
+import taskService from "../../services/taskService.ts";
 import {
   createSuccessTemplate,
   createErrorTemplate,
-} from "../utils/embedTemplates.ts";
-import { StatusEmojis } from "../utils/constants.ts";
-import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
+} from "../../utils/embedTemplates.ts";
+import { StatusEmojis } from "../../utils/constants.ts";
+import { safeDeferReply, safeErrorReply } from "../../utils/interactionUtils.ts";
 import dayjs from "dayjs";
 
 export default {

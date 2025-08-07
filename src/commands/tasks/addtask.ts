@@ -1,11 +1,11 @@
-import { SlashCommandBuilder } from "discord.js";
-import taskService from "../services/taskService.ts";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import taskService from "../../services/taskService.ts";
 import {
   createSuccessTemplate,
   createErrorTemplate,
-} from "../utils/embedTemplates.ts";
-import { StatusEmojis } from "../utils/constants.ts";
-import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
+} from "../../utils/embedTemplates.ts";
+import { StatusEmojis } from "../../utils/constants.ts";
+import { safeDeferReply, safeErrorReply } from "../../utils/interactionUtils.ts";
 import dayjs from "dayjs";
 
 export default {
@@ -19,7 +19,7 @@ export default {
         .setRequired(true)
         .setMaxLength(500),
     ),
-  async execute(interaction) {
+  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     try {
       // Immediately defer to prevent timeout
       const deferred = await safeDeferReply(interaction);
@@ -40,7 +40,8 @@ export default {
             helpText: `${StatusEmojis.INFO} Try: \`/addtask Write project proposal\``,
           },
         );
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        return
       }
 
       if (title.length > 500) {
@@ -51,7 +52,8 @@ export default {
             helpText: `${StatusEmojis.INFO} Current length: ${title.length}/500 characters`,
           },
         );
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        return
       }
 
       // Add the task
@@ -71,14 +73,16 @@ export default {
               additionalInfo: `**Remaining:** ${result.stats.remaining} actions • **Resets:** <t:${resetTime}:R>`,
             },
           );
-          return interaction.editReply({ embeds: [embed] });
+          await interaction.editReply({ embeds: [embed] });
+          return;
         } else {
           const embed = createErrorTemplate(
             `${StatusEmojis.ERROR} Task Creation Failed`,
             result.message,
             { helpText: `${StatusEmojis.INFO} Please try again` },
           );
-          return interaction.editReply({ embeds: [embed] });
+          await interaction.editReply({ embeds: [embed] });
+          return;
         }
       }
 
@@ -94,7 +98,7 @@ export default {
         },
       );
 
-      return interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.error("Error in /addtask:", error);
 
