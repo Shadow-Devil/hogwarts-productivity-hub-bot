@@ -3,9 +3,9 @@
  * Consolidates all daily limit logic to prevent duplication and bugs
  */
 
-const dayjs = require("dayjs");
-const utc = require("dayjs/plugin/utc");
-const timezone = require("dayjs/plugin/timezone");
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);

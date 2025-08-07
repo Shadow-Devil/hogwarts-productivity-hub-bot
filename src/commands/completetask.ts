@@ -1,11 +1,11 @@
 import { SlashCommandBuilder } from "discord.js";
-import taskService from "../services/taskService";
+import taskService from "../services/taskService.ts";
 import {
   createSuccessTemplate,
   createErrorTemplate,
-} from "../utils/embedTemplates";
-import { StatusEmojis } from "../utils/constants";
-import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils";
+} from "../utils/embedTemplates.ts";
+import { StatusEmojis } from "../utils/constants.ts";
+import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -39,23 +39,8 @@ export default {
         member,
       );
 
-      if (result.success) {
-        const embed = createSuccessTemplate(
-          `${StatusEmojis.COMPLETED} Task Completed Successfully!`,
-          `**${result.message}**\n\n${StatusEmojis.READY} Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
-          {
-            celebration: true,
-            points: 2,
-            includeEmoji: true,
-            useEnhancedLayout: true,
-            useTableFormat: true,
-            showBigNumbers: true,
-            additionalInfo: `${StatusEmojis.IN_PROGRESS} **Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`,
-          },
-        );
-        return interaction.editReply({ embeds: [embed] });
-      } else {
-        if (result.limitReached) {
+      if (result.success === false) {
+          if ("limitReached" in result && result.limitReached) {
           const dayjs = require("dayjs");
           const resetTime = Math.floor(
             dayjs().add(1, "day").startOf("day").valueOf() / 1000,
@@ -80,6 +65,22 @@ export default {
           );
           return interaction.editReply({ embeds: [embed] });
         }
+
+      } else {
+        const embed = createSuccessTemplate(
+          `${StatusEmojis.COMPLETED} Task Completed Successfully!`,
+          `**${result.message}**\n\n${StatusEmojis.READY} Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
+          {
+            celebration: true,
+            points: 2,
+            includeEmoji: true,
+            useEnhancedLayout: true,
+            useTableFormat: true,
+            showBigNumbers: true,
+            additionalInfo: `${StatusEmojis.IN_PROGRESS} **Daily Progress:** ${result.stats.total_task_actions}/${result.stats.limit} task actions used • **${result.stats.remaining} remaining**`,
+          },
+        );
+        return interaction.editReply({ embeds: [embed] });
       }
     } catch (error) {
       console.error("Error in /completetask:", error);

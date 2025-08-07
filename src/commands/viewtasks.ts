@@ -1,11 +1,11 @@
 import { SlashCommandBuilder } from "discord.js";
-import taskService from "../services/taskService";
+import taskService from "../services/taskService.ts";
 import {
   createTaskTemplate,
   createErrorTemplate,
-} from "../utils/embedTemplates";
-import { StatusEmojis } from "../utils/constants";
-import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils";
+} from "../utils/embedTemplates.ts";
+import { StatusEmojis } from "../utils/constants.ts";
+import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
 
 export default {
   data: new SlashCommandBuilder()

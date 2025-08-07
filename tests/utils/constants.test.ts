@@ -8,7 +8,7 @@ import {
   BotColors,
   StatusEmojis,
   VisualPatterns,
-} from "../../src/utils/constants";
+} from "../../src/utils/constants.ts";
 
 describe("Constants Module", () => {
   describe("BotColors", () => {

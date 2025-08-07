@@ -17,21 +17,29 @@
  * - winston: https://github.com/winstonjs/winston
  */
 
-const cron = require("node-cron");
-const winston = require("winston");
-const { pool } = require("../models/db");
-const timezoneService = require("./timezoneService");
-const voiceService = require("./voiceService");
-const BaseService = require("../utils/baseService");
-const dayjs = require("dayjs");
-const utc = require("dayjs/plugin/utc");
-const timezone = require("dayjs/plugin/timezone");
+import cron from "node-cron";
+import winston from "winston";
+import { pool } from "../models/db.ts";
+import timezoneService from "./timezoneService.ts";
+import voiceService from "./voiceService.ts";
+import BaseService from "../utils/baseService.ts";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 class CentralResetService extends BaseService {
+  public isRunning: boolean;
+  public scheduledJobs: Map<string, cron.ScheduledTask>
+  public resetStats: {
+    dailyResets: { successful: number; failed: number; lastRun: Date | null };
+    monthlyResets: { successful: number; failed: number; lastRun: Date | null };
+  }
+  public logger: winston.Logger;
+
   constructor() {
     super("CentralResetService");
 
@@ -116,7 +124,7 @@ class CentralResetService extends BaseService {
           await this.processDailyResets();
         },
         {
-          scheduled: false,
+          //scheduled: false,
           timezone: "UTC", // Always run in UTC, convert per user
         },
       );
@@ -128,7 +136,7 @@ class CentralResetService extends BaseService {
           await this.processMonthlyResets();
         },
         {
-          scheduled: false,
+          //scheduled: false,
           timezone: "UTC",
         },
       );
@@ -140,7 +148,7 @@ class CentralResetService extends BaseService {
           await this.performHealthCheck();
         },
         {
-          scheduled: false,
+          //scheduled: false,
           timezone: "UTC",
         },
       );
@@ -311,6 +319,7 @@ class CentralResetService extends BaseService {
     try {
       // Reset daily voice stats and limits using voiceService
       await this.executeWithFallback(
+        "performDailyResetForUser",
         async () => {
           const success = await voiceService.resetDailyStats(user.discord_id);
           if (!success) {
@@ -330,6 +339,7 @@ class CentralResetService extends BaseService {
 
       // Reset daily task stats
       await this.executeWithFallback(
+        "performDailyResetForUser",
         async () => {
           return await pool.query(
             `
@@ -380,6 +390,7 @@ class CentralResetService extends BaseService {
 
       // Check if user had voice activity yesterday
       const hadActivityYesterday = await this.executeWithFallback(
+        "updateUserStreak",
         async () => {
           const result = await pool.query(
             `
@@ -409,6 +420,7 @@ class CentralResetService extends BaseService {
       if (!hadActivityYesterday) {
         // Reset streak if no activity yesterday
         await this.executeWithFallback(
+          "updateUserStreak",
           async () => {
             return await pool.query(
               `
@@ -538,6 +550,7 @@ class CentralResetService extends BaseService {
     try {
       // Reset monthly stats
       await this.executeWithFallback(
+        "performMonthlyResetForUser",
         async () => {
           return await pool.query(
             `

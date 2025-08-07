@@ -1,6 +1,5 @@
-import type { Client } from "discord.js";
-import { CircuitBreaker, RetryHandler, TimeoutHandler } from "./faultTolerance";
-import { performanceMonitor } from "./performanceMonitor";
+import { CircuitBreaker, RetryHandler, TimeoutHandler } from "./faultTolerance.ts";
+import { performanceMonitor } from "./performanceMonitor.ts";
 import type { ClientBase, Pool } from "pg";
 
 /**

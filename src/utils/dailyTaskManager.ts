@@ -3,10 +3,10 @@
  * Handles 10 tasks per day limit, midnight cleanup, and daily voice stats reset
  */
 
-const { pool, executeWithResilience } = require("../models/db");
-const { measureDatabase } = require("./performanceMonitor");
-const CacheInvalidationService = require("./cacheInvalidationService");
-const dayjs = require("dayjs");
+import { pool, executeWithResilience } from "../models/db.ts";
+import { measureDatabase } from "./performanceMonitor.ts";
+import CacheInvalidationService from "./cacheInvalidationService.ts";
+import dayjs from "dayjs";
 
 class DailyTaskManager {
   public DAILY_TASK_LIMIT: number;

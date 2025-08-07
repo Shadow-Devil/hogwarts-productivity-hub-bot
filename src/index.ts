@@ -1,20 +1,40 @@
-require("dotenv").config();
+import { config } from "dotenv";
+config();
+
 import {
   Client,
   IntentsBitField,
   MessageFlags,
   Collection,
   type Interaction,
+  Events,
 } from "discord.js";
-import fs from "fs";
-import path from "path";
-import { initializeDatabase, getDbResilience } from "./models/db";
-import { measureCommand, performanceMonitor } from "./utils/performanceMonitor";
-import monthlyResetService from "./services/monthlyResetService";
-import BotHealthMonitor from "./utils/botHealthMonitor";
-import sessionRecovery from "./utils/sessionRecovery";
-import DailyTaskManager from "./utils/dailyTaskManager";
-import CentralResetService from "./services/centralResetService";
+import * as fs from "fs";
+import * as path from "path";
+import { initializeDatabase, getDbResilience } from "./models/db.ts";
+import { measureCommand, performanceMonitor } from "./utils/performanceMonitor.ts";
+import monthlyResetService from "./services/monthlyResetService.ts";
+import BotHealthMonitor from "./utils/botHealthMonitor.ts";
+import sessionRecovery from "./utils/sessionRecovery.ts";
+import DailyTaskManager from "./utils/dailyTaskManager.ts";
+import CentralResetService from "./services/centralResetService.ts";
+import addtask from "./commands/addtask.ts";
+import completetask from "./commands/completetask.ts";
+import debug from "./commands/debug.ts";
+import graceperiod from "./commands/graceperiod.ts";
+import housepoints from "./commands/housepoints.ts";
+import leaderboard from "./commands/leaderboard.ts";
+import performance from "./commands/performance.ts";
+import recovery from "./commands/recovery.ts";
+import removetask from "./commands/removetask.ts";
+import stats from "./commands/stats.ts";
+import stoptimer from "./commands/stoptimer.ts";
+import time from "./commands/time.ts";
+import timer from "./commands/timer.ts";
+import timezoneCommand from "./commands/timezone.ts";
+import viewtasks from "./commands/viewtasks.ts";
+import voicescan from "./commands/voicescan.ts";
+import voiceStateUpdate from "./events/voiceStateUpdate.ts";
 
 class CustomClient extends Client {
   public commands = new Collection<string, any>();
@@ -43,82 +63,30 @@ const client: CustomClient = new CustomClient({
   ],
 });
 
+
+
 async function loadCommands() {
-  const commandsPath = path.join(__dirname, "commands");
-  const commandFiles = fs
-    .readdirSync(commandsPath)
-    .filter((file) => file.endsWith(".js"));
-
-  console.log("📂 Command Loading Process");
-  console.log("─".repeat(30));
-  console.log(`📁 Scanning: ${commandsPath}`);
-  console.log(`📄 Found ${commandFiles.length} command files`);
-
-  const loadPromises = commandFiles.map(async (file) => {
-    try {
-      const command = require(path.join(commandsPath, file));
-      if (command.data && command.data.name) {
-        client.commands.set(command.data.name, command);
-        console.log(
-          `   ✅ /${command.data.name} - ${command.data.description || "No description"}`,
-        );
-        return command.data.name;
-      } else {
-        console.warn(`   ⚠️  ${file} - Missing data or data.name property`);
-        return null;
-      }
-    } catch (error) {
-      console.error(`   ❌ ${file} - Loading failed:`, error.message);
-      return null;
-    }
-  });
-
-  const commandNames = (await Promise.all(loadPromises)).filter(Boolean);
-  console.log(
-    `🎯 Successfully loaded ${commandNames.length}/${commandFiles.length} commands`,
-  );
-  console.log("─".repeat(30));
+  client.commands.set(addtask.data.name, addtask);
+  client.commands.set(completetask.data.name, completetask);
+  client.commands.set(debug.data.name, debug);
+  client.commands.set(graceperiod.data.name, graceperiod);
+  client.commands.set(housepoints.data.name, housepoints);
+  client.commands.set(leaderboard.data.name, leaderboard);
+  client.commands.set(performance.data.name, performance);
+  client.commands.set(recovery.data.name, recovery);
+  client.commands.set(removetask.data.name, removetask);
+  client.commands.set(stats.data.name, stats);
+  client.commands.set(stoptimer.data.name, stoptimer);
+  client.commands.set(time.data.name, time);
+  client.commands.set(timer.data.name, timer);
+  client.commands.set(timezoneCommand.data.name, timezoneCommand);
+  client.commands.set(viewtasks.data.name, viewtasks);
+  client.commands.set(voicescan.data.name, voicescan);
+  console.log(`📜 Commands loaded: ${client.commands.size}`);
 }
 
 async function loadEvents() {
-  const eventsPath = path.join(__dirname, "events");
-  if (fs.existsSync(eventsPath)) {
-    const eventFiles = fs
-      .readdirSync(eventsPath)
-      .filter((file) => file.endsWith(".js"));
-
-    console.log("🎭 Event Loading Process");
-    console.log("─".repeat(30));
-    console.log(`📁 Scanning: ${eventsPath}`);
-    console.log(`📄 Found ${eventFiles.length} event files`);
-
-    const loadPromises = eventFiles.map(async (file) => {
-      try {
-        const event = require(path.join(eventsPath, file));
-        if (event.name && event.execute) {
-          client.on(event.name, (...args) => event.execute(...args));
-          console.log(`   ✅ ${event.name} - Event handler registered`);
-          return event.name;
-        } else {
-          console.warn(`   ⚠️  ${file} - Missing name or execute property`);
-          return null;
-        }
-      } catch (error) {
-        console.error(`   ❌ ${file} - Loading failed:`, error.message);
-        return null;
-      }
-    });
-
-    const eventNames = (await Promise.all(loadPromises)).filter(Boolean);
-    if (eventNames.length > 0) {
-      console.log(
-        `🎯 Successfully loaded ${eventNames.length}/${eventFiles.length} events`,
-      );
-    }
-    console.log("─".repeat(30));
-  } else {
-    console.log("📂 No events directory found, skipping event loading");
-  }
+  client.on(Events.VoiceStateUpdate, (...args) => voiceStateUpdate.execute(...args));
 }
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
@@ -128,20 +96,20 @@ let centralResetService = null; // Will be initialized after database connection
 
 // Bot login
 
-client.on("ready", async (c) => {
+client.on(Events.ClientReady, async (c) => {
   console.log("🚀 Discord Bot Initialization");
   console.log("═".repeat(50));
-  console.log(`🤖 Bot User: ${c.user.tag}`);
-  console.log(`🆔 Client ID: ${c.user.id}`);
-  console.log(`📊 Commands Loaded: ${client.commands.size}`);
-  console.log("🔄 Starting system initialization...");
+  console.log(`Bot User: ${c.user.tag}`);
+  console.log(`lient ID: ${c.user.id}`);
+  console.log(`Commands Loaded: ${client.commands.size}`);
+  console.log("Starting system initialization...");
   console.log("");
 
   try {
     // Initialize database with enhanced fault tolerance
-    console.log("🗄️  Initializing database connection...");
+    console.log("Initializing database connection...");
     await initializeDatabase();
-    console.log("✅ Database connection established");
+    console.log("Database connection established");
 
     // Initialize health monitoring system
     console.log("🩺 Setting up health monitoring...");

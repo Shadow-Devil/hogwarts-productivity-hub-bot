@@ -7,14 +7,14 @@
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "ES2022",
-    "target": "ES2022",
+    "module": "NodeNext",
+    "target": "esnext",
     //"types": [],
     // For nodejs:
     "lib": ["esnext"],
     "types": ["node"],
     // and npm install -D @types/node
-    "moduleResolution": "bundler",
+    "moduleResolution": "nodenext",
 
     // Other Outputs
     "sourceMap": true,
@@ -41,7 +41,9 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "allowSyntheticDefaultImports": true,
   },
-  "include": ["src/**/*.ts", "jest.config.ts"],
+  "include": ["src/**/*.ts"],
 }

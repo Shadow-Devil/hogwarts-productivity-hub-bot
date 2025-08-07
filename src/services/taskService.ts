@@ -1,11 +1,11 @@
-const { executeWithResilience } = require("../models/db");
-const { measureDatabase } = require("../utils/performanceMonitor");
-const queryCache = require("../utils/queryCache");
-const voiceService = require("./voiceService");
-const DailyTaskManager = require("../utils/dailyTaskManager");
+import { executeWithResilience } from "../models/db.ts";
+import { measureDatabase } from "../utils/performanceMonitor.ts";
+import queryCache from "../utils/queryCache.ts";
+import voiceService from "./voiceService.ts";
+import DailyTaskManager from "../utils/dailyTaskManager.ts";
 const dailyTaskManager = new DailyTaskManager();
-const BaseService = require("../utils/baseService");
-const CacheInvalidationService = require("../utils/cacheInvalidationService");
+import BaseService from "../utils/baseService.ts";
+import CacheInvalidationService from "../utils/cacheInvalidationService.ts";
 
 class TaskService extends BaseService {
   constructor() {
@@ -22,7 +22,7 @@ class TaskService extends BaseService {
           message: `🚫 **Daily Task Limit Reached!**\n\nYou've reached your daily limit of **${limitCheck.limit} tasks** (${limitCheck.currentActions}/${limitCheck.limit}). Your limit resets at midnight.\n\n💡 **Tip:** Focus on completing your existing tasks to earn points!`,
           limitReached: true,
           stats: limitCheck,
-        };
+        } as const;
       }
 
       return executeWithResilience(async (client) => {
@@ -47,7 +47,7 @@ class TaskService extends BaseService {
           success: true,
           task,
           stats: await dailyTaskManager.getUserDailyStats(discordId),
-        };
+        } as const;
       });
     })();
   }
@@ -126,7 +126,7 @@ class TaskService extends BaseService {
           message: `🚫 **Daily Task Limit Reached!**\n\nYou've reached your daily limit of **${limitCheck.limit} task actions** (${limitCheck.currentActions}/${limitCheck.limit}). Your limit resets at midnight.\n\n💡 **Tip:** Your limit counts both adding and completing tasks to encourage thoughtful task planning!`,
           limitReached: true,
           stats: limitCheck,
-        };
+        } as const;
       }
 
       return executeWithResilience(async (client) => {
@@ -139,14 +139,14 @@ class TaskService extends BaseService {
         );
 
         if (tasksResult.rows.length === 0) {
-          return { success: false, message: "You have no incomplete tasks." };
+          return { success: false, message: "You have no incomplete tasks." } as const;
         }
 
         if (taskNumber < 1 || taskNumber > tasksResult.rows.length) {
           return {
             success: false,
             message: `Invalid task number. You have ${tasksResult.rows.length} incomplete task(s).`,
-          };
+          } as const;
         }
 
         const taskToComplete = tasksResult.rows[taskNumber - 1];
@@ -189,7 +189,7 @@ class TaskService extends BaseService {
           points: pointsAwarded,
           message: `✅ Completed: "${taskToComplete.title}" (+${pointsAwarded} points)`,
           stats: await dailyTaskManager.getUserDailyStats(discordId),
-        };
+        } as const;
       });
     })();
   }

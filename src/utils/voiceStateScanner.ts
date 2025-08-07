@@ -4,7 +4,7 @@
  * for users already in voice channels
  */
 
-import voiceService from "../services/voiceService";
+import voiceService from "../services/voiceService.ts";
 
 class VoiceStateScanner {
   private isScanning: boolean;

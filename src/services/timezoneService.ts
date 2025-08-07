@@ -4,19 +4,24 @@
  * Built on the existing solid database foundation for timezone support
  */
 
-const { pool } = require("../models/db");
-const BaseService = require("../utils/baseService");
-const winston = require("winston");
-const timezonePerformanceMonitor = require("../utils/timezonePerformanceMonitor");
-const dayjs = require("dayjs");
-const utc = require("dayjs/plugin/utc");
-const timezone = require("dayjs/plugin/timezone");
+import { pool } from "../models/db.ts";
+import BaseService from "../utils/baseService.ts";
+import winston from "winston";
+import timezonePerformanceMonitor from "../utils/timezonePerformanceMonitor.ts";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 class TimezoneService extends BaseService {
+  public logger: winston.Logger;
+  public timezoneCache: Map<string, any>;
+  public validTimezones: Set<string>;
+
+
   constructor() {
     super("TimezoneService");
 
@@ -395,8 +400,8 @@ class TimezoneService extends BaseService {
    */
   async getUsersInResetWindow(timezone = null) {
     try {
-      let query;
-      let params;
+      let query: string;
+      let params: any[];
 
       if (timezone) {
         // Get users in specific timezone who are in reset window

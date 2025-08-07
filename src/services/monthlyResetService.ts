@@ -3,8 +3,8 @@
  * Consolidates all monthly reset logic to prevent duplication
  */
 
-import { pool, checkAndPerformMonthlyReset } from "../models/db";
-import CacheInvalidationService from "../utils/cacheInvalidationService";
+import { pool, checkAndPerformMonthlyReset } from "../models/db.ts";
+import CacheInvalidationService from "../utils/cacheInvalidationService.ts";
 import dayjs from "dayjs";
 
 class MonthlyResetService {

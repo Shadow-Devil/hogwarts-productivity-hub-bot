@@ -3,17 +3,17 @@ import {
   EmbedBuilder,
   type CustomInteraction,
 } from "discord.js";
-import { performanceMonitor } from "../utils/performanceMonitor";
-import queryCache from "../utils/queryCache";
-import databaseOptimizer from "../utils/databaseOptimizer";
+import { performanceMonitor } from "../utils/performanceMonitor.ts";
+import queryCache from "../utils/queryCache.ts";
+import databaseOptimizer from "../utils/databaseOptimizer.ts";
 import {
   createHeader,
   formatDataTable,
   createStatsCard,
   createProgressSection,
-} from "../utils/visualHelpers";
-import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils";
-import type { HealthReport } from "../utils/botHealthMonitor";
+} from "../utils/visualHelpers.ts";
+import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
+import type { HealthReport } from "../utils/botHealthMonitor.ts";
 
 export default {
   data: new SlashCommandBuilder()

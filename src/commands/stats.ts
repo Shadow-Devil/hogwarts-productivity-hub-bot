@@ -1,15 +1,15 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import voiceService from "../services/voiceService";
-import taskService from "../services/taskService";
-import timezoneService from "../services/timezoneService";
+import voiceService from "../services/voiceService.ts";
+import taskService from "../services/taskService.ts";
+import timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
-import { BotColors, StatusEmojis } from "../utils/constants";
-import { createErrorTemplate } from "../utils/embedTemplates";
-import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils";
-import { formatDailyLimitStatus } from "../utils/dailyLimitUtils";
-import { formatHours } from "../utils/timeUtils";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+import { BotColors, StatusEmojis } from "../utils/constants.ts";
+import { createErrorTemplate } from "../utils/embedTemplates.ts";
+import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
+import { formatDailyLimitStatus } from "../utils/dailyLimitUtils.ts";
+import { formatHours } from "../utils/timeUtils.ts";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);

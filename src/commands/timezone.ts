@@ -1,11 +1,11 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import timezoneService from "../services/timezoneService";
-import { BotColors, StatusEmojis } from "../utils/constants";
-import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils";
+import timezoneService from "../services/timezoneService.ts";
+import { BotColors, StatusEmojis } from "../utils/constants.ts";
+import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
-import relativeTime from "dayjs/plugin/relativeTime";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+import relativeTime from "dayjs/plugin/relativeTime.js";
 
 // Extend dayjs with timezone and relative time support
 dayjs.extend(utc);

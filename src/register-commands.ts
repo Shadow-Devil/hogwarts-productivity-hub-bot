@@ -1,7 +1,10 @@
-const { REST, Routes, SlashCommandBuilder } = require("discord.js");
+import addtask from "./commands/addtask.ts";
+
+import { REST, Routes, SlashCommandBuilder } from "discord.js";
 require("dotenv").config();
 
 const commands = [
+  addtask.data,
   new SlashCommandBuilder()
     .setName("timer")
     .setDescription("Start a work + break timer")

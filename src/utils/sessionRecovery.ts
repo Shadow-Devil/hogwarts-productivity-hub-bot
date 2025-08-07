@@ -1,5 +1,5 @@
-import { executeWithResilience } from "../models/db";
-import { measureDatabase } from "./performanceMonitor";
+import { executeWithResilience } from "../models/db.ts";
+import { measureDatabase } from "./performanceMonitor.ts";
 import dayjs from "dayjs";
 
 /**

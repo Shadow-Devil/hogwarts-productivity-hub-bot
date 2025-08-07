@@ -1,16 +1,16 @@
 import { SlashCommandBuilder } from "discord.js";
-import voiceService from "../services/voiceService";
+import voiceService from "../services/voiceService.ts";
 import {
   createHouseTemplate,
   createChampionTemplate,
   createErrorTemplate,
-} from "../utils/embedTemplates";
-import { StatusEmojis } from "../utils/constants";
+} from "../utils/embedTemplates.ts";
+import { StatusEmojis } from "../utils/constants.ts";
 import {
   safeDeferReply,
   safeErrorReply,
   fastMemberFetch,
-} from "../utils/interactionUtils";
+} from "../utils/interactionUtils.ts";
 
 export default {
   data: new SlashCommandBuilder()

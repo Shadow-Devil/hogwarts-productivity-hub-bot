@@ -1,9 +1,9 @@
 // Materialized View Manager Service
 // Handles periodic refresh of materialized views for optimal performance
 
-import { executeWithResilience } from "../models/db";
-import { measureDatabase } from "../utils/performanceMonitor";
-import queryCache from "../utils/queryCache";
+import { executeWithResilience } from "../models/db.ts";
+import { measureDatabase } from "../utils/performanceMonitor.ts";
+import queryCache from "../utils/queryCache.ts";
 
 class MaterializedViewManager {
   public refreshInterval: NodeJS.Timeout | null;

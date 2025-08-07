@@ -4,13 +4,13 @@ import {
   PermissionFlagsBits,
   MessageFlags,
 } from "discord.js";
-import voiceStateScanner from "../utils/voiceStateScanner";
+import voiceStateScanner from "../utils/voiceStateScanner.ts";
 import {
   createHeader,
   formatDataTable,
   createStatsCard,
-} from "../utils/visualHelpers";
-import { safeDeferReply } from "../utils/interactionUtils";
+} from "../utils/visualHelpers.ts";
+import { safeDeferReply } from "../utils/interactionUtils.ts";
 
 export default {
   data: new SlashCommandBuilder()

@@ -3,8 +3,8 @@
  * Focused on query performance, connection management, and monitoring
  */
 
-const { performanceMonitor } = require("./performanceMonitor");
-const queryCache = require("./queryCache");
+import { performanceMonitor } from "./performanceMonitor.ts";
+import queryCache from "./queryCache.ts";
 
 class DatabaseOptimizer {
   private pool: any | null;

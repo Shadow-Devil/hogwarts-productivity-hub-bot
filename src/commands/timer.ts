@@ -1,19 +1,19 @@
 import { SlashCommandBuilder, MessageFlags } from "discord.js";
-import { getUserVoiceChannel } from "../utils/voiceUtils";
+import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
 import {
   createTimerTemplate,
   createErrorTemplate,
-} from "../utils/embedTemplates";
-import { StatusEmojis } from "../utils/constants";
+} from "../utils/embedTemplates.ts";
+import { StatusEmojis } from "../utils/constants.ts";
 import {
   safeDeferReply,
   safeErrorReply,
   safeReply,
-} from "../utils/interactionUtils";
-import timezoneService from "../services/timezoneService";
+} from "../utils/interactionUtils.ts";
+import timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 
 // Extend dayjs with timezone support for timer displays
 dayjs.extend(utc);

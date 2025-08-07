@@ -1,4 +1,4 @@
-import voiceService from "../services/voiceService";
+import voiceService from "../services/voiceService.ts";
 import dayjs from "dayjs";
 
 /**

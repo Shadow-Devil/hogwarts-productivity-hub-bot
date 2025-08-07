@@ -2,7 +2,7 @@
 // Provides consistent visual formatting across all commands
 
 import { EmbedBuilder } from "discord.js";
-import { BotColors } from "./constants";
+import { BotColors } from "./constants.ts";
 
 // 📊 Progress Bar Generator
 function createProgressBar(

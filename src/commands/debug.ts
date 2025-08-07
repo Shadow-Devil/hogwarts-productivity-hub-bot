@@ -1,14 +1,14 @@
 import { SlashCommandBuilder, MessageFlags, EmbedBuilder } from "discord.js";
-import { getUserVoiceChannel } from "../utils/voiceUtils";
+import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
 import {
   createHeader,
   formatDataTable,
   createStatsCard,
-} from "../utils/visualHelpers";
+} from "../utils/visualHelpers.ts";
 import {
   activeVoiceSessions,
   gracePeriodSessions,
-} from "../events/voiceStateUpdate";
+} from "../events/voiceStateUpdate.ts";
 
 export default {
   data: new SlashCommandBuilder()

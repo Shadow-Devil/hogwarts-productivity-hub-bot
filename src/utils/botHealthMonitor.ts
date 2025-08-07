@@ -1,6 +1,6 @@
 import type { Client } from "discord.js";
-import { HealthChecker } from "./faultTolerance";
-import { performanceMonitor } from "./performanceMonitor";
+import { HealthChecker } from "./faultTolerance.ts";
+import { performanceMonitor } from "./performanceMonitor.ts";
 
 export type HealthReport = {
   current?: any; // Current health status

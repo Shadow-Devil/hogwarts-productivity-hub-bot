@@ -1,7 +1,7 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
 
-import { BotColors, StatusEmojis } from "./constants";
+import { BotColors, StatusEmojis } from "./constants.ts";
 import {
   createHeader,
   createProgressBar,
@@ -10,7 +10,7 @@ import {
   createStatsCard,
   createProgressSection,
   createStyledEmbed,
-} from "./visualHelpers";
+} from "./visualHelpers.ts";
 
 // 📊 Enhanced Statistics Dashboard Template
 function createStatsTemplate(

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node src/index.ts",
+    "start": "ts-node src/index.ts",
     "dev": "nodemon src/index.ts",
     "register": "node src/register-commands.ts",
     "test": "vitest",

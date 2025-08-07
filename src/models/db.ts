@@ -1,9 +1,11 @@
-import { ClientBase, Pool } from "pg";
+import { Client, Pool } from "pg";
 import dayjs from "dayjs";
-require("dotenv").config();
-import { performanceMonitor } from "../utils/performanceMonitor";
-import databaseOptimizer from "../utils/databaseOptimizer";
-import DatabaseResilience from "../utils/databaseResilience";
+import { config } from "dotenv";
+config()
+
+import { performanceMonitor } from "../utils/performanceMonitor.ts";
+import databaseOptimizer from "../utils/databaseOptimizer.ts";
+import DatabaseResilience from "../utils/databaseResilience.ts";
 
 // Simple user cache for performance (replaced legacy functions)
 const userCache = new Map();
@@ -945,7 +947,7 @@ export {
 };
 
 export async function executeWithResilience<T>(
-  callback: (client: ClientBase) => Promise<T>,
+  callback: (client: Client) => Promise<T>,
   options = {},
 ): Promise<T> {
   return await dbResilience.executeWithResilience(callback, options);

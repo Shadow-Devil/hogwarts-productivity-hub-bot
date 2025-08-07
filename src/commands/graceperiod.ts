@@ -3,13 +3,13 @@ import {
   createHeader,
   formatDataTable,
   createStatsCard,
-} from "../utils/visualHelpers";
-import { BotColors } from "../utils/constants";
+} from "../utils/visualHelpers.ts";
+import { BotColors } from "../utils/constants.ts";
 // Get grace period and active sessions
 import {
   activeVoiceSessions,
   gracePeriodSessions,
-} from "../events/voiceStateUpdate";
+} from "../events/voiceStateUpdate.ts";
 
 export default {
   data: new SlashCommandBuilder()

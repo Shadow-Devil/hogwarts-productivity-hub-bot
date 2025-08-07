@@ -1,11 +1,11 @@
 import { SlashCommandBuilder } from "discord.js";
-import taskService from "../services/taskService";
+import taskService from "../services/taskService.ts";
 import {
   createSuccessTemplate,
   createErrorTemplate,
-} from "../utils/embedTemplates";
-import { StatusEmojis } from "../utils/constants";
-import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils";
+} from "../utils/embedTemplates.ts";
+import { StatusEmojis } from "../utils/constants.ts";
+import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -48,7 +48,7 @@ export default {
           const slotReclaimedText = result.slotReclaimed
             ? " ✨ **Slot Reclaimed!**"
             : result.slotReclaimed === false &&
-                result.maxRecoverableSlots !== undefined
+                "maxRecoverableSlots" in result
               ? " 🚫 **Slot Not Reclaimed**"
               : "";
           slotInfo = `\n\n**Daily Task Slots:** ${result.stats.remaining}/${result.stats.limit} remaining • **Resets:** <t:${resetTime}:R>${slotReclaimedText}`;
@@ -60,7 +60,8 @@ export default {
             "Since this task was added today, you've regained a task slot!";
         } else if (
           result.slotReclaimed === false &&
-          result.maxRecoverableSlots !== undefined
+          "maxRecoverableSlots" in result &&
+          "tasksCompleted" in result
         ) {
           additionalInfo = `**Slot Recovery Limit:** You can only recover up to ${result.maxRecoverableSlots} slots today (you've completed ${result.tasksCompleted} tasks). This prevents exceeding your daily limit after earning points.`;
         } else {

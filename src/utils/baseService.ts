@@ -3,7 +3,7 @@
  * Eliminates code duplication in service methods
  */
 
-const { measureDatabase } = require("./performanceMonitor");
+import { measureDatabase } from "./performanceMonitor.ts";
 
 class BaseService {
   public serviceName: string;
@@ -21,7 +21,7 @@ class BaseService {
    * @param {Array} args - Arguments to pass to both functions
    * @returns {Promise} Result from optimized or fallback function
    */
-  async executeWithFallback(methodName, optimizedFn, fallbackFn, ...args) {
+  async executeWithFallback(methodName: string, optimizedFn: Function, fallbackFn: Function, ...args: Array<any>): Promise<any> {
     try {
       // Try optimized version first
       return await measureDatabase(`${methodName}Optimized`, async () => {

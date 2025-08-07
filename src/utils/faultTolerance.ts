@@ -1,4 +1,4 @@
-const EventEmitter = require("events");
+import EventEmitter from "events";
 
 /**
  * Circuit Breaker Pattern Implementation
@@ -10,6 +10,18 @@ class CircuitBreaker extends EventEmitter {
     recoveryTimeout: number; // Time to wait before allowing half-open state
     monitorTimeout: number; // Timeout for monitoring operations
     name: string; // Name of the circuit breaker
+  };
+
+  public state: "CLOSED" | "OPEN" | "HALF_OPEN"; // Current state of the circuit breaker
+  public failureCount: number
+  public lastFailureTime: number | null; // Timestamp of the last failure
+  public nextAttempt: number | null; // Timestamp for the next attempt in HALF_OPEN state
+  
+  public metrics: {
+    requests: number; // Total requests made
+    failures: number; // Total failures
+    successes: number; // Total successes
+    rejections: number; // Total rejections due to OPEN state
   };
 
   constructor({

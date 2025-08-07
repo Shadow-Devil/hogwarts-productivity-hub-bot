@@ -3,7 +3,7 @@
  * Provides consistent cache management across all services
  */
 
-const queryCache = require("./queryCache");
+import queryCache from "./queryCache.ts";
 
 class CacheInvalidationService {
   /**
@@ -11,7 +11,7 @@ class CacheInvalidationService {
    * @param {string} discordId - User's Discord ID
    * @param {string} userTimezone - User's timezone (optional)
    */
-  static invalidateUserCache(discordId, userTimezone = null) {
+  static invalidateUserCache(discordId: string, userTimezone: string = null) {
     const keysToInvalidate = [
       `user_stats:${discordId}`,
       `user_stats_optimized:${discordId}`,

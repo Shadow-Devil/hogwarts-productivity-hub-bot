@@ -1,30 +1,17 @@
-const {
-  pool,
-  getCachedUser,
-  setCachedUser,
-  clearUserCache,
-  calculatePointsForHours,
-  checkAndPerformMonthlyReset,
-  getUserHouse,
-  updateHousePoints,
-  executeWithResilience,
-} = require("../models/db");
-const dayjs = require("dayjs");
-const { measureDatabase } = require("../utils/performanceMonitor");
-const queryCache = require("../utils/queryCache");
-const {
-  calculateDailyLimitInfo,
-  generateDailyLimitMessage,
-} = require("../utils/dailyLimitUtils");
-const {
-  roundHoursFor55MinRule,
-  minutesToHours,
-} = require("../utils/timeUtils");
-const CacheInvalidationService = require("../utils/cacheInvalidationService");
-const BaseService = require("../utils/baseService");
-const timezoneService = require("./timezoneService");
+import { pool, getCachedUser, setCachedUser, clearUserCache, calculatePointsForHours, checkAndPerformMonthlyReset, getUserHouse, updateHousePoints, executeWithResilience } from "../models/db.ts";
+import dayjs from "dayjs";
+import { measureDatabase } from "../utils/performanceMonitor.ts";
+import queryCache from "../utils/queryCache.ts";
+import { calculateDailyLimitInfo, generateDailyLimitMessage } from "../utils/dailyLimitUtils.ts";
+import { roundHoursFor55MinRule, minutesToHours } from "../utils/timeUtils.ts";
+import CacheInvalidationService from "../utils/cacheInvalidationService.ts";
+import BaseService from "../utils/baseService.ts";
+import timezoneService from "./timezoneService.ts";
+import type winston from "winston";
 
 class VoiceService extends BaseService {
+  public logger: winston.Logger;
+
   constructor() {
     super("VoiceService");
   }
@@ -466,7 +453,7 @@ class VoiceService extends BaseService {
         // Use user's timezone for accurate midnight calculation
         const userTime =
           await timezoneService.getCurrentTimeInUserTimezone(discordId);
-        const startOfToday = userTime.startOf("day").toDate();
+        const startOfToday = userTime.startOf("day").toDate().getTime();
 
         // Find active session that started yesterday
         const result = await client.query(
@@ -1144,7 +1131,7 @@ class VoiceService extends BaseService {
    * @param {string} discordId - Discord user ID
    * @returns {Promise<boolean>} Success status
    */
-  async resetDailyStats(discordId) {
+  async resetDailyStats(discordId: string): Promise<boolean> {
     return measureDatabase("resetDailyStats", async () => {
       return executeWithResilience(async (client) => {
         // Reset daily voice stats and limits
@@ -1168,7 +1155,7 @@ class VoiceService extends BaseService {
         // Clear cache for the user to ensure fresh data
         clearUserCache(discordId);
         // Invalidate related caches
-        CacheInvalidationService.invalidateUserCaches(discordId);
+        CacheInvalidationService.invalidateUserCache(discordId);
 
         this.logger.debug("Daily voice stats reset successfully", {
           userId: discordId,
@@ -1177,7 +1164,7 @@ class VoiceService extends BaseService {
 
         return true;
       });
-    });
+    })();
   }
 
   // Fallback method for house leaderboard (used only if optimized version fails)
