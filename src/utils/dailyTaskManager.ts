@@ -10,7 +10,7 @@ import {
   activeVoiceSessions,
   gracePeriodSessions,
 } from "../events/voiceStateUpdate.ts";
-import voiceService from "../services/voiceService.ts";
+import * as voiceService from "../services/voiceService.ts";
 
 
 const DAILY_TASK_LIMIT = 10;

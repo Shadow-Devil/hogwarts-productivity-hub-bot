@@ -1,11 +1,11 @@
 import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from "discord.js";
-import voiceService from "../services/voiceService.ts";
+import * as voiceService from "../services/voiceService.ts";
 import taskService from "../services/taskService.ts";
 import * as timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
-import { BotColors, StatusEmojis } from "../utils/constants.ts";
+import { BotColors } from "../utils/constants.ts";
 import { createErrorTemplate } from "../utils/embedTemplates.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
 import { formatHours } from "../utils/timeUtils.ts";
@@ -224,10 +224,10 @@ export default {
       console.error("Error in /stats:", error);
 
       const embed = createErrorTemplate(
-        `${StatusEmojis.ERROR} Stats Load Failed`,
+        `❌ Stats Load Failed`,
         "An error occurred while fetching your statistics. Please try again in a moment.",
         {
-          helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
+          helpText: `ℹ️ If this problem persists, contact support`,
         }
       );
 

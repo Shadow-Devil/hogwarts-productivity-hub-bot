@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { db } from "../models/db.ts";
-import voiceService from "../services/voiceService.ts";
+import * as voiceService from "../services/voiceService.ts";
 
 /**
  * Session Recovery System

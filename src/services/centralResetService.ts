@@ -19,7 +19,7 @@
 
 import cron from "node-cron";
 import * as timezoneService from "./timezoneService.ts";
-import voiceService from "./voiceService.ts";
+import * as voiceService from "./voiceService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";

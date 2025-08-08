@@ -53,7 +53,7 @@ export default {
             `${StatusEmojis.WARNING} Daily Task Limit Reached`,
             result.message,
             {
-              helpText: `${StatusEmojis.INFO} Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
+              helpText: `ℹ️ Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
               additionalInfo: `**Remaining:** ${result.stats.remaining} actions\n**Resets:** <t:${resetTime}:R>`,
             }
           );
@@ -61,10 +61,10 @@ export default {
           return;
         } else {
           const embed = createErrorTemplate(
-            `${StatusEmojis.ERROR} Task Completion Failed`,
+            `❌ Task Completion Failed`,
             result.message,
             {
-              helpText: `${StatusEmojis.INFO} Use \`/viewtasks\` to check your task numbers`,
+              helpText: `ℹ️ Use \`/viewtasks\` to check your task numbers`,
             }
           );
           await interaction.editReply({ embeds: [embed] });
@@ -90,10 +90,10 @@ export default {
       console.error("Error in /completetask:", error);
 
       const embed = createErrorTemplate(
-        `${StatusEmojis.ERROR} Task Completion Error`,
+        `❌ Task Completion Error`,
         "An unexpected error occurred while completing your task. Please try again in a moment.",
         {
-          helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
+          helpText: `ℹ️ If this problem persists, contact support`,
         }
       );
 

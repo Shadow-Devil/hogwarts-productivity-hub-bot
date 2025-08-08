@@ -193,7 +193,7 @@ async function handleSetTimezone(interaction, discordId, newTimezone) {
     } catch (_error) {
       const embed = new EmbedBuilder()
         .setColor(BotColors.ERROR)
-        .setTitle(`${StatusEmojis.ERROR} Invalid Timezone`)
+        .setTitle(`❌ Invalid Timezone`)
         .setDescription(`The timezone \`${newTimezone}\` is not valid.`)
         .addFields({
           name: "💡 Tips",
@@ -390,7 +390,7 @@ function createTimezoneEmbed(userTimezone, userLocalTime, nextResets) {
 function createTimezoneListEmbed() {
   const embed = new EmbedBuilder()
     .setColor(BotColors.INFO)
-    .setTitle(`${StatusEmojis.INFO} Common Timezones`)
+    .setTitle(`ℹ️ Common Timezones`)
     .setDescription(
       "Here are some commonly used timezones. You can use any valid IANA timezone identifier."
     );

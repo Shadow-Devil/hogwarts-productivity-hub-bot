@@ -40,10 +40,10 @@ export default {
 
       if (!voiceChannel) {
         const embed = createErrorTemplate(
-          `${StatusEmojis.ERROR} Voice Channel Required`,
+          `❌ Voice Channel Required`,
           "You must be in a voice channel to stop a timer and manage your productivity sessions.",
           {
-            helpText: `${StatusEmojis.INFO} Join the voice channel with an active timer`,
+            helpText: `ℹ️ Join the voice channel with an active timer`,
             additionalInfo:
               "Timer controls are tied to your current voice channel location.",
           }
@@ -58,7 +58,7 @@ export default {
           `${StatusEmojis.WARNING} No Active Timer Found`,
           `No Pomodoro timer is currently running in <#${voiceChannelId}>. There's nothing to stop!`,
           {
-            helpText: `${StatusEmojis.INFO} Use \`/timer <work_minutes>\` to start a new Pomodoro session`,
+            helpText: `ℹ️ Use \`/timer <work_minutes>\` to start a new Pomodoro session`,
             additionalInfo:
               "Check `/time` to see if there are any active timers in your current voice channel.",
           }
@@ -102,10 +102,10 @@ export default {
       console.error("Error in /stoptimer:", error);
 
       const embed = createErrorTemplate(
-        `${StatusEmojis.ERROR} Timer Stop Failed`,
+        `❌ Timer Stop Failed`,
         "An error occurred while stopping your timer. Please try again in a moment.",
         {
-          helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
+          helpText: `ℹ️ If this problem persists, contact support`,
         }
       );
 

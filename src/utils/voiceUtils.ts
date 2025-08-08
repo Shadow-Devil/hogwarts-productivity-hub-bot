@@ -5,7 +5,7 @@ import type {
 } from "discord.js";
 
 /**
- * Reliably get the voice channel for a user from an interaction
+ * get the voice channel for a user from an interaction
  * This function handles the case where Discord's cached member data might be stale
  * @param {ChatInputCommandInteraction} interaction - The Discord interaction
  * @param options - Options for voice channel detection

@@ -57,17 +57,17 @@ export default {
 
         const embed = createSuccessTemplate(
           `${StatusEmojis.COMPLETED} Task Removed Successfully`,
-          `**${result.message}**\n\n${StatusEmojis.INFO} The task has been permanently removed from your to-do list.${slotInfo}`,
+          `**${result.message}**\n\nℹ️ The task has been permanently removed from your to-do list.${slotInfo}`,
           {}
         );
         await interaction.editReply({ embeds: [embed] });
         return;
       } else {
         const embed = createErrorTemplate(
-          `${StatusEmojis.ERROR} Task Removal Failed`,
+          `❌ Task Removal Failed`,
           result.message,
           {
-            helpText: `${StatusEmojis.INFO} Use \`/viewtasks\` to check your task numbers`,
+            helpText: `ℹ️ Use \`/viewtasks\` to check your task numbers`,
           }
         );
         await interaction.editReply({ embeds: [embed] });
@@ -77,10 +77,10 @@ export default {
       console.error("Error in /removetask:", error);
 
       const embed = createErrorTemplate(
-        `${StatusEmojis.ERROR} Task Removal Error`,
+        `❌ Task Removal Error`,
         "An unexpected error occurred while removing your task. Please try again in a moment.",
         {
-          helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
+          helpText: `ℹ️ If this problem persists, contact support`,
         }
       );
 

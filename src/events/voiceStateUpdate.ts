@@ -1,5 +1,5 @@
 import { type VoiceState } from "discord.js";
-import voiceService from "../services/voiceService.ts";
+import * as voiceService from "../services/voiceService.ts";
 import dayjs from "dayjs";
 
 /**

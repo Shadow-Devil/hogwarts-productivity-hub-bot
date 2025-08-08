@@ -55,10 +55,10 @@ export default {
 
       if (!voiceChannel) {
         const embed = createErrorTemplate(
-          `${StatusEmojis.ERROR} Voice Channel Required`,
+          `❌ Voice Channel Required`,
           "You must be in a voice channel to start a Pomodoro timer and track your productivity.",
           {
-            helpText: `${StatusEmojis.INFO} Join any voice channel first, then try again`,
+            helpText: `ℹ️ Join any voice channel first, then try again`,
             additionalInfo:
               "Timers help you maintain focus during productive voice sessions.",
           }
@@ -101,7 +101,7 @@ export default {
               `${StatusEmojis.WARNING} Timer Already Running`,
               `A Pomodoro timer is already active in <#${voiceChannelId}>! Only one timer per voice channel is allowed.`,
               {
-                helpText: `${StatusEmojis.INFO} Use \`/stoptimer\` to stop the current timer first`,
+                helpText: `ℹ️ Use \`/stoptimer\` to stop the current timer first`,
                 additionalInfo: `**Current Phase:** ${existingTimer.phase.toUpperCase()}\n**Time Remaining:** ${timeRemaining} minutes`,
               }
             );
@@ -123,7 +123,7 @@ export default {
           `${StatusEmojis.WARNING} Invalid Timer Values`,
           "Please ensure your timer values meet the minimum requirements for effective productivity sessions.",
           {
-            helpText: `${StatusEmojis.INFO} Try again with valid values`,
+            helpText: `ℹ️ Try again with valid values`,
             additionalInfo:
               "**Minimum Requirements:** Work Time: **20 minutes** • Break Time: **5 minutes** (if specified)",
           }

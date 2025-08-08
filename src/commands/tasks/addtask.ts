@@ -34,10 +34,10 @@ export default {
       // Validate title length and content
       if (title.trim().length === 0) {
         const embed = createErrorTemplate(
-          `${StatusEmojis.ERROR} Invalid Task Title`,
+          `❌ Invalid Task Title`,
           "Task title cannot be empty. Please provide a meaningful description for your task.",
           {
-            helpText: `${StatusEmojis.INFO} Try: \`/addtask Write project proposal\``,
+            helpText: `ℹ️ Try: \`/addtask Write project proposal\``,
           }
         );
         await interaction.editReply({ embeds: [embed] });
@@ -49,7 +49,7 @@ export default {
           `${StatusEmojis.WARNING} Task Title Too Long`,
           "Task title must be 500 characters or less for optimal readability.",
           {
-            helpText: `${StatusEmojis.INFO} Current length: ${title.length}/500 characters`,
+            helpText: `ℹ️ Current length: ${title.length}/500 characters`,
           }
         );
         await interaction.editReply({ embeds: [embed] });
@@ -72,7 +72,7 @@ export default {
             `${StatusEmojis.WARNING} Daily Task Limit Reached`,
             result.message,
             {
-              helpText: `${StatusEmojis.INFO} Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
+              helpText: `ℹ️ Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
               additionalInfo: `**Remaining:** ${result.stats.remaining} actions • **Resets:** <t:${resetTime}:R>`,
             }
           );
@@ -80,9 +80,9 @@ export default {
           return;
         } else {
           const embed = createErrorTemplate(
-            `${StatusEmojis.ERROR} Task Creation Failed`,
+            `❌ Task Creation Failed`,
             result.message,
-            { helpText: `${StatusEmojis.INFO} Please try again` }
+            { helpText: `ℹ️ Please try again` }
           );
           await interaction.editReply({ embeds: [embed] });
           return;
@@ -103,10 +103,10 @@ export default {
       console.error("Error in /addtask:", error);
 
       const embed = createErrorTemplate(
-        `${StatusEmojis.ERROR} Task Creation Failed`,
+        `❌ Task Creation Failed`,
         "An unexpected error occurred while adding your task. Please try again in a moment.",
         {
-          helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
+          helpText: `ℹ️ If this problem persists, contact support`,
         }
       );
 

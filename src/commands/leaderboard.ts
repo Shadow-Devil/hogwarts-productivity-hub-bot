@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
-import voiceService from "../services/voiceService.ts";
+import * as voiceService from "../services/voiceService.ts";
 import * as timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
@@ -8,7 +8,6 @@ import {
   createLeaderboardTemplate,
   createErrorTemplate,
 } from "../utils/embedTemplates.ts";
-import { StatusEmojis } from "../utils/constants.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
 
 // Extend dayjs with timezone support
@@ -44,7 +43,7 @@ export default {
 
       if (!leaderboard || leaderboard.length === 0) {
         const embed = createErrorTemplate(
-          `${StatusEmojis.INFO} No Leaderboard Data`,
+          `ℹ️ No Leaderboard Data`,
           "No data is available for the leaderboard yet. Be the first to start tracking your voice time!",
           {
             helpText: "Join a voice channel to start accumulating hours",
@@ -59,7 +58,6 @@ export default {
       // Get current user information for the template
       const currentUserId = interaction.user.id;
 
-      // Create enhanced leaderboard using our template with new features
       const embed = createLeaderboardTemplate(
         leaderboardType,
         leaderboard,
@@ -108,10 +106,10 @@ export default {
       console.error("Error in /leaderboard:", error);
 
       const embed = createErrorTemplate(
-        `${StatusEmojis.ERROR} Leaderboard Load Failed`,
+        `❌ Leaderboard Load Failed`,
         "An error occurred while fetching the leaderboard data. Please try again in a moment.",
         {
-          helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
+          helpText: `ℹ️ If this problem persists, contact support`,
         }
       );
 

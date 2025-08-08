@@ -4,7 +4,7 @@
  * for users already in voice channels
  */
 
-import voiceService from "../services/voiceService.ts";
+import * as voiceService from "../services/voiceService.ts";
 // Get grace period sessions if available
 import { gracePeriodSessions } from "../events/voiceStateUpdate.ts";
 import type { Client } from "discord.js";

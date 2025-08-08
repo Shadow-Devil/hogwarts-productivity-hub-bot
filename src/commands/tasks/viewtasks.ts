@@ -4,7 +4,6 @@ import {
   createTaskTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
-import { StatusEmojis } from "../../utils/constants.ts";
 import {
   safeDeferReply,
   safeErrorReply,
@@ -87,10 +86,10 @@ export default {
       console.error("Error in /viewtasks:", error);
 
       const embed = createErrorTemplate(
-        `${StatusEmojis.ERROR} Failed to Load Tasks`,
+        `❌ Failed to Load Tasks`,
         "An error occurred while fetching your tasks. Please try again in a moment.",
         {
-          helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
+          helpText: `ℹ️ If this problem persists, contact support`,
         }
       );
 

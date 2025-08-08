@@ -4,7 +4,6 @@ import {
   createTimerTemplate,
   createErrorTemplate,
 } from "../utils/embedTemplates.ts";
-import { StatusEmojis } from "../utils/constants.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
 import * as timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
@@ -36,7 +35,7 @@ export default {
 
       if (!voiceChannel) {
         const embed = createErrorTemplate(
-          `${StatusEmojis.ERROR} Voice Channel Required`,
+          `❌ Voice Channel Required`,
           "You must be in a voice channel to check timer status and track your productivity sessions.",
           {
             helpText: "Join a voice channel first, then try again",
@@ -119,10 +118,10 @@ export default {
       console.error("Error in /time command:", error);
 
       const embed = createErrorTemplate(
-        `${StatusEmojis.ERROR} Timer Status Check Failed`,
+        `❌ Timer Status Check Failed`,
         "An error occurred while checking your timer status. Please try again in a moment.",
         {
-          helpText: `${StatusEmojis.INFO} If this problem persists, contact support`,
+          helpText: `ℹ️ If this problem persists, contact support`,
         }
       );
 

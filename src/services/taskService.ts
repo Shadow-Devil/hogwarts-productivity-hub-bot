@@ -1,4 +1,4 @@
-import voiceService from "./voiceService.ts";
+import * as voiceService from "./voiceService.ts";
 import * as DailyTaskManager from "../utils/dailyTaskManager.ts";
 import { db } from "../models/db.ts";
 
