@@ -11,7 +11,7 @@ import {
   gracePeriodSessions,
 } from "../events/voiceStateUpdate.ts";
 import voiceService from "../services/voiceService.ts";
-//import { client } from "../index.ts";
+
 
 const DAILY_TASK_LIMIT = 10;
 let cleanupInterval = null;
@@ -125,11 +125,6 @@ async function performMidnightOperations() {
  */
 async function handleActiveVoiceSessionsAtMidnight() {
   try {
-    // Get reference to active voice sessions from voiceStateUpdate
-    const {
-      activeVoiceSessions,
-      gracePeriodSessions,
-    } = require("../events/voiceStateUpdate");
 
     const totalActiveUsers =
       activeVoiceSessions.size + gracePeriodSessions.size;
@@ -210,7 +205,7 @@ async function resetDailyVoiceStats() {
   }
 
   // Step 2: Archive completed daily stats for users not in voice
-  const yesterday = require("dayjs")().subtract(1, "day").format("YYYY-MM-DD");
+  const yesterday = dayjs().subtract(1, "day").format("YYYY-MM-DD");
   const usersInVoiceArray = Array.from(allActiveUsers);
 
   let archiveQuery = `
@@ -230,12 +225,6 @@ async function resetDailyVoiceStats() {
   console.log(
     `📊 Archived ${archiveResult.rowCount} completed daily stats from yesterday`
   );
-
-  // Step 3: Clear voice-related caches to ensure fresh data for new day
-  const queryCache = require("./queryCache");
-  queryCache.invalidatePattern("user_stats*");
-  queryCache.invalidatePattern("daily_voice*");
-  queryCache.invalidatePattern("leaderboard*");
 
   // Step 4: Log comprehensive reset summary
   console.log("✅ Enhanced midnight reset completed successfully!");

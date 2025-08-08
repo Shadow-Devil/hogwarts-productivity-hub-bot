@@ -124,74 +124,6 @@ async function safeErrorReply(
 }
 
 /**
- * Wrapper for command execution with automatic timeout and error handling
- * @param {CommandInteraction} interaction - Discord interaction
- * @param {Function} commandFunction - Command function to execute
- * @param {Object} options - Execution options
- */
-async function executeWithTimeout(
-  interaction: CommandInteraction,
-  commandFunction: Function,
-  { timeout = 10000, errorTemplate = null } = {}
-) {
-  let deferred = false;
-
-  try {
-    // Immediately defer the interaction to prevent timeout
-    deferred = await safeDeferReply(interaction);
-
-    if (!deferred) {
-      console.warn(
-        `Failed to defer interaction for /${interaction?.commandName}`
-      );
-      return false;
-    }
-
-    // Execute the command with timeout protection
-    const commandPromise = commandFunction(interaction);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Command execution timeout")), timeout)
-    );
-
-    await Promise.race([commandPromise, timeoutPromise]);
-    return true;
-  } catch (error) {
-    console.error(
-      `Error executing /${interaction?.commandName}:`,
-      error.message
-    );
-
-    // Send error reply if we successfully deferred
-    if (deferred && errorTemplate) {
-      await safeErrorReply(interaction, errorTemplate);
-    }
-
-    return false;
-  }
-}
-
-/**
- * Check if an interaction is still valid and actionable
- * @param {CommandInteraction} interaction - Discord interaction
- * @returns {boolean} - Whether interaction is valid
- */
-function isInteractionValid(interaction: CommandInteraction): boolean {
-  if (!interaction) return false;
-
-  // Check if interaction has expired (Discord interactions expire after 15 minutes)
-  const now = Date.now();
-  const interactionTime = interaction.createdTimestamp;
-  const maxAge = 15 * 60 * 1000; // 15 minutes
-
-  if (now - interactionTime > maxAge) {
-    console.warn(`Interaction for /${interaction.commandName} has expired`);
-    return false;
-  }
-
-  return true;
-}
-
-/**
  * Optimized member fetch that avoids slow API calls when possible
  * @param {Guild} guild - Discord guild
  * @param {string} userId - User ID to fetch
@@ -226,7 +158,5 @@ export {
   safeDeferReply,
   safeReply,
   safeErrorReply,
-  executeWithTimeout,
-  isInteractionValid,
   fastMemberFetch,
 };

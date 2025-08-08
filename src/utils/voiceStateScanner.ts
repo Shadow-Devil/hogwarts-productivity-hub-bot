@@ -10,23 +10,18 @@ import { gracePeriodSessions } from "../events/voiceStateUpdate.ts";
 import type { Client } from "discord.js";
 
 class VoiceStateScanner {
-  private isScanning: boolean;
+  private isScanning = false;
   private scanResults: {
     totalUsersFound: number;
     trackingStarted: number;
     errors: number;
     channels: Array<{ id: string; name: string; userCount: number }>;
-  };
-
-  constructor() {
-    this.isScanning = false;
-    this.scanResults = {
+  } = {
       totalUsersFound: 0,
       trackingStarted: 0,
       errors: 0,
       channels: [],
     };
-  }
 
   /**
    * Scan all voice channels and start tracking for users already in voice

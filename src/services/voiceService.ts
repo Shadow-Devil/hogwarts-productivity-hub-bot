@@ -7,13 +7,113 @@ import { roundHoursFor55MinRule, minutesToHours } from "../utils/timeUtils.ts";
 import timezoneService from "./timezoneService.ts";
 import type winston from "winston";
 import {
-  checkAndPerformMonthlyReset,
   db,
-  getHouseChampions1,
   getUserHouse,
-  updateHousePoints,
-  getHouseLeaderboard1,
+  checkAndPerformHouseMonthlyReset,
 } from "../models/db.ts";
+
+
+// Update house points when user earns points (with advisory locking)
+async function updateHousePoints(houseName: string, pointsEarned: number) {
+  if (!houseName || pointsEarned <= 0) return;
+  // Check and perform monthly reset for houses if needed
+  await checkAndPerformHouseMonthlyReset();
+
+  // Update house points atomically (continuous all-time update system)
+  const result = await db.$client.query(
+    `
+          UPDATE houses SET
+              monthly_points = monthly_points + $1,
+              all_time_points = all_time_points + $1,
+              total_points = total_points + $1,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE name = $2
+          RETURNING monthly_points, all_time_points, total_points
+      `,
+    [pointsEarned, houseName]
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error(`House ${houseName} not found`);
+  }
+
+  console.log(
+    `🏠 Added ${pointsEarned} points to ${houseName} (Monthly: ${result.rows[0].monthly_points}, All-time: ${result.rows[0].all_time_points}, Total: ${result.rows[0].total_points})`
+  );
+  return result.rows[0];
+}
+
+
+// Check and perform monthly reset for a user if needed
+async function checkAndPerformMonthlyReset(discordId) {
+  try {
+    const firstOfMonth = dayjs().startOf("month").format("YYYY-MM-DD");
+
+    // Get user data
+    const userResult = await db.$client.query(
+      "SELECT * FROM users WHERE discord_id = $1",
+      [discordId]
+    );
+
+    if (userResult.rows.length === 0) return;
+
+    const user = userResult.rows[0];
+    const lastReset = user.last_monthly_reset
+      ? dayjs(user.last_monthly_reset)
+      : null;
+    const currentMonth = dayjs().startOf("month");
+
+    // Check if we need to perform monthly reset
+    if (!lastReset || lastReset.isBefore(currentMonth)) {
+      console.log(
+        `🔄 Performing monthly reset for user ${discordId} (all-time stats now continuously updated)`
+      );
+
+      // Store the monthly summary before reset (for historical tracking)
+      if (user.monthly_hours > 0 || user.monthly_points > 0) {
+        const lastMonth = lastReset
+          ? lastReset.format("YYYY-MM")
+          : dayjs().subtract(1, "month").format("YYYY-MM");
+        await db.$client.query(
+          `
+                    INSERT INTO monthly_voice_summary (user_id, discord_id, year_month, total_hours, total_points)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT (discord_id, year_month)
+                    DO UPDATE SET
+                        total_hours = $4,
+                        total_points = $5,
+                        updated_at = CURRENT_TIMESTAMP
+                `,
+          [
+            user.id,
+            discordId,
+            lastMonth,
+            user.monthly_hours,
+            user.monthly_points,
+          ]
+        );
+      }
+
+      // Reset monthly stats only (all-time stats are continuously updated now)
+      await db.$client.query(
+        `
+                UPDATE users SET
+                    monthly_points = 0,
+                    monthly_hours = 0,
+                    last_monthly_reset = $1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE discord_id = $2
+            `,
+        [firstOfMonth, discordId]
+      );
+      console.log(`✅ Monthly reset completed for ${discordId}`);
+    }
+  } catch (error) {
+    console.error("Error performing monthly reset:", error);
+    throw error;
+  }
+}
+
 
 // Calculate points based on hours spent
 // First hour daily: 5 points, subsequent hours: 2 points each (daily cumulative system)
@@ -831,13 +931,6 @@ class VoiceService {
     }
   }
 
-  // Get house champions (top contributor per house)
-  async getHouseChampions(type = "monthly") {
-    const result = await getHouseChampions1(type);
-
-    return result;
-  }
-
   // ========================================================================
   // FALLBACK METHODS - For reliability when optimized methods fail
   // ========================================================================
@@ -1013,9 +1106,32 @@ class VoiceService {
 
   // Fallback method for house leaderboard (used only if optimized version fails)
   async getHouseLeaderboardOriginal(type = "monthly") {
-    const result = await getHouseLeaderboard1(type);
+    try {
+      // Check and perform monthly reset for houses if needed
+      await checkAndPerformHouseMonthlyReset();
 
-    return result;
+      let query;
+
+      if (type === "monthly") {
+        query = `
+                SELECT name, monthly_points as points
+                FROM houses
+                ORDER BY monthly_points DESC, name ASC
+            `;
+      } else {
+        query = `
+                SELECT name, all_time_points as points
+                FROM houses
+                ORDER BY all_time_points DESC, name ASC
+            `;
+      }
+
+      const result = await db.$client.query(query);
+      return result.rows;
+    } catch (error) {
+      console.error("Error getting house leaderboard:", error);
+      throw error;
+    }
   }
 }
 

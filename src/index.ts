@@ -35,9 +35,7 @@ client.on(Events.ClientReady, async (c) => {
       gracePeriodSessions
     );
     if (recoveryResults > 0) {
-      console.log(
-        `📈 Recovered ${recoveryResults} incomplete sessions from previous runs`
-      );
+      console.log(`📈 Recovered ${recoveryResults} incomplete sessions from previous runs`);
     }
 
     const scanResults = await voiceStateScanner.scanAndStartTracking(

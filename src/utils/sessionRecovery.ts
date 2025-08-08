@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { db } from "../models/db.ts";
+import voiceService from "../services/voiceService.ts";
 
 /**
  * Session Recovery System
@@ -143,7 +144,6 @@ class SessionRecovery {
     );
 
     // Calculate and award points for the recovered session
-    const voiceService = require("../services/voiceService");
     try {
       const pointsResult = await voiceService.calculateAndAwardPoints(
         session.discord_id,
@@ -259,7 +259,6 @@ class SessionRecovery {
       return;
     }
     const now = new Date();
-    const voiceService = require("../services/voiceService");
     let closedSessions = 0;
 
     console.log(

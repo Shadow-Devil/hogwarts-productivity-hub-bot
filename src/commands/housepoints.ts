@@ -11,7 +11,56 @@ import {
   safeErrorReply,
   fastMemberFetch,
 } from "../utils/interactionUtils.ts";
-import { getUserHouse } from "../models/db.ts";
+import { db, getUserHouse } from "../models/db.ts";
+
+// Get house champions (top contributing user per house)
+async function getHouseChampions(type = "monthly") {
+  try {
+    let query;
+
+    if (type === "monthly") {
+      query = `
+                WITH ranked_users AS (
+                    SELECT
+                        u.username,
+                        u.discord_id,
+                        u.house,
+                        u.monthly_points as points,
+                        ROW_NUMBER() OVER (PARTITION BY u.house ORDER BY u.monthly_points DESC, u.username ASC) as rank
+                    FROM users u
+                    WHERE u.house IS NOT NULL AND u.monthly_points > 0
+                )
+                SELECT username, discord_id, house, points
+                FROM ranked_users
+                WHERE rank = 1
+                ORDER BY points DESC, username ASC
+            `;
+    } else {
+      query = `
+        WITH ranked_users AS (
+            SELECT
+                u.username,
+                u.discord_id,
+                u.house,
+                u.all_time_points as points,
+                ROW_NUMBER() OVER (PARTITION BY u.house ORDER BY u.all_time_points DESC, u.username ASC) as rank
+            FROM users u
+            WHERE u.house IS NOT NULL AND u.all_time_points > 0
+        )
+        SELECT username, discord_id, house, points
+        FROM ranked_users
+        WHERE rank = 1
+        ORDER BY points DESC, username ASC
+    `;
+    }
+
+    const result = await db.$client.query(query);
+    return result.rows;
+  } catch (error) {
+    console.error("Error getting house champions:", error);
+    throw error;
+  }
+}
 
 export default {
   data: new SlashCommandBuilder()
@@ -101,8 +150,8 @@ async function showHouseLeaderboard(interaction, type) {
 
 async function showHouseChampions(interaction) {
   // Check cache first, then fetch missing data
-  const monthlyChampions = await voiceService.getHouseChampions("monthly");
-  const allTimeChampions = await voiceService.getHouseChampions("alltime");
+  const monthlyChampions = await getHouseChampions("monthly");
+  const allTimeChampions = await getHouseChampions("alltime");
 
   // Always show the champion template, even if empty (to match house leaderboard behavior)
 

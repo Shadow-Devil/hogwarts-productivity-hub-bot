@@ -85,7 +85,6 @@ npm run dev
 ### Command Structure
 
 ```javascript
-const { SlashCommandBuilder } = require("discord.js");
 
 module.exports = {
   data: new SlashCommandBuilder()
