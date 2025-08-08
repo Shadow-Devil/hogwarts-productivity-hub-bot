@@ -336,53 +336,6 @@ async function processUserMidnightReset(
   return result;
 }
 
-/**
- * Perform midnight cleanup - delete all pending tasks and notify users (legacy method for task cleanup only)
- */
-async function performMidnightCleanup() {
-  try {
-    // Get all users with pending tasks
-    const usersWithTasks = await db.$client.query(`
-              SELECT DISTINCT discord_id,
-                  COUNT(*) as pending_count,
-                  ARRAY_AGG(title ORDER BY created_at) as pending_titles
-              FROM tasks
-              WHERE is_complete = FALSE
-              GROUP BY discord_id
-          `);
-
-    console.log(
-      `🧹 Found ${usersWithTasks.rows.length} users with pending tasks to clean up`
-    );
-
-    // Process each user
-    for (const user of usersWithTasks.rows) {
-      try {
-        await cleanupUserTasks(
-          user.discord_id,
-          user.pending_count,
-          user.pending_titles
-        );
-      } catch (error) {
-        console.error(
-          `❌ Error cleaning up tasks for user ${user.discord_id}:`,
-          error
-        );
-      }
-    }
-
-    // Reset daily task stats for all users (new day = new limits)
-    await db.$client.query(`
-              UPDATE daily_task_stats
-              SET tasks_added = 0, tasks_completed = 0, total_task_actions = 0
-              WHERE date < CURRENT_DATE
-          `);
-
-    console.log("✅ Midnight task cleanup completed successfully");
-  } catch (error) {
-    console.error("❌ Error during midnight cleanup:", error);
-  }
-}
 
 /**
  * Clean up tasks for a specific user and send notification

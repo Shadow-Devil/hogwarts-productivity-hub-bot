@@ -18,7 +18,7 @@
  */
 
 import cron from "node-cron";
-import timezoneService from "./timezoneService.ts";
+import * as timezoneService from "./timezoneService.ts";
 import voiceService from "./voiceService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
@@ -28,6 +28,94 @@ import { db } from "../models/db.ts";
 // Extend dayjs with timezone support
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+/**
+ * Get users who need monthly reset
+ * @returns {Promise<Array>} Array of users needing monthly reset
+ */
+async function getUsersNeedingMonthlyReset() {
+  try {
+    const result = await db.$client.query(`
+                SELECT
+                    discord_id,
+                    timezone,
+                    last_monthly_reset_tz,
+                    timezone_set_at
+                FROM users
+                WHERE timezone IS NOT NULL
+                AND (
+                    last_monthly_reset_tz IS NULL
+                    OR last_monthly_reset_tz < (NOW() - INTERVAL '32 days')
+                )
+                ORDER BY timezone, discord_id
+            `);
+
+    // Filter to only include users who are actually past the 1st of their local month
+    const usersNeedingReset = [];
+    for (const user of result.rows) {
+      const userTime = dayjs().tz(user.timezone);
+      const lastReset = user.last_monthly_reset_tz
+        ? dayjs(user.last_monthly_reset_tz).tz(user.timezone)
+        : null;
+
+      // If no last reset, or last reset was in a previous month in user's timezone
+      if (!lastReset || !userTime.isSame(lastReset, "month")) {
+        usersNeedingReset.push(user);
+      }
+    }
+
+    return usersNeedingReset;
+  } catch (error) {
+    console.warn("Fallback: Could not get users needing monthly reset", {
+      error: error.message,
+    });
+    return [];
+  }
+}
+
+/**
+ * Get users who need daily reset (haven't been reset today in their timezone)
+ * @returns {Promise<Array>} Array of users needing daily reset
+ */
+async function getUsersNeedingDailyReset() {
+  try {
+    const result = await db.$client.query(`
+                SELECT
+                    discord_id,
+                    timezone,
+                    last_daily_reset_tz,
+                    timezone_set_at
+                FROM users
+                WHERE timezone IS NOT NULL
+                AND (
+                    last_daily_reset_tz IS NULL
+                    OR last_daily_reset_tz < (NOW() - INTERVAL '25 hours')
+                )
+                ORDER BY timezone, discord_id
+            `);
+
+    // Filter to only include users who are actually past their local midnight
+    const usersNeedingReset = [];
+    for (const user of result.rows) {
+      const userTime = dayjs().tz(user.timezone);
+      const lastReset = user.last_daily_reset_tz
+        ? dayjs(user.last_daily_reset_tz).tz(user.timezone)
+        : null;
+
+      // If no last reset, or last reset was yesterday or earlier in user's timezone
+      if (!lastReset || !userTime.isSame(lastReset, "day")) {
+        usersNeedingReset.push(user);
+      }
+    }
+
+    return usersNeedingReset;
+  } catch (error) {
+    console.warn("Fallback: Could not get users needing daily reset", {
+      error: error.message,
+    });
+    return [];
+  }
+}
 
 class CentralResetService {
   public isRunning: boolean;
@@ -149,7 +237,7 @@ class CentralResetService {
     try {
       // Get all users who need daily reset (timezone-aware)
       const usersNeedingReset =
-        await timezoneService.getUsersNeedingDailyReset();
+        await getUsersNeedingDailyReset();
 
       if (usersNeedingReset.length === 0) {
         return;
@@ -290,7 +378,7 @@ class CentralResetService {
     try {
       // Get all users who need monthly reset
       const usersNeedingReset =
-        await timezoneService.getUsersNeedingMonthlyReset();
+        await getUsersNeedingMonthlyReset();
 
       if (usersNeedingReset.length === 0) {
         return;

@@ -3,13 +3,16 @@ import {
   EmbedBuilder,
   ChatInputCommandInteraction,
 } from "discord.js";
-import timezoneService from "../services/timezoneService.ts";
+import * as timezoneService from "../services/timezoneService.ts";
 import { BotColors, StatusEmojis } from "../utils/constants.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
+import { db } from "../models/db.ts";
+import { usersTable } from "../db/schema.ts";
+import { eq } from "drizzle-orm";
 
 // Extend dayjs with timezone and relative time support
 dayjs.extend(utc);
@@ -35,6 +38,120 @@ const COMMON_TIMEZONES = [
   { name: "Australian Central Time", value: "Australia/Adelaide" },
   { name: "Australian Western Time", value: "Australia/Perth" },
 ];
+
+/**
+ * Evaluate streak preservation during timezone change
+ * @param {string} userId - User's Discord ID
+ * @param {string} oldTimezone - Previous timezone
+ * @param {string} newTimezone - New timezone
+ * @param {Date} changeTime - When the change occurred
+ * @returns {Promise<string>} 'preserve' or 'reset'
+ */
+async function evaluateStreakDuringTimezoneChange(
+  userId,
+  oldTimezone,
+  newTimezone,
+  changeTime
+) {
+  try {
+    const changeInOldTz = dayjs(changeTime).tz(oldTimezone);
+    const changeInNewTz = dayjs(changeTime).tz(newTimezone);
+
+    // Get user's last VC date
+    const result = await db.$client.query(
+      "SELECT last_vc_date FROM users WHERE discord_id = $1",
+      [userId]
+    );
+
+    if (!result.rows[0]?.last_vc_date) {
+      return "preserve"; // No existing streak to evaluate
+    }
+
+    const lastVcDate = dayjs(result.rows[0].last_vc_date);
+
+    // If last VC was today in either timezone, preserve streak
+    const isTodayInOldTz = changeInOldTz.isSame(lastVcDate, "day");
+    const isTodayInNewTz = changeInNewTz.isSame(lastVcDate, "day");
+
+    if (isTodayInOldTz || isTodayInNewTz) {
+      return "preserve";
+    }
+
+    return "reset";
+  } catch (error) {
+    console.warn("Error evaluating streak preservation", {
+      userId,
+      error: error.message,
+    });
+    return "preserve"; // Be generous on errors
+  }
+}
+
+
+/**
+ * Handle timezone change for a user
+ * @param {string} userId - User's Discord ID
+ * @param {string} oldTimezone - Previous timezone
+ * @param {string} newTimezone - New timezone
+ * @returns {Promise<object>} Migration result
+ */
+async function handleTimezoneChange(userId: string, oldTimezone: string, newTimezone: string) {
+  try {
+    // Validate new timezone before proceeding
+    if (!timezoneService.isValidTimezone(newTimezone)) {
+      throw new Error(`Invalid timezone: ${newTimezone}`);
+    }
+
+    const now = new Date();
+
+    // Update timezone in database
+    const result = await db.update(usersTable).set({
+      timezone: newTimezone,
+    }).where(eq(usersTable.discord_id, userId));
+
+    if (result.rowCount === 0) {
+      throw new Error("User not found");
+    }
+
+    // Clear cache
+    timezoneService.timezoneCache.delete(userId);
+
+    // Check if we need to preserve streak
+    const streakAction = await evaluateStreakDuringTimezoneChange(
+      userId,
+      oldTimezone,
+      newTimezone,
+      now
+    );
+
+    return {
+      success: true,
+      oldTimezone,
+      newTimezone,
+      streakAction,
+      changeTime: now,
+      resetTimesChanged: null,
+      streakPreserved: null,
+      dstAffected: null,
+    };
+  } catch (error) {
+    // For validation errors, throw them directly
+    if (error.message.includes("Invalid timezone")) {
+      throw error;
+    }
+
+    console.warn("Fallback: Could not handle timezone change", {
+      userId,
+      oldTimezone,
+      newTimezone,
+      error: error.message,
+    });
+    return {
+      success: false,
+      error: "Timezone change failed",
+    };
+  }
+}
 
 
 async function handleViewTimezone(interaction, discordId) {
@@ -94,7 +211,7 @@ async function handleSetTimezone(interaction, discordId, newTimezone) {
     const oldTimezone = await timezoneService.getUserTimezone(discordId);
 
     // Handle timezone change with impact analysis
-    const changeResult = await timezoneService.handleTimezoneChange(
+    const changeResult = await handleTimezoneChange(
       discordId,
       oldTimezone,
       newTimezone
@@ -147,9 +264,68 @@ async function handleListTimezones(interaction) {
   }
 }
 
+/**
+ * Check if a date is a DST transition day
+ * @param {string} timezone - IANA timezone identifier
+ * @param {Date|string} date - Date to check
+ * @returns {Promise<boolean>} True if DST transition day
+ */
+async function isDSTTransitionDay(timezone, date) {
+  try {
+    const checkDate = dayjs(date).tz(timezone);
+    const dayBefore = checkDate.subtract(1, "day");
+    const dayAfter = checkDate.add(1, "day");
+
+    // Check if UTC offset changes, indicating DST transition
+    const offsetBefore = dayBefore.utcOffset();
+    const offsetCurrent = checkDate.utcOffset();
+    const offsetAfter = dayAfter.utcOffset();
+
+    return offsetBefore !== offsetCurrent || offsetCurrent !== offsetAfter;
+  } catch (error) {
+    console.warn("Error checking DST transition", {
+      timezone,
+      date,
+      error: error.message,
+    });
+    return false;
+  }
+}
+
+/**
+ * Get next reset time for a user (daily or monthly)
+ * @param {string} userId - User's Discord ID
+ * @param {string} resetType - 'daily' or 'monthly'
+ * @returns {Promise<dayjs.Dayjs>} Next reset time in UTC
+ */
+async function getNextResetTimeForUser(userId, resetType = "daily") {
+  const userTimezone = await timezoneService.getUserTimezone(userId);
+  const userTime = dayjs().tz(userTimezone);
+
+  let nextReset;
+  if (resetType === "daily") {
+    nextReset = userTime.add(1, "day").startOf("day");
+
+    // Handle DST transitions by checking if we need to adjust
+    if (await isDSTTransitionDay(userTimezone, nextReset)) {
+      // Schedule at 3 AM to avoid 2 AM DST issues
+      nextReset = nextReset.hour(3);
+    }
+  } else if (resetType === "monthly") {
+    nextReset = userTime.add(1, "month").startOf("month");
+
+    // Handle month-end edge cases (Feb 29, etc.)
+    if (userTime.month() === 1 && userTime.date() === 29) {
+      nextReset = nextReset.date(1); // Always use 1st of month
+    }
+  }
+
+  return nextReset.utc(); // Return in UTC for scheduling
+}
+
 async function getNextResetDisplay(discordId: string, resetType: string) {
   try {
-    const nextResetTime = await timezoneService.getNextResetTimeForUser(
+    const nextResetTime = await getNextResetTimeForUser(
       discordId,
       resetType
     );

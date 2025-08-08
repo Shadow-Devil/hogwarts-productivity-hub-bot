@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { roundHoursFor55MinRule, minutesToHours } from "../utils/timeUtils.ts";
-import timezoneService from "./timezoneService.ts";
+import * as timezoneService from "./timezoneService.ts";
 import type winston from "winston";
 import {
   db,

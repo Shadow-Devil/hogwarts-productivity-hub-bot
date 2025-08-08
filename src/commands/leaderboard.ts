@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import voiceService from "../services/voiceService.ts";
-import timezoneService from "../services/timezoneService.ts";
+import * as timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
