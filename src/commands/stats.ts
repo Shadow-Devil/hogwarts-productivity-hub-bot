@@ -8,12 +8,31 @@ import timezone from "dayjs/plugin/timezone.js";
 import { BotColors, StatusEmojis } from "../utils/constants.ts";
 import { createErrorTemplate } from "../utils/embedTemplates.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
-import { formatDailyLimitStatus } from "../utils/dailyLimitUtils.ts";
 import { formatHours } from "../utils/timeUtils.ts";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+/**
+ * Generate daily limit status text for display
+ * @param {Object} limitInfo - Daily limit info from calculateDailyLimitInfo
+ * @returns {string} Formatted status text
+ */
+function formatDailyLimitStatus(limitInfo) {
+  if (limitInfo.limitReached) {
+    return "🚫 **Limit Reached**";
+  }
+
+  if (limitInfo.isLimitedByAllowance) {
+    // Limited by 15-hour daily allowance
+    return `✅ **${limitInfo.remainingHours.toFixed(1)}h** remaining (${limitInfo.allowanceHoursRemaining.toFixed(1)}h allowance left)`;
+  } else {
+    // Limited by time until midnight reset
+    return `⏰ **${limitInfo.remainingHours.toFixed(1)}h** until reset (resets at midnight)`;
+  }
+}
+
 
 export default {
   data: new SlashCommandBuilder()

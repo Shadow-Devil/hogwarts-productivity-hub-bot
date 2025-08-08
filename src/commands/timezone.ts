@@ -36,6 +36,137 @@ const COMMON_TIMEZONES = [
   { name: "Australian Western Time", value: "Australia/Perth" },
 ];
 
+
+async function handleViewTimezone(interaction, discordId) {
+  try {
+    const userTimezone = await timezoneService.getUserTimezone(discordId);
+    const userLocalTime = dayjs()
+      .tz(userTimezone)
+      .format("dddd, MMMM D, YYYY [at] h:mm A");
+
+    // Get next reset times
+    const nextResets = {
+      daily: await getNextResetDisplay(discordId, "daily"),
+      monthly: await getNextResetDisplay(
+        discordId,
+        "monthly"
+      ),
+    };
+
+    const embed = createTimezoneEmbed(
+      userTimezone,
+      userLocalTime,
+      nextResets
+    );
+    await interaction.editReply({ embeds: [embed] });
+  } catch (error) {
+    console.error("Error viewing timezone:", error);
+    await safeErrorReply(
+      interaction,
+      "Failed to retrieve your timezone settings. Please try again."
+    );
+  }
+}
+
+async function handleSetTimezone(interaction, discordId, newTimezone) {
+  try {
+    // Validate timezone
+    try {
+      dayjs().tz(newTimezone);
+    } catch (_error) {
+      const embed = new EmbedBuilder()
+        .setColor(BotColors.ERROR)
+        .setTitle(`${StatusEmojis.ERROR} Invalid Timezone`)
+        .setDescription(`The timezone \`${newTimezone}\` is not valid.`)
+        .addFields({
+          name: "💡 Tips",
+          value: [
+            "• Use `/timezone list` to see common options",
+            "• Check [IANA timezone list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)",
+            "• Format: `Continent/City` (e.g., `America/New_York`)",
+          ].join("\n"),
+        });
+
+      return interaction.editReply({ embeds: [embed] });
+    }
+
+    // Get current timezone for comparison
+    const oldTimezone = await timezoneService.getUserTimezone(discordId);
+
+    // Handle timezone change with impact analysis
+    const changeResult = await timezoneService.handleTimezoneChange(
+      discordId,
+      oldTimezone,
+      newTimezone
+    );
+
+    const userLocalTime = dayjs()
+      .tz(newTimezone)
+      .format("dddd, MMMM D, YYYY [at] h:mm A");
+
+    // Create impact messages
+    const impacts = [];
+    if (changeResult.resetTimesChanged) {
+      impacts.push("🔄 Your daily/monthly reset times have been adjusted");
+    }
+    if (changeResult.streakPreserved) {
+      impacts.push("✅ Your streak has been preserved");
+    }
+    if (changeResult.dstAffected) {
+      impacts.push(
+        "🌅 DST transition detected - times adjusted automatically"
+      );
+    }
+
+    const embed = createTimezoneChangeEmbed(
+      oldTimezone,
+      newTimezone,
+      userLocalTime,
+      impacts
+    );
+    await interaction.editReply({ embeds: [embed] });
+  } catch (error) {
+    console.error("Error setting timezone:", error);
+    await safeErrorReply(
+      interaction,
+      "Failed to update your timezone. Please try again."
+    );
+  }
+}
+
+async function handleListTimezones(interaction) {
+  try {
+    const embed = createTimezoneListEmbed();
+    await interaction.editReply({ embeds: [embed] });
+  } catch (error) {
+    console.error("Error listing timezones:", error);
+    await safeErrorReply(
+      interaction,
+      "Failed to load timezone list. Please try again."
+    );
+  }
+}
+
+async function getNextResetDisplay(discordId: string, resetType: string) {
+  try {
+    const nextResetTime = await timezoneService.getNextResetTimeForUser(
+      discordId,
+      resetType
+    );
+    const userTimezone = await timezoneService.getUserTimezone(discordId);
+
+    const localTime = dayjs(nextResetTime).tz(userTimezone);
+
+    const relativeTime = localTime.fromNow();
+    const exactTime = localTime.format("MMM D [at] h:mm A");
+
+    return `${exactTime} (${relativeTime})`;
+  } catch (error) {
+    console.error(`Error getting next ${resetType} reset:`, error);
+    return "Unable to calculate";
+  }
+}
+
 function createTimezoneEmbed(userTimezone, userLocalTime, nextResets) {
   const embed = new EmbedBuilder()
     .setColor(BotColors.SUCCESS)
@@ -210,11 +341,11 @@ const timezoneCommand = {
 
       switch (subcommand) {
         case "view":
-          await timezoneCommand.handleViewTimezone(interaction, discordId);
+          await handleViewTimezone(interaction, discordId);
           break;
         case "set": {
           const timezone = interaction.options.getString("timezone");
-          await timezoneCommand.handleSetTimezone(
+          await handleSetTimezone(
             interaction,
             discordId,
             timezone
@@ -222,7 +353,7 @@ const timezoneCommand = {
           break;
         }
         case "list":
-          await timezoneCommand.handleListTimezones(interaction);
+          await handleListTimezones(interaction);
           break;
         default:
           await safeErrorReply(interaction, "Unknown subcommand");
@@ -233,136 +364,6 @@ const timezoneCommand = {
         interaction,
         "An error occurred while processing your timezone request. Please try again."
       );
-    }
-  },
-
-  async handleViewTimezone(interaction, discordId) {
-    try {
-      const userTimezone = await timezoneService.getUserTimezone(discordId);
-      const userLocalTime = dayjs()
-        .tz(userTimezone)
-        .format("dddd, MMMM D, YYYY [at] h:mm A");
-
-      // Get next reset times
-      const nextResets = {
-        daily: await timezoneCommand.getNextResetDisplay(discordId, "daily"),
-        monthly: await timezoneCommand.getNextResetDisplay(
-          discordId,
-          "monthly"
-        ),
-      };
-
-      const embed = createTimezoneEmbed(
-        userTimezone,
-        userLocalTime,
-        nextResets
-      );
-      await interaction.editReply({ embeds: [embed] });
-    } catch (error) {
-      console.error("Error viewing timezone:", error);
-      await safeErrorReply(
-        interaction,
-        "Failed to retrieve your timezone settings. Please try again."
-      );
-    }
-  },
-
-  async handleSetTimezone(interaction, discordId, newTimezone) {
-    try {
-      // Validate timezone
-      try {
-        dayjs().tz(newTimezone);
-      } catch (_error) {
-        const embed = new EmbedBuilder()
-          .setColor(BotColors.ERROR)
-          .setTitle(`${StatusEmojis.ERROR} Invalid Timezone`)
-          .setDescription(`The timezone \`${newTimezone}\` is not valid.`)
-          .addFields({
-            name: "💡 Tips",
-            value: [
-              "• Use `/timezone list` to see common options",
-              "• Check [IANA timezone list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)",
-              "• Format: `Continent/City` (e.g., `America/New_York`)",
-            ].join("\n"),
-          });
-
-        return interaction.editReply({ embeds: [embed] });
-      }
-
-      // Get current timezone for comparison
-      const oldTimezone = await timezoneService.getUserTimezone(discordId);
-
-      // Handle timezone change with impact analysis
-      const changeResult = await timezoneService.handleTimezoneChange(
-        discordId,
-        oldTimezone,
-        newTimezone
-      );
-
-      const userLocalTime = dayjs()
-        .tz(newTimezone)
-        .format("dddd, MMMM D, YYYY [at] h:mm A");
-
-      // Create impact messages
-      const impacts = [];
-      if (changeResult.resetTimesChanged) {
-        impacts.push("🔄 Your daily/monthly reset times have been adjusted");
-      }
-      if (changeResult.streakPreserved) {
-        impacts.push("✅ Your streak has been preserved");
-      }
-      if (changeResult.dstAffected) {
-        impacts.push(
-          "🌅 DST transition detected - times adjusted automatically"
-        );
-      }
-
-      const embed = createTimezoneChangeEmbed(
-        oldTimezone,
-        newTimezone,
-        userLocalTime,
-        impacts
-      );
-      await interaction.editReply({ embeds: [embed] });
-    } catch (error) {
-      console.error("Error setting timezone:", error);
-      await safeErrorReply(
-        interaction,
-        "Failed to update your timezone. Please try again."
-      );
-    }
-  },
-
-  async handleListTimezones(interaction) {
-    try {
-      const embed = createTimezoneListEmbed();
-      await interaction.editReply({ embeds: [embed] });
-    } catch (error) {
-      console.error("Error listing timezones:", error);
-      await safeErrorReply(
-        interaction,
-        "Failed to load timezone list. Please try again."
-      );
-    }
-  },
-
-  async getNextResetDisplay(discordId, resetType) {
-    try {
-      const nextResetTime = await timezoneService.getNextResetTimeForUser(
-        discordId,
-        resetType
-      );
-      const userTimezone = await timezoneService.getUserTimezone(discordId);
-
-      const localTime = dayjs(nextResetTime).tz(userTimezone);
-
-      const relativeTime = localTime.fromNow();
-      const exactTime = localTime.format("MMM D [at] h:mm A");
-
-      return `${exactTime} (${relativeTime})`;
-    } catch (error) {
-      console.error(`Error getting next ${resetType} reset:`, error);
-      return "Unable to calculate";
     }
   },
 };

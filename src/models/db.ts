@@ -1,7 +1,8 @@
 import dayjs from "dayjs";
 import { drizzle } from "drizzle-orm/node-postgres";
+import * as schema from "../db/schema.ts";
 
-export const db = drizzle(process.env.DATABASE_URL!);
+export const db = drizzle({connection: process.env.DATABASE_URL!, schema});
 
 // Check and perform monthly reset for houses if needed
 async function checkAndPerformHouseMonthlyReset() {

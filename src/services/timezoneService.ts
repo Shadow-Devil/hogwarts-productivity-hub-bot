@@ -5,36 +5,39 @@
  */
 
 import { db } from "../models/db.ts";
-import timezonePerformanceMonitor from "../utils/timezonePerformanceMonitor.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
+import { usersTable } from "../db/schema.ts";
+import { eq } from "drizzle-orm";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-class TimezoneService {
-  public timezoneCache: Map<string, any>;
-  public validTimezones: Set<string>;
-
-  constructor() {
-    // Cache for frequently accessed timezone data
-    this.timezoneCache = new Map();
-    this.validTimezones = null;
-
-    // Initialize valid timezone list
-    this.initializeValidTimezones();
-  }
 
   /**
-   * Initialize the list of valid IANA timezone identifiers
-   * Uses dayjs.tz.names() which provides comprehensive timezone support
+   * Validate if a timezone is supported
+   * @param {string} timezone - Timezone to validate
+   * @returns {boolean} True if valid
    */
-  async initializeValidTimezones() {
-    // Get all available timezone names from dayjs
-    // This provides comprehensive IANA timezone support
-    this.validTimezones = new Set([
+  function isValidTimezone(timezone: string): boolean {
+    try {
+      if (!timezone || typeof timezone !== "string") {
+        return false;
+      }
+
+      // Test if dayjs can parse the timezone
+      const testTime = dayjs().tz(timezone);
+      return testTime.isValid();
+    } catch (_error) {
+      return false;
+    }
+  }
+
+class TimezoneService {
+  public timezoneCache = new Map<string, any>();
+  public validTimezones = new Set([
       // Major timezone regions that users commonly need
       "UTC",
       "America/New_York",
@@ -99,52 +102,14 @@ class TimezoneService {
       "America/Lima",
       "America/Santiago",
     ]);
-  }
 
-  /**
-   * Set user's timezone preference
-   * @param {string} userId - User's Discord ID
-   * @param {string} timezone - IANA timezone identifier
-   * @returns {Promise<boolean>} Success status
-   */
-  async setUserTimezone(userId, timezone) {
-    try {
-      // Validate timezone
-      if (!this.isValidTimezone(timezone)) {
-        throw new Error(`Invalid timezone: ${timezone}`);
-      }
-
-      const result = await db.$client.query(
-        `UPDATE users
-                 SET timezone = $1, timezone_set_at = CURRENT_TIMESTAMP
-                 WHERE discord_id = $2`,
-        [timezone, userId]
-      );
-
-      if (result.rowCount === 0) {
-        throw new Error("User not found");
-      }
-
-      // Update cache
-      this.timezoneCache.set(userId, {
-        timezone,
-        setAt: new Date(),
-        cachedAt: Date.now(),
-      });
-
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
 
   /**
    * Get user's timezone preference with production-grade error handling
    * @param {string} userId - User's Discord ID
    * @returns {Promise<string>} User's timezone (defaults to UTC if not set)
    */
-  async getUserTimezone(userId) {
-    const startTime = Date.now();
+  async getUserTimezone(userId: string) {
     try {
       // Validate input
       if (!userId || typeof userId !== "string") {
@@ -154,31 +119,20 @@ class TimezoneService {
       // Check cache first (with cache warming)
       const cached = this.timezoneCache.get(userId);
       if (cached && Date.now() - cached.cachedAt < 3600000) {
-        // 1 hour cache
-        timezonePerformanceMonitor.recordCacheOperation("hit", { userId });
         return cached.timezone;
       }
 
-      timezonePerformanceMonitor.recordCacheOperation("miss", { userId });
 
       // Database query with connection db.$clienting and timeout
-      const queryStartTime = Date.now();
       const result = await db.$client.query(
         "SELECT timezone FROM users WHERE discord_id = $1",
         [userId]
       );
-      const queryDuration = Date.now() - queryStartTime;
-
-      // Record database performance
-      timezonePerformanceMonitor.recordDatabaseQuery(queryDuration, true, {
-        userId,
-        operation: "getUserTimezone",
-      });
 
       let timezone = result.rows[0]?.timezone || "UTC";
 
       // Validate timezone before caching
-      if (!this.isValidTimezone(timezone)) {
+      if (!isValidTimezone(timezone)) {
         timezone = "UTC";
       }
 
@@ -191,15 +145,6 @@ class TimezoneService {
 
       return timezone;
     } catch (error) {
-      const totalDuration = Date.now() - startTime;
-
-      // Record failed operation
-      timezonePerformanceMonitor.recordDatabaseQuery(totalDuration, false, {
-        userId,
-        operation: "getUserTimezone",
-        error: error.message,
-      });
-
       // Graceful fallback to UTC
       return "UTC";
     }
@@ -258,80 +203,6 @@ class TimezoneService {
   async getTodayInUserTimezone(userId) {
     const userTime = await this.getCurrentTimeInUserTimezone(userId);
     return userTime.format("YYYY-MM-DD");
-  }
-
-  /**
-   * Get next midnight in user's timezone
-   * @param {string} userId - User's Discord ID
-   * @returns {Promise<dayjs.Dayjs>} Next midnight in user's timezone
-   */
-  async getNextMidnightInUserTimezone(userId) {
-    const userTime = await this.getCurrentTimeInUserTimezone(userId);
-    return userTime.add(1, "day").startOf("day");
-  }
-
-  /**
-   * Check if it's currently within reset window (11 PM - 1 AM) in user's timezone
-   * @param {string} userId - User's Discord ID
-   * @returns {Promise<boolean>} True if in reset window
-   */
-  async isInResetWindow(userId) {
-    const userTime = await this.getCurrentTimeInUserTimezone(userId);
-    const hour = userTime.hour();
-
-    // Reset window: 11 PM (23) to 1 AM (1)
-    return hour >= 23 || hour <= 1;
-  }
-
-  /**
-   * Get users who are currently in their reset window
-   * @param {string} timezone - Specific timezone to check (optional)
-   * @returns {Promise<Array>} Array of user IDs in reset window
-   */
-  async getUsersInResetWindow(timezone = null) {
-    try {
-      let query: string;
-      let params: any[];
-
-      if (timezone) {
-        // Get users in specific timezone who are in reset window
-        query = `
-                    SELECT discord_id, timezone
-                    FROM users
-                    WHERE timezone = $1
-                      AND timezone IS NOT NULL
-                `;
-        params = [timezone];
-      } else {
-        // Get all users currently in their reset window (11 PM - 1 AM local time)
-        query = `
-                    SELECT discord_id, timezone
-                    FROM users
-                    WHERE timezone IS NOT NULL
-                `;
-        params = [];
-      }
-
-      const result = await db.$client.query(query, params);
-
-      // Filter users who are actually in reset window (11 PM - 1 AM local time)
-      const usersInResetWindow = [];
-      for (const user of result.rows) {
-        const userTime = dayjs().tz(user.timezone);
-        const hour = userTime.hour();
-        if (hour >= 23 || hour <= 1) {
-          usersInResetWindow.push(user);
-        }
-      }
-
-      return usersInResetWindow;
-    } catch (error) {
-      // Fallback: return empty array
-      console.warn("Fallback: Could not get users in reset window", {
-        error: error.message,
-      });
-      return [];
-    }
   }
 
   /**
@@ -531,22 +402,19 @@ class TimezoneService {
    * @param {string} newTimezone - New timezone
    * @returns {Promise<object>} Migration result
    */
-  async handleTimezoneChange(userId, oldTimezone, newTimezone) {
+  async handleTimezoneChange(userId: string, oldTimezone: string, newTimezone: string) {
     try {
       // Validate new timezone before proceeding
-      if (!this.isValidTimezone(newTimezone)) {
+      if (!isValidTimezone(newTimezone)) {
         throw new Error(`Invalid timezone: ${newTimezone}`);
       }
 
       const now = new Date();
 
       // Update timezone in database
-      const result = await db.$client.query(
-        `UPDATE users
-                 SET timezone = $1, timezone_set_at = $2
-                 WHERE discord_id = $3`,
-        [newTimezone, now, userId]
-      );
+      const result = await db.update(usersTable).set({
+        timezone: newTimezone,
+      }).where(eq(usersTable.discord_id, userId));
 
       if (result.rowCount === 0) {
         throw new Error("User not found");
@@ -763,24 +631,6 @@ class TimezoneService {
     }
   }
 
-  /**
-   * Validate if a timezone is supported
-   * @param {string} timezone - Timezone to validate
-   * @returns {boolean} True if valid
-   */
-  isValidTimezone(timezone) {
-    try {
-      if (!timezone || typeof timezone !== "string") {
-        return false;
-      }
-
-      // Test if dayjs can parse the timezone
-      const testTime = dayjs().tz(timezone);
-      return testTime.isValid();
-    } catch (_error) {
-      return false;
-    }
-  }
 }
 
 export default new TimezoneService();

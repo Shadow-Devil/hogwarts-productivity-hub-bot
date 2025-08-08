@@ -550,27 +550,6 @@ export async function getUserDailyStats(discordId: string) {
 }
 
 /**
- * Get scheduler status
- */
-export function getStatus() {
-  return {
-    isRunning: isRunning,
-    dailyLimit: DAILY_TASK_LIMIT,
-    nextCleanup: isRunning
-      ? "Daily at 00:00 (task cleanup + voice stats reset)"
-      : "Not scheduled",
-  };
-}
-
-/**
- * Manual trigger cleanup (admin function)
- */
-export async function forceCleanup() {
-  console.log("🧹 Force triggering midnight cleanup...");
-  await performMidnightCleanup();
-}
-
-/**
  * Regain a task slot when removing a task (only for tasks added today)
  */
 export async function reclaimTaskSlot(discordId, taskCreatedAt) {
