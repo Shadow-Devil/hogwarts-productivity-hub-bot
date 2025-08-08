@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 import { Client, IntentsBitField, MessageFlags, Events } from "discord.js";
-import sessionRecovery from "./utils/sessionRecovery.ts";
+import * as sessionRecovery from "./utils/sessionRecovery.ts";
 import * as DailyTaskManager from "./utils/dailyTaskManager.ts";
 import CentralResetService from "./services/centralResetService.ts";
 import * as voiceStateUpdate from "./events/voiceStateUpdate.ts";
@@ -9,7 +9,7 @@ import {
   activeVoiceSessions,
   gracePeriodSessions,
 } from "./events/voiceStateUpdate.ts";
-import voiceStateScanner from "./utils/voiceStateScanner.ts";
+import * as voiceStateScanner from "./utils/voiceStateScanner.ts";
 import { commands } from "./commands.ts";
 
 export const client = new Client({

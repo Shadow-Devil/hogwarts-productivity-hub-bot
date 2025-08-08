@@ -5,7 +5,7 @@ import {
   MessageFlags,
   ChatInputCommandInteraction,
 } from "discord.js";
-import voiceStateScanner from "../utils/voiceStateScanner.ts";
+import * as voiceStateScanner from "../utils/voiceStateScanner.ts";
 import {
   createHeader,
   formatDataTable,

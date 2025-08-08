@@ -5,7 +5,7 @@ import {
   MessageFlags,
   ChatInputCommandInteraction,
 } from "discord.js";
-import sessionRecovery from "../utils/sessionRecovery.ts";
+import * as sessionRecovery from "../utils/sessionRecovery.ts";
 import {
   createHeader,
   formatDataTable,

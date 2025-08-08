@@ -344,11 +344,10 @@ const timezoneCommand = {
           await handleViewTimezone(interaction, discordId);
           break;
         case "set": {
-          const timezone = interaction.options.getString("timezone");
           await handleSetTimezone(
             interaction,
             discordId,
-            timezone
+            interaction.options.getString("timezone")
           );
           break;
         }
