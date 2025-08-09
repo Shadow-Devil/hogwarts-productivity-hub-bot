@@ -9,13 +9,11 @@ import {
   createHeader,
   createProgressBar,
   formatDataGrid,
-  getStatusColor,
 } from "../../src/utils/visualHelpers";
 
 describe("Visual Helpers", () => {
   it("should export expected functions", () => {
     expect(typeof createProgressBar).toBe("function");
-    expect(typeof getStatusColor).toBe("function");
     expect(typeof formatDataGrid).toBe("function");
     expect(typeof createHeader).toBe("function");
   });

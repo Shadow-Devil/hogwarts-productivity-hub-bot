@@ -8,11 +8,22 @@ import timezone from "dayjs/plugin/timezone.js";
 import { BotColors } from "../utils/constants.ts";
 import { createErrorTemplate } from "../utils/embedTemplates.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
-import { formatHours } from "../utils/timeUtils.ts";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+
+/**
+ * Format hours for display (consistent formatting across the bot)
+ * @param {number|string} hours - Hours to format
+ * @returns {string} Formatted hours (e.g., "2.5h")
+ */
+function formatHours(hours: string): string {
+  const numericHours = parseFloat(hours) || 0;
+  return `${numericHours.toFixed(1)}h`;
+}
+
 
 /**
  * Generate daily limit status text for display

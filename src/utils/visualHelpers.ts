@@ -23,26 +23,6 @@ function createProgressBar(
   };
 }
 
-// 🎨 Status Color Helper
-function getStatusColor(status) {
-  const statusMap = {
-    healthy: BotColors.SUCCESS,
-    success: BotColors.SUCCESS,
-    good: BotColors.SUCCESS,
-    warning: BotColors.WARNING,
-    moderate: BotColors.WARNING,
-    caution: BotColors.WARNING,
-    error: BotColors.ERROR,
-    critical: BotColors.ERROR,
-    high: BotColors.ERROR,
-    info: BotColors.INFO,
-    primary: BotColors.PRIMARY,
-    premium: BotColors.PREMIUM,
-  };
-
-  return statusMap[status.toLowerCase()] || BotColors.SECONDARY;
-}
-
 // 📋 Create Decorated Header with Enhanced Typography
 function createHeader(title, subtitle = null, emoji = "🎯", style = "default") {
   const styles = {
@@ -72,28 +52,6 @@ function createHeader(title, subtitle = null, emoji = "🎯", style = "default")
   }
 
   return header;
-}
-
-// 📦 Create Info Box
-function createInfoBox(title, content, style = "default") {
-  const styles = {
-    default: { top: "┌", bottom: "└", side: "│", corner: "─" },
-    success: { top: "┏", bottom: "┗", side: "┃", corner: "━" },
-    warning: { top: "╔", bottom: "╚", side: "║", corner: "═" },
-    error: { top: "╔", bottom: "╚", side: "║", corner: "═" },
-  };
-
-  const s = styles[style] || styles.default;
-  const width = Math.max(title.length + 4, 25);
-  const padding = Math.max(0, width - title.length - 4);
-
-  return [
-    `${s.top}${s.corner.repeat(width)}${s.top === "┌" ? "┐" : s.top === "┏" ? "┓" : "╗"}`,
-    `${s.side} ${title}${" ".repeat(padding)} ${s.side}`,
-    `${s.bottom}${s.corner.repeat(width)}${s.bottom === "└" ? "┘" : s.bottom === "┗" ? "┛" : "╝"}`,
-    "",
-    content,
-  ].join("\n");
 }
 
 // 📊 Enhanced Data Grid with Table-Like Structure
@@ -252,82 +210,6 @@ function formatCenteredDataTable(
   }
 }
 
-// 📋 Create Stats Section with Enhanced Layout and Padding
-function createStatsSection(
-  title,
-  data,
-  {
-    emoji = "📊",
-    useTable = true,
-    addSpacing = true,
-    centerContent = true,
-    style = "enhanced", // 'basic', 'enhanced', 'premium'
-    columnWidths = null,
-  } = {},
-) {
-  let content = "";
-
-  if (style === "premium") {
-    const header = `✨ **${title}** ✨\n${"═".repeat(Math.min(title.length + 8, 25))}\n`;
-    content = header;
-  } else if (style === "enhanced") {
-    const header = `${emoji} **${title}**\n${"▬".repeat(Math.min(title.length + 2, 20))}\n`;
-    content = header;
-  } else {
-    content = `${emoji} **${title}**\n`;
-  }
-
-  if (useTable) {
-    const tableOptions = {
-      columnWidths,
-      addPadding: true,
-      centerAlign: centerContent,
-      spacing: addSpacing ? "normal" : "compact",
-    };
-    content += formatCenteredDataTable(data, tableOptions);
-  } else {
-    // Simple list format
-    const items = Array.isArray(data) ? data : Object.entries(data);
-    content += items.map(([key, value]) => `• **${key}:** ${value}`).join("\n");
-  }
-
-  return content;
-}
-
-// 🎯 Create Centered Field Layout for Discord Embeds
-function createCenteredLayout(
-  sections,
-  { maxColumnsPerRow = 3, addSpacers = true, spacerValue = "\u200b" } = {},
-) {
-  const fields = [];
-
-  // Process sections into fields with proper inline configuration
-  sections.forEach((section, _index) => {
-    fields.push({
-      name: section.name,
-      value: section.value,
-      inline: true,
-    });
-  });
-
-  // Add spacer fields to balance the layout if needed
-  if (addSpacers) {
-    const remainder = fields.length % maxColumnsPerRow;
-    if (remainder !== 0) {
-      const spacersNeeded = maxColumnsPerRow - remainder;
-      for (let i = 0; i < spacersNeeded; i++) {
-        fields.push({
-          name: spacerValue,
-          value: spacerValue,
-          inline: true,
-        });
-      }
-    }
-  }
-
-  return fields;
-}
-
 // 🎨 Enhanced Embed Builder
 function createStyledEmbed(type = "default") {
   const embed = new EmbedBuilder().setTimestamp().setColor(BotColors.PRIMARY);
@@ -352,43 +234,6 @@ function createStyledEmbed(type = "default") {
   }
 
   return embed;
-}
-
-// 💫 Loading Animation Text
-function getLoadingText(step = 0) {
-  const animations = ["⏳", "🔄", "⚡", "✨"];
-  const messages = [
-    "Processing request...",
-    "Gathering data...",
-    "Calculating results...",
-    "Finalizing response...",
-  ];
-
-  const emoji = animations[step % animations.length];
-  const message = messages[step % messages.length];
-
-  return `${emoji} ${message}`;
-}
-
-// 🎯 User Status Formatter
-function formatUserStatus(user, { points = 0, streak = 0, house = null } = {}) {
-  const houseEmojis = {
-    Gryffindor: "🦁",
-    Hufflepuff: "🦡",
-    Ravenclaw: "🦅",
-    Slytherin: "🐍",
-  };
-
-  let statusText = `👤 **${user.username}**`;
-  if (house) {
-    statusText += ` • ${houseEmojis[house] || "🏠"} ${house}`;
-  }
-  statusText += `\n💰 ${points.toLocaleString()} points`;
-  if (streak > 0) {
-    statusText += ` • 🔥 ${streak} day streak`;
-  }
-
-  return statusText;
 }
 
 // 📊 Create Stats Card with Enhanced Typography
@@ -454,57 +299,6 @@ function createStatsCard(
   return card;
 }
 
-// 🎖️ Create Achievement Badge with Enhanced Typography
-function createAchievementBadge(
-  title: string,
-  value: string,
-  emoji = "🏆",
-  style = "default",
-) {
-  const badges = {
-    default: `${emoji} **${title}:** ${value}`,
-    highlighted: `✨ ${emoji} **${title}:** ▓▓▓ ${value} ▓▓▓`,
-    celebration: `🎉 ${emoji} **${title}:** 🌟 ${value} 🌟`,
-    minimal: `${emoji} ${value}`,
-    large: `# ${emoji} **${title}:** ${value}`,
-    card: `\`\`\`\n${emoji} ${title}: ${value}\n\`\`\``,
-  };
-
-  return badges[style] || badges.default;
-}
-
-// 📋 Create Info Section with Enhanced Layout
-function createInfoSection(
-  title: any,
-  items: any[],
-  {
-    emoji = "📋",
-    style = "list",
-    useTable = false,
-    showNumbers = false,
-    spacing = "normal",
-  } = {},
-) {
-  let section = `### ${emoji} **${title}**\n`;
-
-  if (spacing === "spacious") {
-    section += "\n";
-  }
-
-  if (useTable && Array.isArray(items)) {
-    section += formatDataTable(items);
-  } else if (style === "list") {
-    items.forEach((item, index) => {
-      const prefix = showNumbers ? `${index + 1}.` : "•";
-      section += `${prefix} ${item}\n`;
-    });
-  } else if (style === "grid") {
-    section += formatDataGrid(items, { useTable: true });
-  }
-
-  return section;
-}
-
 // 📊 Create Progress Section with Visual Enhancement
 function createProgressSection(
   title: string,
@@ -540,41 +334,12 @@ function createProgressSection(
   return section;
 }
 
-// 📈 Trend Indicators
-function getTrendEmoji(trend) {
-  const trends = {
-    up: "📈",
-    increasing: "📈",
-    improving: "📈",
-    rising: "📈",
-    down: "📉",
-    decreasing: "📉",
-    declining: "📉",
-    falling: "📉",
-    stable: "➡️",
-    steady: "➡️",
-    unchanged: "➡️",
-  };
-
-  return trends[trend.toLowerCase()] || "➡️";
-}
-
 export {
   createProgressBar,
-  getStatusColor,
   createHeader,
-  createInfoBox,
   formatDataGrid,
   formatDataTable,
   createStatsCard,
-  createInfoSection,
   createProgressSection,
-  createAchievementBadge,
-  getTrendEmoji,
   createStyledEmbed,
-  getLoadingText,
-  formatUserStatus,
-  formatCenteredDataTable,
-  createStatsSection,
-  createCenteredLayout,
 };

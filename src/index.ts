@@ -2,16 +2,22 @@ import "dotenv/config";
 
 import * as DailyTaskManager from "./utils/dailyTaskManager.ts";
 import CentralResetService from "./services/centralResetService.ts";
-import * as voiceStateUpdate from "./events/voiceStateUpdate.ts";
 import { client } from "./client.ts";
-import { registerEvents } from "./events.ts";
+import { Events, type Client } from "discord.js";
+import * as VoiceStateUpdate from "./events/voiceStateUpdate.ts";
+import * as ClientReady from "./events/clientReady.ts";
+import * as InteractionCreate from "./events/interactionCreate.ts";
+
+function registerEvents(client: Client) {
+  client.on(Events.ClientReady, ClientReady.execute);
+  client.on(Events.InteractionCreate, InteractionCreate.execute);
+  client.on(Events.VoiceStateUpdate, VoiceStateUpdate.execute);
+}
 
 // Start the bot
 try {
   registerEvents(client);
   await CentralResetService.start();
-  voiceStateUpdate.setClient(client);
-  DailyTaskManager.setClient(client);
   DailyTaskManager.start();
 
   await client.login(process.env.DISCORD_TOKEN);

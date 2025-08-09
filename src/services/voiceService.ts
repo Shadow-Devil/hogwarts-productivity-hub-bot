@@ -1,11 +1,30 @@
 import dayjs from "dayjs";
-import { roundHoursFor55MinRule, minutesToHours } from "../utils/timeUtils.ts";
 import * as timezoneService from "./timezoneService.ts";
 import {
   db,
   getUserHouse,
   checkAndPerformHouseMonthlyReset,
 } from "../models/db.ts";
+
+/**
+ * Convert minutes to hours with proper precision
+ * @param {number} minutes - Minutes to convert
+ * @returns {number} Hours as decimal
+ */
+function minutesToHours(minutes: number): number {
+  return (minutes || 0) / 60;
+}
+
+/**
+ * Round hours using the 55-minute rule
+ * If minutes >= 55, round up to next hour; otherwise round down
+ * @param {number} hours - Hours to round (can be decimal)
+ * @returns {number} Rounded hours
+ */
+function roundHoursFor55MinRule(hours: number): number {
+  const minutes = (hours % 1) * 60; // Get the minutes portion
+  return minutes >= 55 ? Math.ceil(hours) : Math.floor(hours);
+}
 
 /**
  * Calculate daily limit information for a user
