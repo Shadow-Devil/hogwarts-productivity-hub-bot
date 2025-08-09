@@ -52,7 +52,7 @@ export default {
       // Use the reliable voice channel detection utility
       const voiceChannel = await getUserVoiceChannel(interaction);
 
-      if (!voiceChannel) {
+      if (voiceChannel === null) {
         const embed = createErrorTemplate(
           `❌ Voice Channel Required`,
           "You must be in a voice channel to start a Pomodoro timer and track your productivity.",
@@ -67,6 +67,7 @@ export default {
           embeds: [embed],
           flags: MessageFlags.Ephemeral,
         });
+        return;
       }
       const voiceChannelId = voiceChannel.id;
       // Enforce: only one timer per voice channel
@@ -115,7 +116,7 @@ export default {
           }
         }
       }
-      const work = interaction.options.getInteger("work");
+      const work = interaction.options.getInteger("work", true);
       const breakTime = interaction.options.getInteger("break") || 0;
       if (work < 20 || (breakTime > 0 && breakTime < 5)) {
         const embed = createErrorTemplate(
@@ -182,7 +183,7 @@ export default {
 
         await interaction.editReply({ embeds: [updatedEmbed] });
       } catch (error) {
-        console.warn("Could not add timezone info to timer:", error.message);
+        console.warn("Could not add timezone info to timer:", error);
         // Timer already started, timezone display is optional
       }
       const workTimeout = setTimeout(

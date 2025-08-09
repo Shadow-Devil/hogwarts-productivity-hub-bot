@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, GuildMember, SlashCommandBuilder } from "discord.js";
 import taskService from "../../services/taskService.ts";
 import {
   createSuccessTemplate,
@@ -33,8 +33,8 @@ export default {
       }
 
       const discordId = interaction.user.id;
-      const taskNumber = interaction.options.getInteger("number");
-      const member = interaction.member;
+      const taskNumber = interaction.options.getInteger("number", true);
+      const member = interaction.member as GuildMember | null;
 
       const result = await taskService.completeTask(
         discordId,
@@ -61,7 +61,7 @@ export default {
         } else {
           const embed = createErrorTemplate(
             `❌ Task Completion Failed`,
-            result.message,
+            result.message!!,
             {
               helpText: `ℹ️ Use \`/viewtasks\` to check your task numbers`,
             }

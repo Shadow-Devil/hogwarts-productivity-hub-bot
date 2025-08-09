@@ -67,7 +67,7 @@ async function getUsersNeedingMonthlyReset() {
     return usersNeedingReset;
   } catch (error) {
     console.warn("Fallback: Could not get users needing monthly reset", {
-      error: error.message,
+      error
     });
     return [];
   }
@@ -111,7 +111,7 @@ async function getUsersNeedingDailyReset() {
     return usersNeedingReset;
   } catch (error) {
     console.warn("Fallback: Could not get users needing daily reset", {
-      error: error.message,
+      error
     });
     return [];
   }
@@ -194,8 +194,7 @@ class CentralResetService {
       await this.performHealthCheck();
     } catch (error) {
       console.error("Failed to start CentralResetService", {
-        error: error.message,
-        stack: error.stack,
+        error
       });
       throw error;
     }
@@ -220,8 +219,7 @@ class CentralResetService {
       this.isRunning = false;
     } catch (error) {
       console.error("Error stopping CentralResetService", {
-        error: error.message,
-        stack: error.stack,
+        error
       });
     }
   }
@@ -243,7 +241,11 @@ class CentralResetService {
         return;
       }
 
-      const results = {
+      const results: {
+        successful: number;
+        failed: number;
+        errors: Array<{ userId: string; timezone: string; error: any }>;
+      } = {
         successful: 0,
         failed: 0,
         errors: [],
@@ -264,7 +266,7 @@ class CentralResetService {
               results.errors.push({
                 userId: user.discord_id,
                 timezone: user.timezone,
-                error: error.message,
+                error,
               });
             }
           })
@@ -282,8 +284,7 @@ class CentralResetService {
       this.resetStats.dailyResets.lastRun = new Date();
     } catch (error) {
       console.error("Critical error in daily reset processing", {
-        error: error.message,
-        stack: error.stack,
+        error,
         duration: `${Date.now() - startTime}ms`,
       });
     }
@@ -293,7 +294,7 @@ class CentralResetService {
    * Perform daily reset for a specific user
    * @param {Object} user - User object with discord_id, timezone, etc.
    */
-  async performDailyResetForUser(user) {
+  async performDailyResetForUser(user: { discord_id: string; timezone: string }) {
     const userStartTime = Date.now();
 
     try {
@@ -318,7 +319,7 @@ class CentralResetService {
       console.error("Error performing daily reset for user", {
         userId: user.discord_id,
         timezone: user.timezone,
-        error: error.message,
+        error,
         duration: `${Date.now() - userStartTime}ms`,
       });
       throw error;
@@ -329,7 +330,7 @@ class CentralResetService {
    * Update user streak based on timezone-aware logic
    * @param {Object} user - User object
    */
-  async updateUserStreak(user) {
+  async updateUserStreak(user: { discord_id: string; timezone: string }) {
     try {
       // Get user's current time in their timezone
       const userTime = dayjs().tz(user.timezone);
@@ -363,7 +364,7 @@ class CentralResetService {
     } catch (error) {
       console.error("Error updating user streak", {
         userId: user.discord_id,
-        error: error.message,
+        error,
       });
     }
   }
@@ -384,7 +385,11 @@ class CentralResetService {
         return;
       }
 
-      const results = {
+      const results: {
+        successful: number;
+        failed: number;
+        errors: Array<{ userId: string; timezone: string; error: any }>;
+      } = {
         successful: 0,
         failed: 0,
         errors: [],
@@ -405,7 +410,7 @@ class CentralResetService {
               results.errors.push({
                 userId: user.discord_id,
                 timezone: user.timezone,
-                error: error.message,
+                error,
               });
             }
           })
@@ -423,8 +428,7 @@ class CentralResetService {
       this.resetStats.monthlyResets.lastRun = new Date();
     } catch (error) {
       console.error("Critical error in monthly reset processing", {
-        error: error.message,
-        stack: error.stack,
+        error,
         duration: `${Date.now() - startTime}ms`,
       });
     }
@@ -434,7 +438,7 @@ class CentralResetService {
    * Perform monthly reset for a specific user
    * @param {Object} user - User object
    */
-  async performMonthlyResetForUser(user) {
+  async performMonthlyResetForUser(user: { discord_id: string; timezone: string }) {
     try {
       // Reset monthly stats
       await db.$client.query(
@@ -452,7 +456,7 @@ class CentralResetService {
       console.error("Error performing monthly reset for user", {
         userId: user.discord_id,
         timezone: user.timezone,
-        error: error.message,
+        error,
       });
       throw error;
     }
@@ -497,8 +501,7 @@ class CentralResetService {
       return healthData;
     } catch (error) {
       console.error("Health check failed", {
-        error: error.message,
-        stack: error.stack,
+        error,
       });
       throw error;
     }

@@ -1,6 +1,8 @@
 import dayjs from "dayjs";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "../db/schema.ts";
+import type { GuildMember } from "discord.js";
+import assert from "node:assert";
 
 export const db = drizzle({connection: process.env.DATABASE_URL!, schema});
 
@@ -64,8 +66,12 @@ async function checkAndPerformHouseMonthlyReset() {
 }
 
 // Get user's house from their Discord roles using role IDs
-async function getUserHouse(member) {
+async function getUserHouse(member: GuildMember): Promise<"Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin" | null> {
   if (!member || !member.roles) return null;
+  assert(process.env.GRYFFINDOR_ROLE_ID);
+  assert(process.env.SLYTHERIN_ROLE_ID);
+  assert(process.env.HUFFLEPUFF_ROLE_ID);
+  assert(process.env.RAVENCLAW_ROLE_ID);
 
   // House role IDs mapping - more secure than role names
   const houseRoleIds = {
@@ -73,7 +79,7 @@ async function getUserHouse(member) {
     [process.env.SLYTHERIN_ROLE_ID]: "Slytherin",
     [process.env.HUFFLEPUFF_ROLE_ID]: "Hufflepuff",
     [process.env.RAVENCLAW_ROLE_ID]: "Ravenclaw",
-  };
+  } as const;
 
   // Check if user has any house role by ID
   for (const [roleId, houseName] of Object.entries(houseRoleIds)) {

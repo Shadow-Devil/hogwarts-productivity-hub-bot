@@ -37,7 +37,7 @@ async function safeDeferReply(
   } catch (error) {
     console.warn(
       `Failed to defer interaction for /${interaction?.commandName}:`,
-      error.message
+      error
     );
     return false;
   }
@@ -75,14 +75,8 @@ async function safeReply(
   } catch (error) {
     console.error(
       `Failed to send reply for /${interaction?.commandName}:`,
-      error.message
+      error
     );
-
-    // If the error is about unknown interaction or already acknowledged, don't retry
-    if (error.code === 10062 || error.code === 40060) {
-      console.warn("Interaction expired or already handled - skipping retry");
-      return false;
-    }
 
     return false;
   }

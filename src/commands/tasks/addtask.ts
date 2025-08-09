@@ -80,7 +80,7 @@ export default {
         } else {
           const embed = createErrorTemplate(
             `❌ Task Creation Failed`,
-            result.message,
+            result,
             { helpText: `ℹ️ Please try again` }
           );
           await interaction.editReply({ embeds: [embed] });

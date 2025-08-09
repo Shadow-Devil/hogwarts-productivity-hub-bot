@@ -18,7 +18,7 @@ import dayjs from "dayjs";
 // 📋 Enhanced Task Management Template
 function createTaskTemplate(
   user: User,
-  tasks,
+  tasks: any,
   {
     emptyState = false,
     emptyStateMessage = "",
@@ -61,9 +61,9 @@ function createTaskTemplate(
 
   // Handle enhanced task data structure
   const incompleteTasks =
-    tasks.incompleteTasks || tasks.filter?.((t) => !t.is_complete) || [];
+    tasks.incompleteTasks || tasks.filter?.((t: { is_complete: boolean }) => !t.is_complete) || [];
   const completedTasks =
-    tasks.completedTasks || tasks.filter?.((t) => t.is_complete) || [];
+    tasks.completedTasks || tasks.filter?.((t: { is_complete: boolean }) => t.is_complete) || [];
   const stats = tasks.stats || {};
 
   embed.setDescription(
@@ -131,7 +131,7 @@ function createTaskTemplate(
 
   // Add pending tasks with enhanced formatting
   if (incompleteTasks.length > 0) {
-    const taskList = incompleteTasks.slice(0, 10).map((task, index) => {
+    const taskList = incompleteTasks.slice(0, 10).map((task: { created_at: number, title: string }, index: number) => {
       const taskNumber = index + 1;
       const createdDate = dayjs(task.created_at).format("MMM DD");
 
@@ -169,14 +169,14 @@ function createTaskTemplate(
   if (includeRecentCompleted && completedTasks.length > 0) {
     const recentCompleted = completedTasks
       .sort(
-        (a, b) =>
+        (a: any, b: any) =>
           new Date(b.completed_at).getTime() -
           new Date(a.completed_at).getTime()
       )
       .slice(0, maxRecentCompleted);
 
     if (useTableFormat) {
-      const completedList = recentCompleted.map((task) => {
+      const completedList = recentCompleted.map((task: { completed_at: number, points_awarded: number, title: string }) => {
         const completedDate = dayjs(task.completed_at).format("MMM DD");
         const points = task.points_awarded || 0;
         return [`✅ ${task.title}`, `${completedDate} (+${points} pts)`];
@@ -191,7 +191,7 @@ function createTaskTemplate(
       ]);
     } else {
       const completedList = recentCompleted
-        .map((task) => {
+        .map((task: { completed_at: number, points_awarded: number, title: string }) => {
           const completedDate = dayjs(task.completed_at).format("MMM DD");
           const points = task.points_awarded || 0;
           return `✅ ${task.title}\n*Completed: ${completedDate}* (+${points} pts)`;
@@ -245,9 +245,9 @@ function createTaskTemplate(
 
 // 🏆 Enhanced Leaderboard Template
 function createLeaderboardTemplate(
-  type,
-  data,
-  currentUser,
+  type: string,
+  data: Array<any>,
+  currentUser: { id: string; username: string },
   {
     maxEntries = 10,
     showUserPosition = true,
@@ -440,14 +440,20 @@ function createLeaderboardTemplate(
 // ⏱️ Enhanced Timer Status Template
 // 🏠 Enhanced House Points Template
 function createHouseTemplate(
-  houses,
-  type,
+  houses: Array<{ name: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin"; points: number }>,
+  type: string,
   {
     showEmojis = true,
     includeStats = true,
     useEnhancedLayout = true,
     useTableFormat = true,
     currentUser = null,
+  }: {
+    showEmojis?: boolean;
+    includeStats?: boolean;
+    useEnhancedLayout?: boolean;
+    useTableFormat?: boolean;
+    currentUser?: { house: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin" } | null;
   } = {},
 ) {
   const houseEmojis = {
@@ -545,7 +551,7 @@ function createHouseTemplate(
   if (includeStats && houses && houses.length > 0) {
     const totalPoints = houses.reduce((sum, house) => sum + house.points, 0);
     const averagePoints = Math.round(totalPoints / houses.length);
-    const leadingHouse = houses[0];
+    const leadingHouse = houses[0]!!;
 
     const statsData = [
       ["Total Points", totalPoints],
@@ -556,7 +562,7 @@ function createHouseTemplate(
       ],
       [
         "Point Spread",
-        `${leadingHouse.points - houses[houses.length - 1].points}`,
+        `${leadingHouse.points - houses[houses.length - 1]!!.points}`,
       ],
     ];
 
@@ -586,7 +592,7 @@ function createHouseTemplate(
       embed.addFields([
         {
           name: `${emoji} Your House: ${userHouseName}`,
-          value: `**Rank:** #${userPosition} of ${houses.length}\n**Points:** ${userHouseData.points}\n**Status:** ${userPosition === 1 ? "Leading the competition! 🏆" : `${houses[0].points - userHouseData.points} points behind first place`}`,
+          value: `**Rank:** #${userPosition} of ${houses.length}\n**Points:** ${userHouseData.points}\n**Status:** ${userPosition === 1 ? "Leading the competition! 🏆" : `${houses[0]!!.points - userHouseData.points} points behind first place`}`,
           inline: false,
         },
       ]);
@@ -604,8 +610,8 @@ function createHouseTemplate(
 
 // 🩺 Enhanced Health Report Template
 function createHealthTemplate(
-  title,
-  healthData,
+  title: string,
+  healthData: any,
   {
     includeMetrics = true,
     useEnhancedLayout = true,
@@ -718,7 +724,7 @@ function createHealthTemplate(
   // Add troubleshooting section if provided
   if (troubleshooting && troubleshooting.length > 0) {
     const troubleshootingList = troubleshooting
-      .map((tip) => `• ${tip}`)
+      .map((tip: any) => `• ${tip}`)
       .join("\n");
 
     embed.addFields([
@@ -841,7 +847,7 @@ function createHealthTemplate(
   if (issues && issues.length > 0) {
     const issuesList = issues
       .slice(0, 3)
-      .map((issue) =>
+      .map((issue: any) =>
         typeof issue === "string"
           ? `• ${issue}`
           : `• **${issue.name}**: ${issue.error}`
@@ -879,8 +885,8 @@ function createHealthTemplate(
 
 // 🎯 Enhanced Achievement/Success Template
 function createSuccessTemplate(
-  title,
-  message,
+  title: string,
+  message: string,
   {
     celebration = false,
     points = null,
@@ -889,6 +895,14 @@ function createSuccessTemplate(
     useEnhancedLayout = true,
     useTableFormat = true,
     showBigNumbers = false,
+  }: {
+    celebration?: boolean;
+    points?: number | null;
+    streak?: number | null;
+    includeEmoji?: boolean;
+    useEnhancedLayout?: boolean;
+    useTableFormat?: boolean;
+    showBigNumbers?: boolean;
   } = {}
 ) {
   const emoji = celebration ? "🎉" : "✅";
@@ -949,18 +963,19 @@ function createSuccessTemplate(
   return embed;
 }
 
+
 // ⏱️ Timer Template
 function createTimerTemplate(
-  action,
-  data,
+  action: "start" | "work_complete" | "break_complete" | "status" | "no_timer",
+  data: any,
   { showProgress = true, includeMotivation = true } = {}
 ) {
-  const { workTime, breakTime, voiceChannel, phase, timeRemaining } = data;
 
   let embed;
 
   switch (action) {
     case "start": {
+
       embed = createStyledEmbed("primary")
         .setTitle("⏱️ Pomodoro Timer Started")
         .setDescription(
@@ -973,9 +988,9 @@ function createTimerTemplate(
 
       // Add timer configuration
       const configFields = [
-        `🕒 **Work Time:** ${workTime} minutes`,
-        breakTime > 0 ? `☕ **Break Time:** ${breakTime} minutes` : null,
-        `📍 **Location:** <#${voiceChannel.id}>`,
+        `🕒 **Work Time:** ${data.workTime} minutes`,
+        data.breakTime > 0 ? `☕ **Break Time:** ${data.breakTime} minutes` : null,
+        `📍 **Location:** <#${data.voiceChannel.id}>`,
       ].filter(Boolean);
 
       embed.addFields([
@@ -987,7 +1002,7 @@ function createTimerTemplate(
       ]);
 
       if (showProgress) {
-        const progressBar = createProgressBar(0, workTime, 15, "▓", "░");
+        const progressBar = createProgressBar(0, data.workTime, 15, "▓", "░");
         embed.addFields([
           {
             name: "📊 Progress Tracker",
@@ -1025,11 +1040,11 @@ function createTimerTemplate(
           )
         );
 
-      if (breakTime > 0) {
+      if (data.breakTime > 0) {
         embed.addFields([
           {
             name: "☕ Break Time!",
-            value: `Take a well-deserved **${breakTime}-minute break**.\n🔔 I'll notify you when it's time to get back to work.`,
+            value: `Take a well-deserved **${data.breakTime}-minute break**.\n🔔 I'll notify you when it's time to get back to work.`,
             inline: false,
           },
         ]);
@@ -1067,28 +1082,28 @@ function createTimerTemplate(
       break;
 
     case "status": {
-      const isBreak = phase === "break";
+      const isBreak = data.phase === "break";
       embed = createStyledEmbed(isBreak ? "warning" : "primary")
         .setTitle(
-          `⏰ Timer Status - ${phase.charAt(0).toUpperCase() + phase.slice(1)} Phase`
+          `⏰ Timer Status - ${data.phase.charAt(0).toUpperCase() + data.phase.slice(1)} Phase`
         )
         .setDescription(
           createHeader(
             "Active Session",
-            `Currently in ${phase} phase`,
+            `Currently in ${data.phase} phase`,
             isBreak ? "☕" : "🎯"
           )
         );
 
-      if (showProgress && timeRemaining !== undefined) {
-        const totalTime = isBreak ? breakTime : workTime;
-        const elapsed = totalTime - timeRemaining;
+      if (showProgress && data.timeRemaining !== undefined) {
+        const totalTime = isBreak ? data.breakTime : data.workTime;
+        const elapsed = totalTime - data.timeRemaining;
         const progressBar = createProgressBar(elapsed, totalTime, 15);
 
         embed.addFields([
           {
             name: "📊 Progress",
-            value: `${progressBar.bar}\n**Time Remaining:** ${timeRemaining} minutes • **Status:** 🔄 Active`,
+            value: `${progressBar.bar}\n**Time Remaining:** ${data.timeRemaining} minutes • **Status:** 🔄 Active`,
             inline: false,
           },
         ]);
@@ -1097,7 +1112,7 @@ function createTimerTemplate(
       embed.addFields([
         {
           name: "📍 Session Info",
-          value: `**Location:** <#${voiceChannel.id}>\n**Phase:** ${phase.charAt(0).toUpperCase() + phase.slice(1)}`,
+          value: `**Location:** <#${data.voiceChannel.id}>\n**Phase:** ${data.phase.charAt(0).toUpperCase() + data.phase.slice(1)}`,
           inline: false,
         },
       ]);
@@ -1110,7 +1125,7 @@ function createTimerTemplate(
         .setDescription(
           createHeader(
             "No Active Timer",
-            `No Pomodoro timer is currently running in <#${voiceChannel.id}>`,
+            `No Pomodoro timer is currently running in <#${data.voiceChannel.id}>`,
             "💤"
           )
         );
@@ -1149,6 +1164,11 @@ function createErrorTemplate(
     helpText = "Please try again or contact support if the issue persists.",
     additionalInfo = null,
     showEmoji = true,
+  }: {
+    includeHelp?: boolean;
+    helpText?: string;
+    additionalInfo?: string | null;
+    showEmoji?: boolean;
   } = {}
 ) {
   const embed = createStyledEmbed("error")
@@ -1177,7 +1197,7 @@ function createErrorTemplate(
 function createChampionTemplate(
   monthlyChampions: any[],
   allTimeChampions: any[],
-  currentUser: { house: any },
+  currentUser: { house: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin" | null },
   { useEnhancedLayout = true, useTableFormat = true, showUserInfo = true } = {}
 ) {
   const houseEmojis = {
@@ -1200,11 +1220,11 @@ function createChampionTemplate(
   }
 
   // Define all houses for consistent display
-  const allHouses = ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"];
+  const allHouses = ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"] as const;
 
   // Monthly champions section - always show all houses
   const monthlyChampionData = allHouses.map((house) => {
-    const emoji = houseEmojis[house] || "🏠";
+    const emoji = houseEmojis[house];
     const champion = (monthlyChampions || []).find((c) => c.house === house);
     if (champion) {
       return [

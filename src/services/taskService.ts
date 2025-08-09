@@ -4,12 +4,13 @@ import { db } from "../models/db.ts";
 import { tasksTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 import dayjs from "dayjs";
+import type { GuildMember } from "discord.js";
 
 
 /**
  * Regain a task slot when removing a task (only for tasks added today)
  */
-export async function reclaimTaskSlot(discordId, taskCreatedAt) {
+export async function reclaimTaskSlot(discordId: string, taskCreatedAt: number) {
   const today = dayjs().format("YYYY-MM-DD");
   const taskDate = dayjs(taskCreatedAt).format("YYYY-MM-DD");
 
@@ -114,7 +115,7 @@ class TaskService {
   }
 
   // Remove a task by its number (position in user's task list)
-  async removeTask(discordId, taskNumber) {
+  async removeTask(discordId: string, taskNumber: number) {
     // Get all incomplete tasks for the user, ordered by creation date
     const tasksResult = await db.$client.query(
       ` SELECT id, title, created_at FROM tasks
@@ -158,20 +159,20 @@ class TaskService {
   }
 
   // Get all tasks for a user (using optimized/fallback pattern)
-  async getUserTasks(discordId) {
+  async getUserTasks(discordId: string) {
     try {
       return await this.getUserTasksOptimized(discordId);
     } catch (error) {
       console.warn(
         "⚠️ Failed to fetch user tasks, falling back:",
-        error.message
+        error
       );
       return await this.getUserTasksOriginal(discordId);
     }
   }
 
   // Mark a task as complete
-  async completeTask(discordId, taskNumber, member = null) {
+  async completeTask(discordId: string, taskNumber: number, member: GuildMember | null) {
     // Check daily task limit first
     const limitCheck = await DailyTaskManager.canUserCompleteTask(discordId);
     if (!limitCheck.canAdd) {
@@ -246,7 +247,7 @@ class TaskService {
   }
 
   // Validate voice channel requirements for task completion
-  async validateVoiceChannelRequirements(discordId) {
+  async validateVoiceChannelRequirements(discordId: string) {
     // Check if user has an active voice session
     const activeSessionResult = await db.$client.query(
       `SELECT joined_at FROM vc_sessions
@@ -265,7 +266,7 @@ class TaskService {
     return { valid: true };
   } // Validate task age requirements for task completion
 
-  async validateTaskAge(taskId) {
+  async validateTaskAge(taskId: string) {
     // Check task creation time
     const taskResult = await db.$client.query(
       "SELECT created_at FROM tasks WHERE id = $1",
@@ -311,7 +312,7 @@ class TaskService {
     } catch (error) {
       console.warn(
         "⚠️ Failed to fetch task stats, falling back:",
-        error.message
+        error
       );
       return await this.getTaskStatsOriginal(discordId);
     }
@@ -327,7 +328,7 @@ class TaskService {
   // ========================================================================
 
   // Get task statistics using optimized view (replaces getTaskStats)
-  async getTaskStatsOptimized(discordId) {
+  async getTaskStatsOptimized(discordId: string) {
     // Single query using optimized view - replaces aggregation query
     const result = await db.$client.query(
       "SELECT * FROM user_task_summary WHERE discord_id = $1",
@@ -360,7 +361,7 @@ class TaskService {
   }
 
   // Get all user tasks with enhanced information using optimized approach
-  async getUserTasksOptimized(discordId) {
+  async getUserTasksOptimized(discordId: string) {
     // Get tasks with additional user context
     const result = await db.$client.query(
       `SELECT
@@ -382,7 +383,7 @@ class TaskService {
   // ========================================================================
 
   // Fallback method for task statistics (used only if optimized version fails)
-  async getTaskStatsOriginal(discordId) {
+  async getTaskStatsOriginal(discordId: string) {
     const result = await db.$client.query(
       `SELECT
                     COUNT(*) as total_tasks,
@@ -397,7 +398,7 @@ class TaskService {
   }
 
   // Fallback method for user tasks (used only if optimized version fails)
-  async getUserTasksOriginal(discordId) {
+  async getUserTasksOriginal(discordId: string) {
     const result = await db.$client.query(
       `SELECT id, title, is_complete, created_at, completed_at, points_awarded
                   FROM tasks

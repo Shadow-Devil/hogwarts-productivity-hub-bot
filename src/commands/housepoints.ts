@@ -36,7 +36,7 @@ export default {
         return;
       }
 
-      const leaderboardType = interaction.options.getString("type");
+      const leaderboardType = interaction.options.getString("type", true) as "monthly" | "alltime" | "housechampion";
 
       if (leaderboardType === "housechampion") {
         await showHouseChampions(interaction);
@@ -59,7 +59,7 @@ export default {
   },
 };
 
-async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, type: "monthly" | null) {
+async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, type: "monthly" | "alltime") {
   const houseLeaderboard =
     await voiceService.getHouseLeaderboardOptimized(type);
 

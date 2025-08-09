@@ -5,6 +5,7 @@ import {
   getUserHouse,
   checkAndPerformHouseMonthlyReset,
 } from "../models/db.ts";
+import type { GuildMember } from "discord.js";
 
 /**
  * Convert minutes to hours with proper precision
@@ -77,9 +78,12 @@ function calculateDailyLimitInfo(
  * @returns {string|null} Limit message or null if no message needed
  */
 function generateDailyLimitMessage(
-  limitInfo,
-  actualSessionHours,
-  voiceTimePoints,
+  limitInfo: {
+    dailyHours: number;
+    limitReached: boolean;
+  },
+  actualSessionHours: number,
+  voiceTimePoints: number,
 ) {
   if (!limitInfo.limitReached) {
     return null; // No limit reached, no message needed
@@ -129,7 +133,7 @@ async function updateHousePoints(houseName: string, pointsEarned: number) {
 
 
 // Check and perform monthly reset for a user if needed
-async function checkAndPerformMonthlyReset(discordId) {
+async function checkAndPerformMonthlyReset(discordId: string) {
   try {
     const firstOfMonth = dayjs().startOf("month").format("YYYY-MM-DD");
 
@@ -202,7 +206,7 @@ async function checkAndPerformMonthlyReset(discordId) {
 // Calculate points based on hours spent
 // First hour daily: 5 points, subsequent hours: 2 points each (daily cumulative system)
 // NOTE: Rounding is handled in the voice service, this function receives already-rounded hours
-function calculatePointsForHours(startingHours, hoursToCalculate) {
+function calculatePointsForHours(startingHours: number, hoursToCalculate: number) {
   let points = 0;
   let remainingHours = hoursToCalculate;
   let currentTotal = startingHours;
@@ -229,7 +233,7 @@ function calculatePointsForHours(startingHours, hoursToCalculate) {
 
 
 // Get or create user in database with caching
-async function getOrCreateUser(discordId, username) {
+async function getOrCreateUser(discordId: string, username: string) {
   // Try to find existing user
   const result = await db.$client.query(
     "SELECT * FROM users WHERE discord_id = $1",
@@ -263,10 +267,10 @@ async function getOrCreateUser(discordId, username) {
 
 // Start a voice session when user joins VC (timezone-aware)
 export async function startVoiceSession(
-  discordId,
-  username,
-  voiceChannelId,
-  voiceChannelName
+  discordId: string,
+  username: string,
+  voiceChannelId: string,
+  voiceChannelName: string
 ) {
   const user = await getOrCreateUser(discordId, username);
   const now = new Date();
@@ -289,7 +293,7 @@ export async function startVoiceSession(
 }
 
 // End a voice session when user leaves VC
-export async function endVoiceSession(discordId, voiceChannelId, member = null) {
+export async function endVoiceSession(discordId: string, voiceChannelId: string, member: GuildMember | null = null) {
   const now = new Date().getTime();
 
   // Find the active session
@@ -360,9 +364,9 @@ export async function endVoiceSession(discordId, voiceChannelId, member = null) 
 
 // Calculate and award points based on time spent and/or task completion
 export async function calculateAndAwardPoints(
-  discordId,
-  durationMinutes,
-  member = null,
+  discordId: string,
+  durationMinutes: number,
+  member: GuildMember | null = null,
   additionalPoints = 0,
   applyRounding = true
 ) {
@@ -503,7 +507,7 @@ export async function calculateAndAwardPoints(
         await member.send(limitMessage);
       } catch (error) {
         console.log(
-          `Could not send daily limit notification to ${discordId}: ${error.message}`
+          `Could not send daily limit notification to ${discordId}: ${error}`
         );
       }
     }
@@ -542,9 +546,9 @@ export async function calculateAndAwardPoints(
 
 // Update daily voice stats
 export async function updateDailyStats(
-  discordId,
-  date,
-  additionalMinutes,
+  discordId: string,
+  date: string,
+  additionalMinutes: number,
   _pointsEarned = 0
 ) {
   try {
@@ -607,7 +611,7 @@ export async function updateDailyStats(
 }
 
 // Handle session that crosses midnight - split into separate daily sessions (timezone-aware)
-export async function handleMidnightCrossover(discordId, voiceChannelId, member = null) {
+export async function handleMidnightCrossover(discordId: string, voiceChannelId: string, member: GuildMember | null = null) {
   // Use user's timezone for accurate midnight calculation
   const userTime =
     await timezoneService.getCurrentTimeInUserTimezone(discordId);
@@ -678,7 +682,7 @@ export async function handleMidnightCrossover(discordId, voiceChannelId, member 
       await member.send(midnightMessage);
     } catch (error) {
       console.log(
-        `Could not send midnight notification to ${discordId}: ${error.message}`
+        `Could not send midnight notification to ${discordId}: ${error}`
       );
     }
   }
@@ -699,7 +703,7 @@ export async function handleMidnightCrossover(discordId, voiceChannelId, member 
 }
 
 // Get user's daily voice time for limit checking (timezone-aware)
-async function getUserDailyTime(discordId, date = null) {
+async function getUserDailyTime(discordId: string, date: string | null = null) {
   try {
     // Use user's timezone for accurate date calculation
     const targetDate =
@@ -738,7 +742,7 @@ async function getUserDailyTime(discordId, date = null) {
 }
 
 // Update user streak (only increment once per day) - timezone-aware
-async function updateStreak(discordId, sessionDate, userTimezone = null) {
+async function updateStreak(discordId: string, sessionDate: number, userTimezone: string | null = null) {
   try {
     const user = await db.$client.query(
       "SELECT * FROM users WHERE discord_id = $1",
@@ -905,7 +909,7 @@ export async function getLeaderboardOptimized(type = "monthly") {
 }
 
 // Get house leaderboard using optimized views
-export async function getHouseLeaderboardOptimized(type: "monthly" | null = "monthly") {
+export async function getHouseLeaderboardOptimized(type: "monthly" | "alltime" = "monthly") {
   // Use house_leaderboard_with_champions view - single optimized query
   const result = await db.$client.query(
     "SELECT * FROM house_leaderboard_with_champions"

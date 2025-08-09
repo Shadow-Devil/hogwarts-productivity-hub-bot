@@ -38,6 +38,8 @@ export default tseslint.config([
       "no-console": "off", // Allow console for Discord bot logging
       "no-var": "error",
       "prefer-const": "error",
+      "no-redeclare": "off",
+      "@typescript-eslint/no-redeclare": "error",
     },
   },
   tseslint.configs.base,

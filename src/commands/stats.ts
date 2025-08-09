@@ -30,12 +30,12 @@ function formatHours(hours: string): string {
  * @param {Object} limitInfo - Daily limit info from calculateDailyLimitInfo
  * @returns {string} Formatted status text
  */
-function formatDailyLimitStatus(limitInfo) {
+function formatDailyLimitStatus(limitInfo: { dailyHours: number; remainingHours: number; limitReached: boolean; canEarnPoints: boolean; isLimitedByAllowance?: boolean; allowanceHoursRemaining?: number; }): string {
   if (limitInfo.limitReached) {
     return "🚫 **Limit Reached**";
   }
 
-  if (limitInfo.isLimitedByAllowance) {
+  if (limitInfo.isLimitedByAllowance && limitInfo.allowanceHoursRemaining !== undefined) {
     // Limited by 15-hour daily allowance
     return `✅ **${limitInfo.remainingHours.toFixed(1)}h** remaining (${limitInfo.allowanceHoursRemaining.toFixed(1)}h allowance left)`;
   } else {
@@ -67,7 +67,7 @@ export default {
       try {
         userTasks = await taskService.getUserTasksOptimized(discordId);
       } catch (error) {
-        console.warn("⚠️ Failed to fetch user tasks for stats:", error.message);
+        console.warn("⚠️ Failed to fetch user tasks for stats:", error);
         // Continue without tasks - will show fallback message
       }
 
@@ -224,7 +224,7 @@ export default {
           text: `🌍 Your timezone: ${userTimezone} | Local time: ${userLocalTime.format("h:mm A")} | Daily reset in ${hoursUntilReset.toFixed(1)}h`,
         });
       } catch (error) {
-        console.warn("Could not add timezone info to stats:", error.message);
+        console.warn("Could not add timezone info to stats:", error);
         embed.setFooter({
           text: "⏰ Daily limit resets at midnight your local time",
         });

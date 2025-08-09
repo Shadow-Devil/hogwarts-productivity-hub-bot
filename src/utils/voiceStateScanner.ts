@@ -7,7 +7,7 @@
 // Get grace period sessions if available
 import { gracePeriodSessions } from "../events/voiceStateUpdate.ts";
 import * as voiceService from "../services/voiceService.ts";
-import { BaseGuildVoiceChannel, ChannelType, type Client, type Guild, type GuildBasedChannel } from "discord.js";
+import { BaseGuildVoiceChannel, ChannelType, Collection, type Client, type Guild } from "discord.js";
 
 export let isScanning = false;
 let scanResults: {
@@ -118,7 +118,7 @@ async function scanGuildVoiceStates(
       (channel) =>
         channel.type === ChannelType.GuildVoice && // Voice channel type
         channel.members.size > 0 // Has members
-    );
+    ) as Collection<string, BaseGuildVoiceChannel>;
 
     console.log(`🎤 Found ${voiceChannels.size} voice channels with users`);
 

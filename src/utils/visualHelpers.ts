@@ -56,7 +56,7 @@ function createHeader(title: string, subtitle: string | null = null, emoji = "�
 
 // 📊 Enhanced Data Grid with Table-Like Structure
 function formatDataGrid(
-  data,
+  data: Record<string, any> | Array<any>,
   {
     columns = 2,
     separator = " • ",
@@ -95,7 +95,7 @@ function formatDataGrid(
 }
 
 // 📊 Create Table-Like Structure for Better Space Utilization
-function formatDataTable(data, columnWidths: number[] | null = null) {
+function formatDataTable(data: any, columnWidths: number[] | null = null) {
   if (!Array.isArray(data) || data.length === 0) return "";
 
   // Convert array items to key-value pairs if needed
@@ -104,7 +104,7 @@ function formatDataTable(data, columnWidths: number[] | null = null) {
       return [item[0], item[1]];
     } else if (typeof item === "string" && item.includes(":")) {
       const [key, ...valueParts] = item.split(":");
-      return [key.trim(), valueParts.join(":").trim()];
+      return [key!!.trim(), valueParts.join(":").trim()];
     }
     return [item, ""];
   });
@@ -125,7 +125,7 @@ function formatDataTable(data, columnWidths: number[] | null = null) {
 
 // 📊 Enhanced Centered Data Table with Better Spacing
 function formatCenteredDataTable(
-  data,
+  data: any,
   {
     columnWidths = null,
     addPadding = true,
@@ -142,7 +142,7 @@ function formatCenteredDataTable(
       return [item[0], item[1]];
     } else if (typeof item === "string" && item.includes(":")) {
       const [key, ...valueParts] = item.split(":");
-      return [key.trim(), valueParts.join(":").trim()];
+      return [key!!.trim(), valueParts.join(":").trim()];
     }
     return [item, ""];
   });
@@ -238,8 +238,8 @@ function createStyledEmbed(type = "default") {
 
 // 📊 Create Stats Card with Enhanced Typography
 function createStatsCard(
-  title,
-  stats,
+  title: string,
+  stats: Record<string, any> | Array<any>,
   {
     emoji = "📊",
     style = "card",

@@ -193,7 +193,7 @@ export default {
         let errorDescription =
           "An error occurred during the voice scan operation.";
 
-        if (error.message === "SCAN_TIMEOUT") {
+        if (typeof error === "object" && error !== null && "message" in error && error.message === "SCAN_TIMEOUT") {
           errorTitle = "⏱️ Voice Scan Timeout";
           errorDescription =
             "The voice scan operation timed out. This may happen during high server load or with large servers.";

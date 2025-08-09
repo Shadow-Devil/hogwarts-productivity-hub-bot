@@ -6,6 +6,7 @@ import assert from "node:assert";
 
 assert(process.env.CLIENT_ID)
 assert(process.env.GUILD_ID)
+assert(process.env.DISCORD_TOKEN)
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 

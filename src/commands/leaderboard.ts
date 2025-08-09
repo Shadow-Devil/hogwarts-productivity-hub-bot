@@ -37,7 +37,7 @@ export default {
         return;
       }
 
-      const leaderboardType = interaction.options.getString("type");
+      const leaderboardType = interaction.options.getString("type", true);
       const leaderboard =
         await voiceService.getLeaderboardOptimized(leaderboardType);
 
@@ -88,7 +88,7 @@ export default {
         } catch (error) {
           console.warn(
             "Could not add timezone info to leaderboard:",
-            error.message
+            error
           );
           embed.setFooter({
             text: "🗓️ Monthly rankings reset on 1st of each month | Global rankings update hourly",

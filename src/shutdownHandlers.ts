@@ -76,7 +76,7 @@ async function shutdown() {
 
             DailyTaskManager.stop();
         } catch (error) {
-            console.warn("⚠️  Scheduler shutdown error:", error.message);
+            console.warn("⚠️  Scheduler shutdown error:", error);
         }
         console.log("✅ Schedulers stopped");
 
@@ -104,7 +104,6 @@ async function shutdown() {
     } catch (error) {
         console.log("❌ Shutdown Error");
         console.log("═".repeat(40));
-        console.error("💥 Error details:", error.message);
         console.error("🔍 Full error:", error);
         console.log("═".repeat(40));
         clearTimeout(forceExitTimeout);

@@ -33,7 +33,7 @@ export default {
       }
 
       const discordId = interaction.user.id;
-      const taskNumber = interaction.options.getInteger("number");
+      const taskNumber = interaction.options.getInteger("number", true);
 
       const result = await taskService.removeTask(discordId, taskNumber);
 

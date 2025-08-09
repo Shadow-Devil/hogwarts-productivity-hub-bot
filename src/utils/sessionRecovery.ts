@@ -78,7 +78,7 @@ async function recoverIncompleteSessions() {
 /**
  * Process a single incomplete session
  */
-async function processIncompleteSession(session, now: Date) {
+async function processIncompleteSession(session: { joined_at: number; last_heartbeat: number | null; id: string; discord_id: string; date: string }, now: Date) {
   const sessionStartTime = new Date(session.joined_at);
   const sessionDurationMs = now.getTime() - sessionStartTime.getTime();
 

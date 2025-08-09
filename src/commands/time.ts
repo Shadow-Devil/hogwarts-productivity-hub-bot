@@ -9,6 +9,7 @@ import * as timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
+import assert from "node:assert";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
@@ -20,7 +21,9 @@ export default {
     .setDescription("Check your active Pomodoro timer status"),
   async execute(
     interaction: ChatInputCommandInteraction,
-    { activeVoiceTimers }
+    { activeVoiceTimers }: {
+      activeVoiceTimers: Map<string, { endTime: number; phase: "work" | "break"; startTime: number }>;
+    }
   ): Promise<void> {
     try {
       // Immediately defer to prevent timeout
@@ -65,6 +68,8 @@ export default {
 
       // Get timer info
       const timer = activeVoiceTimers.get(voiceChannelId);
+      assert(timer !== undefined, "Timer should exist for active voice channel");
+
       const now = new Date().getTime();
       const timeRemaining = Math.max(
         0,
@@ -105,7 +110,7 @@ export default {
       } catch (error) {
         console.warn(
           "Could not add timezone info to timer status:",
-          error.message
+          error
         );
         // Use default footer if timezone fails
         embed.setFooter({

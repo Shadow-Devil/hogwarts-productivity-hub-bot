@@ -24,7 +24,9 @@ export default {
     .setDescription("Stop the active Pomodoro timer in your voice channel"),
   async execute(
     interaction: ChatInputCommandInteraction,
-    { activeVoiceTimers }
+    { activeVoiceTimers }: {
+      activeVoiceTimers: Map<string, { endTime: number; phase: string; startTime: number; workTimeout?: NodeJS.Timeout; breakTimeout?: NodeJS.Timeout }>;
+    }
   ): Promise<void> {
     try {
       // Immediately defer to prevent timeout
@@ -66,8 +68,8 @@ export default {
         return;
       }
       const timer = activeVoiceTimers.get(voiceChannelId);
-      if (timer.workTimeout) clearTimeout(timer.workTimeout);
-      if (timer.breakTimeout) clearTimeout(timer.breakTimeout);
+      if (timer && timer.workTimeout) clearTimeout(timer.workTimeout);
+      if (timer && timer.breakTimeout) clearTimeout(timer.breakTimeout);
       activeVoiceTimers.delete(voiceChannelId);
 
       const embed = createSuccessTemplate(
@@ -88,7 +90,7 @@ export default {
       } catch (error) {
         console.warn(
           "Could not add timezone info to timer stop:",
-          error.message
+          error
         );
         embed.setFooter({
           text: "Use /timer to start a new session when ready",

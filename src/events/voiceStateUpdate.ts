@@ -18,7 +18,7 @@ import { client } from "../client.ts";
 // Track active voice sessions with grace period support for unstable connections
 export const activeVoiceSessions = new Map<
   string,
-  { channelId; joinTime; sessionId; gracePeriodStart?; lastSeen? }
+  { channelId: string; joinTime: Date; sessionId: string; gracePeriodStart?: number; lastSeen?: Date }
 >(); // key: userId, value: { channelId, joinTime, sessionId, gracePeriodStart?, lastSeen? }
 
 // Grace period configuration for users with unstable connections
@@ -101,7 +101,7 @@ setInterval(async () => {
           } catch (error) {
             console.warn(
               `Error checking voice state during grace period for user ${userId}:`,
-              error.message
+              error
             );
           }
         }
@@ -141,7 +141,7 @@ setInterval(async () => {
           } catch (error) {
             console.warn(
               `Error checking voice state for user ${userId} in guild ${guild.name}:`,
-              error.message
+              error
             );
           }
         }
@@ -324,7 +324,7 @@ export async function manualCleanup() {
         cleanupCandidates.push({ userId, sessionAge });
       }
     } catch (error) {
-      console.error(`Error checking user ${userId}:`, error.message);
+      console.error(`Error checking user ${userId}:`, error);
       results.errors++;
     }
   }

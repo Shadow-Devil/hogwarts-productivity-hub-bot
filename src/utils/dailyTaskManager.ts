@@ -15,7 +15,7 @@ import { client } from "../client.ts";
 
 
 export const DAILY_TASK_LIMIT = 10;
-let cleanupInterval = null;
+let cleanupInterval: NodeJS.Timeout | null = null;
 let isRunning = false;
 
 /**
@@ -244,10 +244,10 @@ async function resetDailyVoiceStats() {
  * Process individual user's midnight reset - handles all edge cases
  */
 async function processUserMidnightReset(
-  userId,
-  activeVoiceSessions,
-  gracePeriodSessions,
-  voiceService
+  userId: string,
+  activeVoiceSessions: Map<string, any>,
+  gracePeriodSessions: Map<string, any>,
+  voiceService: typeof import("../services/voiceService.ts")
 ) {
   const result = {
     wasInGracePeriod: false,
@@ -403,7 +403,7 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
     console.log(`📧 Sent cleanup notification to user ${discordId}`);
   } catch (error) {
     console.log(
-      `⚠️ Could not send cleanup notification to ${discordId}: ${error.message}`
+      `⚠️ Could not send cleanup notification to ${discordId}: ${error}`
     );
   }
 }

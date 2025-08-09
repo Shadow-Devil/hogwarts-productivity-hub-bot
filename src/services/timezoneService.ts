@@ -39,7 +39,7 @@ export const timezoneCache = new Map<string, any>();
  * @param {string} userId - User's Discord ID
  * @returns {Promise<string>} User's timezone (defaults to UTC if not set)
  */
-export async function getUserTimezone(userId: string) {
+export async function getUserTimezone(userId: string): Promise<string> {
   try {
     // Validate input
     if (!userId || typeof userId !== "string") {
@@ -49,7 +49,7 @@ export async function getUserTimezone(userId: string) {
     // Check cache first (with cache warming)
     const cached = timezoneCache.get(userId);
     if (cached && Date.now() - cached.cachedAt < 3600000) {
-      return cached.timezone;
+      return cached.timezone as string;
     }
 
 
@@ -59,7 +59,7 @@ export async function getUserTimezone(userId: string) {
       [userId]
     );
 
-    let timezone = result.rows[0]?.timezone || "UTC";
+    let timezone: string = result.rows[0]?.timezone || "UTC";
 
     // Validate timezone before caching
     if (!isValidTimezone(timezone)) {
@@ -85,7 +85,7 @@ export async function getUserTimezone(userId: string) {
  * @param {string} userId - User's Discord ID
  * @returns {Promise<dayjs.Dayjs>} Current time in user's timezone
  */
-export async function getCurrentTimeInUserTimezone(userId) {
+export async function getCurrentTimeInUserTimezone(userId: string) {
   const startTime = Date.now();
   try {
     const userTimezone = await getUserTimezone(userId);
@@ -102,8 +102,7 @@ export async function getCurrentTimeInUserTimezone(userId) {
       "getCurrentTimeInUserTimezone failed, falling back to UTC",
       {
         userId,
-        error: error.message,
-        stack: error.stack,
+        error,
         duration: Date.now() - startTime,
         fallbackUsed: "UTC",
       }
@@ -119,7 +118,7 @@ export async function getCurrentTimeInUserTimezone(userId) {
  * @param {string} userId - User's Discord ID
  * @returns {Promise<string>} Today's date in user's timezone
  */
-export async function getTodayInUserTimezone(userId) {
+export async function getTodayInUserTimezone(userId: string) {
   const userTime = await getCurrentTimeInUserTimezone(userId);
   return userTime.format("YYYY-MM-DD");
 }
