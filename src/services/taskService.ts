@@ -157,19 +157,6 @@ export async function removeTask(discordId: string, taskNumber: number) {
   };
 }
 
-// Get all tasks for a user (using optimized/fallback pattern)
-async function getUserTasks(discordId: string) {
-  try {
-    return await getUserTasksOptimized(discordId);
-  } catch (error) {
-    console.warn(
-      "⚠️ Failed to fetch user tasks, falling back:",
-      error
-    );
-    return await getUserTasksOriginal(discordId);
-  }
-}
-
 // Mark a task as complete
 export async function completeTask(discordId: string, taskNumber: number, member: GuildMember | null) {
   // Check daily task limit first
@@ -244,26 +231,6 @@ export async function completeTask(discordId: string, taskNumber: number, member
     stats: await DailyTaskManager.getUserDailyStats(discordId),
   } as const;
 }
-
-// Validate voice channel requirements for task completion
-async function validateVoiceChannelRequirements(discordId: string) {
-  // Check if user has an active voice session
-  const activeSessionResult = await db.$client.query(
-    `SELECT joined_at FROM vc_sessions
-                WHERE discord_id = $1 AND left_at IS NULL
-                ORDER BY joined_at DESC LIMIT 1`,
-    [discordId]
-  );
-
-  if (activeSessionResult.rows.length === 0) {
-    return {
-      valid: false,
-      message: "🚫 You must be in a voice channel to complete tasks.",
-    };
-  }
-
-  return { valid: true };
-} // Validate task age requirements for task completion
 
 async function validateTaskAge(taskId: string) {
   // Check task creation time
@@ -396,17 +363,3 @@ async function getTaskStatsOriginal(discordId: string) {
   return result.rows[0];
 }
 
-// Fallback method for user tasks (used only if optimized version fails)
-async function getUserTasksOriginal(discordId: string) {
-  const result = await db.$client.query(
-    `SELECT id, title, is_complete, created_at, completed_at, points_awarded
-                  FROM tasks
-                  WHERE discord_id = $1
-                  ORDER BY is_complete ASC, created_at ASC`,
-    [discordId]
-  );
-
-  const tasks = result.rows;
-
-  return tasks;
-}
