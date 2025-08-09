@@ -1,6 +1,6 @@
 import { client } from "./client.ts";
 import * as sessionRecovery from "./utils/sessionRecovery.ts";
-import CentralResetService from "./services/centralResetService.ts";
+import * as CentralResetService from "./services/centralResetService.ts";
 import * as DailyTaskManager from "./utils/dailyTaskManager.ts";
 
 export function registerShutdownHandlers() {

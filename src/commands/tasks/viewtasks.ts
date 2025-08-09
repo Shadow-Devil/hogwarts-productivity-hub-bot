@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
-import taskService from "../../services/taskService.ts";
+import * as taskService from "../../services/taskService.ts";
 import {
   createTaskTemplate,
   createErrorTemplate,
