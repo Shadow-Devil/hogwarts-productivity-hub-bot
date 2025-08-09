@@ -39,7 +39,7 @@ export default {
 
       try {
         // Check if scan is already running
-        if (voiceStateScanner.isCurrentlyScanning()) {
+        if (voiceStateScanner.isScanning) {
           const embed = new EmbedBuilder()
             .setTitle("🔄 Voice Scan Already Running")
             .setDescription(
@@ -220,8 +220,7 @@ export default {
       }
     } catch (error) {
       console.error("💥 Error in /voicescan command:", {
-        error: error.message,
-        stack: error.stack,
+        error: error,
         user: interaction.user.tag,
         timestamp: new Date().toISOString(),
       });
@@ -244,7 +243,7 @@ export default {
           });
         }
       } catch (replyError) {
-        console.error("🔥 Failed to send error response:", replyError.message);
+        console.error("🔥 Failed to send error response:", replyError);
       }
     }
   },

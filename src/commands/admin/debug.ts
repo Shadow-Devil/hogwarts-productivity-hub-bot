@@ -21,7 +21,7 @@ export default {
     .setDescription("Debug voice channel detection"),
   async execute(
     interaction: ChatInputCommandInteraction,
-    { activeVoiceTimers }
+    { activeVoiceTimers }: { activeVoiceTimers: Map<string, any> }
   ) {
     try {
       // Defer reply immediately to prevent timeout issues

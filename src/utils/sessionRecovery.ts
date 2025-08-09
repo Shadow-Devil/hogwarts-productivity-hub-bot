@@ -9,7 +9,7 @@ import * as voiceService from "../services/voiceService.ts";
  */
 
 let isShuttingDown = false;
-let periodicSaveInterval = null;
+let periodicSaveInterval: NodeJS.Timeout | null = null;
 let activeVoiceSessions: Map<string, any> | null = null; // Will be set from voiceStateUpdate
 let gracePeriodSessions: Map<string, any> | null = null; // Will be set from voiceStateUpdate
 
@@ -30,7 +30,7 @@ setupGracefulShutdown();
 /**
  * Initialize the session recovery system
  */
-export async function initialize(activeVoiceSessionsMap, gracePeriodSessionsMap = null) {
+export async function initialize(activeVoiceSessionsMap: Map<string, any>, gracePeriodSessionsMap: Map<string, any> | null = null) {
   activeVoiceSessions = activeVoiceSessionsMap;
   gracePeriodSessions = gracePeriodSessionsMap;
 
@@ -78,7 +78,7 @@ async function recoverIncompleteSessions() {
 /**
  * Process a single incomplete session
  */
-async function processIncompleteSession(session, now) {
+async function processIncompleteSession(session, now: Date) {
   const sessionStartTime = new Date(session.joined_at);
   const sessionDurationMs = now.getTime() - sessionStartTime.getTime();
 
@@ -111,10 +111,10 @@ async function processIncompleteSession(session, now) {
   if (sessionDurationMinutes < 1) {
     await db.$client.query(
       `
-                UPDATE vc_sessions
-                SET left_at = $1, duration_minutes = 0, recovery_note = 'Recovered: Session too short'
-                WHERE id = $2
-            `,
+          UPDATE vc_sessions
+          SET left_at = $1, duration_minutes = 0, recovery_note = 'Recovered: Session too short'
+          WHERE id = $2
+      `,
       [estimatedEndTime, session.id]
     );
 
@@ -127,10 +127,10 @@ async function processIncompleteSession(session, now) {
   // Update the session with estimated end time and duration
   await db.$client.query(
     `
-            UPDATE vc_sessions
-            SET left_at = $1, duration_minutes = $2, recovery_note = 'Recovered from crash'
-            WHERE id = $3
-        `,
+        UPDATE vc_sessions
+        SET left_at = $1, duration_minutes = $2, recovery_note = 'Recovered from crash'
+        WHERE id = $3
+    `,
     [estimatedEndTime, sessionDurationMinutes, session.id]
   );
 
@@ -202,10 +202,10 @@ async function saveActiveSessionStates() {
       // Update the session with current progress (heartbeat)
       await db.$client.query(
         `
-                            UPDATE vc_sessions
-                            SET last_heartbeat = $1, current_duration_minutes = $2
-                            WHERE id = $3 AND left_at IS NULL
-                        `,
+          UPDATE vc_sessions
+          SET last_heartbeat = $1, current_duration_minutes = $2
+          WHERE id = $3 AND left_at IS NULL
+      `,
         [now, durationMinutes, sessionData.sessionId]
       );
     } catch (error) {
@@ -265,10 +265,10 @@ async function closeAllActiveSessions() {
       // Update session in database
       await db.$client.query(
         `
-                            UPDATE vc_sessions
-                            SET left_at = $1, duration_minutes = $2, recovery_note = 'Graceful shutdown'
-                            WHERE id = $3 AND left_at IS NULL
-                        `,
+            UPDATE vc_sessions
+            SET left_at = $1, duration_minutes = $2, recovery_note = 'Graceful shutdown'
+            WHERE id = $3 AND left_at IS NULL
+        `,
         [now, durationMinutes, sessionData.sessionId]
       );
 

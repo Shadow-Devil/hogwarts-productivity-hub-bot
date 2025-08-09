@@ -4,12 +4,12 @@
  * for users already in voice channels
  */
 
-import * as voiceService from "../services/voiceService.ts";
 // Get grace period sessions if available
 import { gracePeriodSessions } from "../events/voiceStateUpdate.ts";
-import type { Client } from "discord.js";
+import * as voiceService from "../services/voiceService.ts";
+import { BaseGuildVoiceChannel, ChannelType, type Client, type Guild, type GuildBasedChannel } from "discord.js";
 
-let isScanning = false;
+export let isScanning = false;
 let scanResults: {
   totalUsersFound: number;
   trackingStarted: number;
@@ -108,15 +108,15 @@ export async function scanAndStartTracking(
  * @param {Map} gracePeriodSessions - Grace period sessions map
  */
 async function scanGuildVoiceStates(
-  guild,
-  activeVoiceSessions,
-  gracePeriodSessions = null
+  guild: Guild,
+  activeVoiceSessions: Map<string, any>,
+  gracePeriodSessions: Map<string, any> | null = null
 ) {
   try {
     // Get all voice channels in the guild
     const voiceChannels = guild.channels.cache.filter(
       (channel) =>
-        channel.type === 2 && // Voice channel type
+        channel.type === ChannelType.GuildVoice && // Voice channel type
         channel.members.size > 0 // Has members
     );
 
@@ -137,14 +137,14 @@ async function scanGuildVoiceStates(
 
 /**
  * Scan a specific voice channel and start tracking for users
- * @param {VoiceChannel} channel - Discord voice channel
+ * @param {BaseGuildVoiceChannel} channel - Discord voice channel
  * @param {Map} activeVoiceSessions - Active voice sessions map
  * @param {Map} gracePeriodSessions - Grace period sessions map
  */
 async function scanVoiceChannel(
-  channel,
-  activeVoiceSessions,
-  gracePeriodSessions = null
+  channel: BaseGuildVoiceChannel,
+  activeVoiceSessions: Map<string, any>,
+  gracePeriodSessions: Map<string, any> | null = null
 ) {
   try {
     const members = channel.members;
@@ -259,13 +259,5 @@ function resetScanResults() {
     errors: 0,
     channels: [],
   };
-}
-
-/**
- * Check if a scan is currently in progress
- * @returns {boolean} True if scanning
- */
-export function isCurrentlyScanning() {
-  return isScanning;
 }
 

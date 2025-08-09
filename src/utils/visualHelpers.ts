@@ -6,8 +6,8 @@ import { BotColors } from "./constants.ts";
 
 // 📊 Progress Bar Generator
 function createProgressBar(
-  current,
-  max,
+  current: number,
+  max: number,
   length = 10,
   fillChar = "▓",
   emptyChar = "░",
@@ -24,7 +24,7 @@ function createProgressBar(
 }
 
 // 📋 Create Decorated Header with Enhanced Typography
-function createHeader(title, subtitle = null, emoji = "🎯", style = "default") {
+function createHeader(title: string, subtitle: string | null = null, emoji = "🎯", style: "default" | "large" | "emphasis" = "default") {
   const styles = {
     default: {
       titleFormat: `${emoji} **${title}**`,
@@ -95,7 +95,7 @@ function formatDataGrid(
 }
 
 // 📊 Create Table-Like Structure for Better Space Utilization
-function formatDataTable(data, columnWidths = null) {
+function formatDataTable(data, columnWidths: number[] | null = null) {
   if (!Array.isArray(data) || data.length === 0) return "";
 
   // Convert array items to key-value pairs if needed

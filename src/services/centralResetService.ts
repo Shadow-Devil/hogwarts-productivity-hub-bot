@@ -439,13 +439,13 @@ class CentralResetService {
       // Reset monthly stats
       await db.$client.query(
         `
-                    UPDATE users
-                    SET
-                        monthly_hours = 0,
-                        monthly_points = 0,
-                        last_monthly_reset_tz = NOW()
-                    WHERE discord_id = $1
-                `,
+          UPDATE users
+          SET
+              monthly_hours = 0,
+              monthly_points = 0,
+              last_monthly_reset_tz = NOW()
+          WHERE discord_id = $1
+        `,
         [user.discord_id]
       );
     } catch (error) {
@@ -502,38 +502,6 @@ class CentralResetService {
       });
       throw error;
     }
-  }
-
-  /**
-   * Get service statistics and status
-   * @returns {Object} Service status and metrics
-   */
-  getServiceStatus() {
-    return {
-      isRunning: this.isRunning,
-      activeJobs: Array.from(this.scheduledJobs.keys()),
-      resetStats: this.resetStats,
-      uptime: this.isRunning
-        ? Date.now() -
-          (this.resetStats.dailyResets.lastRun?.getTime() || Date.now())
-        : 0,
-    };
-  }
-
-  /**
-   * Force a manual daily reset check
-   * Useful for testing and administrative purposes
-   */
-  async forceManualDailyReset() {
-    await this.processDailyResets();
-  }
-
-  /**
-   * Force a manual monthly reset check
-   * Useful for testing and administrative purposes
-   */
-  async forceManualMonthlyReset() {
-    await this.processMonthlyResets();
   }
 }
 

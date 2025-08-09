@@ -19,25 +19,5 @@ const BotColors = {
   HOUSE_SLYTHERIN: 0x1a472a,
 };
 
-// Common Visual Patterns
-const VisualPatterns = {
-  PROGRESS_BAR: {
-    FILLED: "▓",
-    EMPTY: "░",
-    DEFAULT_LENGTH: 15,
-  },
-  SEPARATORS: {
-    DASH: "─",
-    DOT: "•",
-    ARROW: "→",
-    BULLET: "├─",
-  },
-  EMPHASIS: {
-    BOLD: "**",
-    ITALIC: "*",
-    CODE: "`",
-    BLOCK: "```",
-  },
-};
 
-export { BotColors, VisualPatterns };
+export { BotColors };

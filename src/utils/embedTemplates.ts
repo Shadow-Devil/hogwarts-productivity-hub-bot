@@ -1,6 +1,7 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
 
+import type { User } from "discord.js";
 import { BotColors } from "./constants.ts";
 import {
   createHeader,
@@ -13,53 +14,10 @@ import {
 } from "./visualHelpers.ts";
 import dayjs from "dayjs";
 
-// 📊 Enhanced Statistics Dashboard Template
-function createStatsTemplate(
-  user,
-  stats,
-  { showThumbnail = true, includeFooter = true, useEnhancedLayout = true } = {}
-) {
-  const embed = createStyledEmbed("info");
-
-  if (useEnhancedLayout) {
-    embed
-      .setTitle("📊 Personal Productivity Dashboard")
-      .setDescription(
-        createHeader(
-          "Statistics Overview",
-          `Performance metrics for **${user.username}**`,
-          "📈",
-          "emphasis"
-        )
-      );
-  } else {
-    embed
-      .setTitle("📊 Personal Productivity Dashboard")
-      .setDescription(
-        createHeader(
-          "Statistics Overview",
-          `Data for **${user.username}**`,
-          "📈"
-        )
-      );
-  }
-
-  if (showThumbnail) {
-    embed.setThumbnail(user.displayAvatarURL());
-  }
-
-  if (includeFooter) {
-    embed.setFooter({
-      text: "Stay consistent to build your streak • Complete tasks for bonus points!",
-    });
-  }
-
-  return embed;
-}
 
 // 📋 Enhanced Task Management Template
 function createTaskTemplate(
-  user,
+  user: User,
   tasks,
   {
     emptyState = false,
@@ -1380,7 +1338,6 @@ function createChampionTemplate(
 }
 
 export {
-  createStatsTemplate,
   createTaskTemplate,
   createLeaderboardTemplate,
   createTimerTemplate,

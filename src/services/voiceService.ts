@@ -36,7 +36,7 @@ function roundHoursFor55MinRule(hours: number): number {
 function calculateDailyLimitInfo(
   dailyHours: number,
   dailyLimitHours: number = 15,
-  userTimezone: string = null
+  userTimezone: string | null = null
 ) {
   // Calculate hours remaining in the daily allowance
   const allowanceHoursRemaining = Math.max(0, dailyLimitHours - dailyHours);
@@ -905,7 +905,7 @@ export async function getLeaderboardOptimized(type = "monthly") {
 }
 
 // Get house leaderboard using optimized views
-export async function getHouseLeaderboardOptimized(type = "monthly") {
+export async function getHouseLeaderboardOptimized(type: "monthly" | null = "monthly") {
   // Use house_leaderboard_with_champions view - single optimized query
   const result = await db.$client.query(
     "SELECT * FROM house_leaderboard_with_champions"

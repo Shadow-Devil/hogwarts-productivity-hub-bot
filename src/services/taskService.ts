@@ -1,6 +1,82 @@
 import * as voiceService from "./voiceService.ts";
 import * as DailyTaskManager from "../utils/dailyTaskManager.ts";
 import { db } from "../models/db.ts";
+import { tasksTable } from "../db/schema.ts";
+import { eq } from "drizzle-orm";
+import dayjs from "dayjs";
+
+
+/**
+ * Regain a task slot when removing a task (only for tasks added today)
+ */
+export async function reclaimTaskSlot(discordId, taskCreatedAt) {
+  const today = dayjs().format("YYYY-MM-DD");
+  const taskDate = dayjs(taskCreatedAt).format("YYYY-MM-DD");
+
+  // Only regain slot if task was created today
+  if (taskDate !== today) {
+    return {
+      slotReclaimed: false,
+      reason: "Task was created on a different day",
+    };
+  }
+
+  // Check if user has daily stats for today
+  const result = await db.$client.query(
+    "SELECT tasks_added, tasks_completed, total_task_actions FROM daily_task_stats WHERE discord_id = $1 AND date = $2",
+    [discordId, today]
+  );
+
+  if (result.rows.length === 0 || result.rows[0].tasks_added === 0) {
+    return {
+      slotReclaimed: false,
+      reason: "No task additions recorded for today",
+    };
+  }
+
+  const stats = result.rows[0];
+  const tasksCompleted = stats.tasks_completed;
+  const currentTotalActions = stats.total_task_actions;
+
+  // Calculate maximum recoverable slots = DAILY_LIMIT - tasks_completed
+  // This ensures users can't exceed their theoretical maximum after completing tasks
+  const maxRecoverableSlots = DailyTaskManager.DAILY_TASK_LIMIT - tasksCompleted;
+  const currentAvailableSlots = DailyTaskManager.DAILY_TASK_LIMIT - currentTotalActions;
+
+  // Check if user would exceed their recoverable limit
+  const newTotalActions = currentTotalActions - 1;
+  const newAvailableSlots = DailyTaskManager.DAILY_TASK_LIMIT - newTotalActions;
+
+  if (newAvailableSlots > maxRecoverableSlots) {
+    return {
+      slotReclaimed: false,
+      reason: `Cannot reclaim slot: Maximum recoverable slots is ${maxRecoverableSlots} (you've completed ${tasksCompleted} tasks today)`,
+      maxRecoverableSlots,
+      tasksCompleted,
+      currentAvailableSlots,
+    };
+  }
+
+  // Decrease the task counts (only if within recoverable limit)
+  await db.$client.query(
+    `
+                  UPDATE daily_task_stats
+                  SET tasks_added = GREATEST(0, tasks_added - 1),
+                      total_task_actions = GREATEST(0, total_task_actions - 1),
+                      updated_at = CURRENT_TIMESTAMP
+                  WHERE discord_id = $1 AND date = $2
+              `,
+    [discordId, today]
+  );
+
+  return {
+    slotReclaimed: true,
+    reason: "Task slot successfully reclaimed",
+    maxRecoverableSlots,
+    tasksCompleted,
+    newAvailableSlots,
+  };
+}
 
 class TaskService {
   // Add a new task for a user
@@ -21,8 +97,8 @@ class TaskService {
 
     const result = await db.$client.query(
       `INSERT INTO tasks (user_id, discord_id, title)
-                  VALUES ((SELECT id FROM users WHERE discord_id = $1), $1, $2)
-                  RETURNING id, title, created_at`,
+        VALUES ((SELECT id FROM users WHERE discord_id = $1), $1, $2)
+        RETURNING id, title, created_at`,
       [discordId, title]
     );
 
@@ -61,13 +137,13 @@ class TaskService {
     const taskToRemove = tasksResult.rows[taskNumber - 1];
 
     // Try to reclaim the task slot if the task was added today
-    const reclaimResult = await DailyTaskManager.reclaimTaskSlot(
+    const reclaimResult = await reclaimTaskSlot(
       discordId,
       taskToRemove.created_at
     );
 
     // Delete the task
-    await db.$client.query("DELETE FROM tasks WHERE id = $1", [taskToRemove.id]);
+    await db.delete(tasksTable).where(eq(tasksTable.id, taskToRemove.id));
 
     // Get updated daily stats after potential slot reclaim
     const dailyStats = await DailyTaskManager.getUserDailyStats(discordId);

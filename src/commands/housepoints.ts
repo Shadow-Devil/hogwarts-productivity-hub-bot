@@ -59,7 +59,7 @@ export default {
   },
 };
 
-async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, type: string) {
+async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, type: "monthly" | null) {
   const houseLeaderboard =
     await voiceService.getHouseLeaderboardOptimized(type);
 

@@ -103,7 +103,7 @@ async function safeErrorReply(
   } catch (error) {
     console.error(
       `Failed to send error reply for /${interaction?.commandName}:`,
-      error.message
+      error
     );
 
     // Last resort: try a simple text reply
@@ -116,7 +116,7 @@ async function safeErrorReply(
         return true;
       }
     } catch (fallbackError) {
-      console.error("Even fallback error reply failed:", fallbackError.message);
+      console.error("Even fallback error reply failed:", fallbackError);
     }
 
     return false;
@@ -131,7 +131,7 @@ async function safeErrorReply(
  * @returns {Promise<GuildMember|null>} - Guild member or null
  */
 async function fastMemberFetch(
-  guild: Guild,
+  guild: Guild | null,
   userId: string,
   useCache: boolean = true
 ): Promise<GuildMember | null> {
@@ -149,7 +149,7 @@ async function fastMemberFetch(
 
     return await fetchPromise;
   } catch (error) {
-    console.warn(`Failed to fetch member ${userId}:`, error.message);
+    console.warn(`Failed to fetch member ${userId}:`, error);
     return null;
   }
 }

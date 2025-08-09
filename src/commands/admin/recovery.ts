@@ -158,8 +158,7 @@ export default {
       }
     } catch (error) {
       console.error("💥 Error in /recovery command:", {
-        error: error.message,
-        stack: error.stack,
+        error: error,
         user: interaction.user.tag,
         subcommand: interaction.options.getSubcommand(),
         timestamp: new Date().toISOString(),
@@ -184,7 +183,7 @@ export default {
       } catch (replyError) {
         console.error(
           "🔥 Error sending recovery error reply:",
-          replyError.message
+          replyError
         );
       }
     }

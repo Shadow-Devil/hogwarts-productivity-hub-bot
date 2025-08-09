@@ -34,8 +34,7 @@ export async function execute(c: Client<true>): Promise<void> {
     } catch (error) {
         console.log("❌ Bot Initialization Failed");
         console.log("═".repeat(50));
-        console.error("💥 Error details:", error.message);
-        console.error("🔍 Full error:", error);
+        console.error("error:", error);
         console.log("═".repeat(50));
         process.exit(1);
     }
