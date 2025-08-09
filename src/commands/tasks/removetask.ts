@@ -4,7 +4,6 @@ import {
   createSuccessTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
-import { StatusEmojis } from "../../utils/constants.ts";
 import {
   safeDeferReply,
   safeErrorReply,
@@ -56,7 +55,7 @@ export default {
         }
 
         const embed = createSuccessTemplate(
-          `${StatusEmojis.COMPLETED} Task Removed Successfully`,
+          `✅ Task Removed Successfully`,
           `**${result.message}**\n\nℹ️ The task has been permanently removed from your to-do list.${slotInfo}`,
           {}
         );

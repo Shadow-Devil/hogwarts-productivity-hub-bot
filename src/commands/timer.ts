@@ -4,7 +4,6 @@ import {
   createTimerTemplate,
   createErrorTemplate,
 } from "../utils/embedTemplates.ts";
-import { StatusEmojis } from "../utils/constants.ts";
 import {
   safeDeferReply,
   safeErrorReply,
@@ -98,7 +97,7 @@ export default {
           } else {
             // Timer is valid and active, reject the new timer request
             const embed = createErrorTemplate(
-              `${StatusEmojis.WARNING} Timer Already Running`,
+              `⚠️ Timer Already Running`,
               `A Pomodoro timer is already active in <#${voiceChannelId}>! Only one timer per voice channel is allowed.`,
               {
                 helpText: `ℹ️ Use \`/stoptimer\` to stop the current timer first`,
@@ -120,7 +119,7 @@ export default {
       const breakTime = interaction.options.getInteger("break") || 0;
       if (work < 20 || (breakTime > 0 && breakTime < 5)) {
         const embed = createErrorTemplate(
-          `${StatusEmojis.WARNING} Invalid Timer Values`,
+          `⚠️ Invalid Timer Values`,
           "Please ensure your timer values meet the minimum requirements for effective productivity sessions.",
           {
             helpText: `ℹ️ Try again with valid values`,

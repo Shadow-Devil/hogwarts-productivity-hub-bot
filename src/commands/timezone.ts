@@ -4,7 +4,7 @@ import {
   ChatInputCommandInteraction,
 } from "discord.js";
 import * as timezoneService from "../services/timezoneService.ts";
-import { BotColors, StatusEmojis } from "../utils/constants.ts";
+import { BotColors } from "../utils/constants.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
@@ -346,7 +346,7 @@ async function getNextResetDisplay(discordId: string, resetType: string) {
 function createTimezoneEmbed(userTimezone, userLocalTime, nextResets) {
   const embed = new EmbedBuilder()
     .setColor(BotColors.SUCCESS)
-    .setTitle(`${StatusEmojis.CLOCK} Your Timezone Settings`)
+    .setTitle(`🕰️ Your Timezone Settings`)
     .addFields(
       {
         name: "🌍 Current Timezone",
@@ -435,7 +435,7 @@ function createTimezoneChangeEmbed(
 ) {
   const embed = new EmbedBuilder()
     .setColor(BotColors.SUCCESS)
-    .setTitle(`${StatusEmojis.SUCCESS} Timezone Updated Successfully`)
+    .setTitle(`✅ Timezone Updated Successfully`)
     .addFields(
       {
         name: "🔄 Change Summary",

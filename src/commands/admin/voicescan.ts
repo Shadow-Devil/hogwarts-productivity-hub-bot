@@ -5,15 +5,15 @@ import {
   MessageFlags,
   ChatInputCommandInteraction,
 } from "discord.js";
-import * as voiceStateScanner from "../utils/voiceStateScanner.ts";
+import * as voiceStateScanner from "../../utils/voiceStateScanner.ts";
 import {
   createHeader,
   formatDataTable,
   createStatsCard,
-} from "../utils/visualHelpers.ts";
-import { safeDeferReply } from "../utils/interactionUtils.ts";
+} from "../../utils/visualHelpers.ts";
+import { safeDeferReply } from "../../utils/interactionUtils.ts";
 // Get active voice sessions from the voice state update handler
-import { activeVoiceSessions } from "../events/voiceStateUpdate.ts";
+import { activeVoiceSessions } from "../../events/voiceStateUpdate.ts";
 
 export default {
   data: new SlashCommandBuilder()

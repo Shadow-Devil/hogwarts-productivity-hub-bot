@@ -4,7 +4,6 @@ import {
   createSuccessTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
-import { StatusEmojis } from "../../utils/constants.ts";
 import {
   safeDeferReply,
   safeErrorReply,
@@ -50,7 +49,7 @@ export default {
           );
 
           const embed = createErrorTemplate(
-            `${StatusEmojis.WARNING} Daily Task Limit Reached`,
+            `⚠️ Daily Task Limit Reached`,
             result.message,
             {
               helpText: `ℹ️ Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
@@ -72,8 +71,8 @@ export default {
         }
       } else {
         const embed = createSuccessTemplate(
-          `${StatusEmojis.COMPLETED} Task Completed Successfully!`,
-          `**${result.message}**\n\n${StatusEmojis.READY} Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
+          `✅ Task Completed Successfully!`,
+          `**${result.message}**\n\n🚀 Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
           {
             celebration: true,
             points: 2,

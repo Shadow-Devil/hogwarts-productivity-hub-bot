@@ -5,13 +5,13 @@ import {
   MessageFlags,
   ChatInputCommandInteraction,
 } from "discord.js";
-import * as sessionRecovery from "../utils/sessionRecovery.ts";
+import * as sessionRecovery from "../../utils/sessionRecovery.ts";
 import {
   createHeader,
   formatDataTable,
   createStatsCard,
-} from "../utils/visualHelpers.ts";
-import { safeDeferReply } from "../utils/interactionUtils.ts";
+} from "../../utils/visualHelpers.ts";
+import { safeDeferReply } from "../../utils/interactionUtils.ts";
 
 async function status(interaction: ChatInputCommandInteraction) {
   const stats = sessionRecovery.getRecoveryStats();

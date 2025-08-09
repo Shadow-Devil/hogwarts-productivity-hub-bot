@@ -8,17 +8,18 @@ import viewtasks from "./commands/tasks/viewtasks.ts";
 import removetask from "./commands/tasks/removetask.ts";
 import completetask from "./commands/tasks/completetask.ts";
 
-import debug from "./commands/debug.ts";
-import graceperiod from "./commands/graceperiod.ts";
+import debug from "./commands/admin/debug.ts";
+import graceperiod from "./commands/admin/graceperiod.ts";
+import recovery from "./commands/admin/recovery.ts";
+import voicescan from "./commands/admin/voicescan.ts";
+
 import housepoints from "./commands/housepoints.ts";
 import leaderboard from "./commands/leaderboard.ts";
-import recovery from "./commands/recovery.ts";
 import stats from "./commands/stats.ts";
 import stoptimer from "./commands/stoptimer.ts";
 import time from "./commands/time.ts";
 import timer from "./commands/timer.ts";
 import timezoneCommand from "./commands/timezone.ts";
-import voicescan from "./commands/voicescan.ts";
 
 export type Command = {
   data: SharedSlashCommand;
@@ -37,12 +38,13 @@ commands.set(completetask.data.name, completetask);
 
 commands.set(debug.data.name, debug);
 commands.set(graceperiod.data.name, graceperiod);
+commands.set(recovery.data.name, recovery);
+commands.set(voicescan.data.name, voicescan);
+
 commands.set(housepoints.data.name, housepoints);
 commands.set(leaderboard.data.name, leaderboard);
-commands.set(recovery.data.name, recovery);
 commands.set(stats.data.name, stats);
 commands.set(stoptimer.data.name, stoptimer);
 commands.set(time.data.name, time);
 commands.set(timer.data.name, timer);
 commands.set(timezoneCommand.data.name, timezoneCommand);
-commands.set(voicescan.data.name, voicescan);

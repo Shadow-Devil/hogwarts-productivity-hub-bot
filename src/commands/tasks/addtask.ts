@@ -4,7 +4,6 @@ import {
   createSuccessTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
-import { StatusEmojis } from "../../utils/constants.ts";
 import { safeDeferReply, safeErrorReply } from "../../utils/interactionUtils.ts";
 import dayjs from "dayjs";
 
@@ -46,7 +45,7 @@ export default {
 
       if (title.length > 500) {
         const embed = createErrorTemplate(
-          `${StatusEmojis.WARNING} Task Title Too Long`,
+          `⚠️ Task Title Too Long`,
           "Task title must be 500 characters or less for optimal readability.",
           {
             helpText: `ℹ️ Current length: ${title.length}/500 characters`,
@@ -69,7 +68,7 @@ export default {
           );
 
           const embed = createErrorTemplate(
-            `${StatusEmojis.WARNING} Daily Task Limit Reached`,
+            `⚠️ Daily Task Limit Reached`,
             result.message,
             {
               helpText: `ℹ️ Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
@@ -90,8 +89,8 @@ export default {
       }
 
       const embed = createSuccessTemplate(
-        `${StatusEmojis.COMPLETED} Task Added Successfully!`,
-        `**${result.task.title}**\n\n${StatusEmojis.READY} Your task has been added to your personal to-do list and is ready for completion.`,
+        `✅ Task Added Successfully!`,
+        `**${result.task.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
         {
           celebration: true,
           points: 2,

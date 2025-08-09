@@ -6,7 +6,6 @@
 import { describe, expect, test } from "vitest";
 import {
   BotColors,
-  StatusEmojis,
   VisualPatterns,
 } from "../../src/utils/constants.ts";
 
@@ -54,58 +53,8 @@ describe("Constants Module", () => {
     });
   });
 
-  describe("StatusEmojis", () => {
-    test("should have all core status emojis", () => {
-      const coreEmojis = [
-        "SUCCESS",
-        "ERROR",
-        "WARNING",
-        "INFO",
-        "LOADING",
-        "IN_PROGRESS",
-        "COMPLETED",
-        "HEALTHY",
-        "READY",
-      ];
 
-      coreEmojis.forEach((emoji) => {
-        expect(StatusEmojis).toHaveProperty(emoji);
-        expect(typeof StatusEmojis[emoji]).toBe("string");
-        expect(StatusEmojis[emoji].length).toBeGreaterThan(0);
-      });
-    });
 
-    test("should have timer-specific emojis", () => {
-      const timerEmojis = ["TIMER_ACTIVE", "TIMER_PAUSED", "TIMER_STOPPED"];
-
-      timerEmojis.forEach((emoji) => {
-        expect(StatusEmojis).toHaveProperty(emoji);
-        expect(typeof StatusEmojis[emoji]).toBe("string");
-      });
-    });
-
-    test("should have house-specific emojis", () => {
-      const houseEmojis = [
-        "HOUSE_GRYFFINDOR",
-        "HOUSE_HUFFLEPUFF",
-        "HOUSE_RAVENCLAW",
-        "HOUSE_SLYTHERIN",
-      ];
-
-      houseEmojis.forEach((emoji) => {
-        expect(StatusEmojis).toHaveProperty(emoji);
-        expect(typeof StatusEmojis[emoji]).toBe("string");
-      });
-    });
-
-    test("should not have duplicate emoji values for different meanings", () => {
-      const values = Object.values(StatusEmojis);
-      const uniqueValues = [...new Set(values)];
-
-      // Allow some duplicates (like SUCCESS and COMPLETED both being ✅)
-      // but ensure we don't have too many duplicates
-      expect(uniqueValues.length).toBeGreaterThan(values.length * 0.7);
-    });
   });
 
   describe("VisualPatterns", () => {
@@ -143,7 +92,6 @@ describe("Constants Module", () => {
   describe("Module Integration", () => {
     test("should export all required constants", () => {
       expect(BotColors).toBeDefined();
-      expect(StatusEmojis).toBeDefined();
       expect(VisualPatterns).toBeDefined();
     });
 
@@ -153,10 +101,6 @@ describe("Constants Module", () => {
         expect(key).toMatch(/^[A-Z_]+$/);
       });
 
-      // All emoji constants should be UPPER_CASE
-      Object.keys(StatusEmojis).forEach((key) => {
-        expect(key).toMatch(/^[A-Z_]+$/);
-      });
     });
   });
 });

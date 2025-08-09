@@ -4,16 +4,16 @@ import {
   EmbedBuilder,
   ChatInputCommandInteraction,
 } from "discord.js";
-import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
+import { getUserVoiceChannel } from "../../utils/voiceUtils.ts";
 import {
   createHeader,
   formatDataTable,
   createStatsCard,
-} from "../utils/visualHelpers.ts";
+} from "../../utils/visualHelpers.ts";
 import {
   activeVoiceSessions,
   gracePeriodSessions,
-} from "../events/voiceStateUpdate.ts";
+} from "../../events/voiceStateUpdate.ts";
 
 export default {
   data: new SlashCommandBuilder()

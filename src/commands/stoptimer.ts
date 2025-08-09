@@ -4,7 +4,6 @@ import {
   createSuccessTemplate,
   createErrorTemplate,
 } from "../utils/embedTemplates.ts";
-import { StatusEmojis } from "../utils/constants.ts";
 import {
   safeDeferReply,
   safeErrorReply,
@@ -55,7 +54,7 @@ export default {
       const voiceChannelId = voiceChannel.id;
       if (!activeVoiceTimers.has(voiceChannelId)) {
         const embed = createErrorTemplate(
-          `${StatusEmojis.WARNING} No Active Timer Found`,
+          `⚠️ No Active Timer Found`,
           `No Pomodoro timer is currently running in <#${voiceChannelId}>. There's nothing to stop!`,
           {
             helpText: `ℹ️ Use \`/timer <work_minutes>\` to start a new Pomodoro session`,
@@ -72,8 +71,8 @@ export default {
       activeVoiceTimers.delete(voiceChannelId);
 
       const embed = createSuccessTemplate(
-        `${StatusEmojis.COMPLETED} Timer Stopped Successfully`,
-        `Your Pomodoro timer in <#${voiceChannelId}> has been stopped. ${StatusEmojis.READY} No worries - every session counts towards building your productivity habits!`,
+        `✅ Timer Stopped Successfully`,
+        `Your Pomodoro timer in <#${voiceChannelId}> has been stopped. 🚀 No worries - every session counts towards building your productivity habits!`,
         {}
       );
 

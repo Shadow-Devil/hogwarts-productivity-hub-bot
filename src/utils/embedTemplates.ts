@@ -1,7 +1,7 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
 
-import { BotColors, StatusEmojis } from "./constants.ts";
+import { BotColors } from "./constants.ts";
 import {
   createHeader,
   createProgressBar,
@@ -696,14 +696,14 @@ function createHealthTemplate(
   const finalStatusEmoji =
     statusEmoji ||
     (status === "healthy"
-      ? StatusEmojis.HEALTHY
+      ? "�"
       : status === "degraded"
-        ? StatusEmojis.WARNING
+        ? "⚠️"
         : status === "unavailable"
           ? "⚠️"
           : status === "initializing"
             ? "🔄"
-            : StatusEmojis.ERROR);
+            : "❌");
   const isHealthy =
     systemHealth !== undefined ? systemHealth : status === "healthy";
 
@@ -1033,7 +1033,7 @@ function createTimerTemplate(
         embed.addFields([
           {
             name: "📊 Progress Tracker",
-            value: `${progressBar.bar}\n**Phase:** Work Session • **Status:** ${StatusEmojis.IN_PROGRESS} Active`,
+            value: `${progressBar.bar}\n**Phase:** Work Session • **Status:** 🔄 Active`,
             inline: false,
           },
         ]);
@@ -1130,7 +1130,7 @@ function createTimerTemplate(
         embed.addFields([
           {
             name: "📊 Progress",
-            value: `${progressBar.bar}\n**Time Remaining:** ${timeRemaining} minutes • **Status:** ${StatusEmojis.IN_PROGRESS} Active`,
+            value: `${progressBar.bar}\n**Time Remaining:** ${timeRemaining} minutes • **Status:** 🔄 Active`,
             inline: false,
           },
         ]);

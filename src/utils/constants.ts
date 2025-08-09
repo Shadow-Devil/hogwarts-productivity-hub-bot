@@ -19,35 +19,6 @@ const BotColors = {
   HOUSE_SLYTHERIN: 0x1a472a,
 };
 
-// Status Emojis - Visual feedback for user actions
-const StatusEmojis = {
-  SUCCESS: "✅",
-  ERROR: "❌",
-  WARNING: "⚠️",
-  INFO: "ℹ️",
-  LOADING: "⏳",
-  IN_PROGRESS: "🔄",
-  COMPLETE: "✅",
-  COMPLETED: "✅",
-  CANCELLED: "❌",
-  PENDING: "⏳",
-  HEALTHY: "�",
-  UNHEALTHY: "💔",
-  MAINTENANCE: "🔧",
-  TIMER_ACTIVE: "⏱️",
-  TIMER_PAUSED: "⏸️",
-  TIMER_STOPPED: "⏹️",
-  HOUSE_GRYFFINDOR: "🦁",
-  HOUSE_HUFFLEPUFF: "🦡",
-  HOUSE_RAVENCLAW: "🦅",
-  HOUSE_SLYTHERIN: "🐍",
-  CLOCK: "🕰️",
-  READY: "🚀",
-  FAILED: "❌",
-  PAUSED: "⏸️",
-  UNKNOWN: "⚪",
-};
-
 // Common Visual Patterns
 const VisualPatterns = {
   PROGRESS_BAR: {
@@ -69,4 +40,4 @@ const VisualPatterns = {
   },
 };
 
-export { BotColors, StatusEmojis, VisualPatterns };
+export { BotColors, VisualPatterns };
