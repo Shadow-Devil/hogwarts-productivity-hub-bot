@@ -10,7 +10,7 @@ import {
   safeErrorReply,
   fastMemberFetch,
 } from "../utils/interactionUtils.ts";
-import { db, getUserHouse } from "../models/db.ts";
+import { db, getUserHouse } from "../db/db.ts";
 
 export default {
   data: new SlashCommandBuilder()

@@ -1,6 +1,6 @@
 import * as voiceService from "./voiceService.ts";
 import * as DailyTaskManager from "../utils/dailyTaskManager.ts";
-import { db } from "../models/db.ts";
+import { db } from "../db/db.ts";
 import { tasksTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 import dayjs from "dayjs";
@@ -126,17 +126,6 @@ export async function removeTask(discordId: string, taskNumber: number) {
 
 // Mark a task as complete
 export async function completeTask(discordId: string, taskNumber: number, member: GuildMember | null) {
-  // Check daily task limit first
-  const limitCheck = await DailyTaskManager.canUserCompleteTask(discordId);
-  if (!limitCheck.canAdd) {
-    return {
-      success: false,
-      message: `🚫 **Daily Task Limit Reached!**\n\nYou've reached your daily limit of **${limitCheck.limit} task actions** (${limitCheck.currentActions}/${limitCheck.limit}). Your limit resets at midnight.\n\n💡 **Tip:** Your limit counts both adding and completing tasks to encourage thoughtful task planning!`,
-      limitReached: true,
-      stats: limitCheck,
-    } as const;
-  }
-
   // Get all incomplete tasks for the user, ordered by creation date
   const tasksResult = await db.$client.query(
     `SELECT id, title, created_at FROM tasks

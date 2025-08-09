@@ -23,7 +23,7 @@ import * as voiceService from "./voiceService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
-import { db } from "../models/db.ts";
+import { db } from "../db/db.ts";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);

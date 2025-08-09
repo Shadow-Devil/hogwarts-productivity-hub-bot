@@ -4,7 +4,7 @@
  * Built on the existing solid database foundation for timezone support
  */
 
-import { db } from "../models/db.ts";
+import { db } from "../db/db.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";

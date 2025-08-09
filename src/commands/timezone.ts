@@ -11,7 +11,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
-import { db } from "../models/db.ts";
+import { db } from "../db/db.ts";
 import { usersTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 

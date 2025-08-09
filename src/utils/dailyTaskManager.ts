@@ -3,7 +3,7 @@
  * Handles 10 tasks per day limit, midnight cleanup, and daily voice stats reset
  */
 
-import { db } from "../models/db.ts";
+import { db } from "../db/db.ts";
 import dayjs from "dayjs";
 // Get reference to active voice sessions and grace period sessions
 import {
@@ -406,15 +406,6 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
       `⚠️ Could not send cleanup notification to ${discordId}: ${error}`
     );
   }
-}
-
-
-
-/**
- * Check if user can complete more tasks today
- */
-export async function canUserCompleteTask(discordId: string) {
-  return await canUserAddTask(discordId); // Same logic for both
 }
 
 /**

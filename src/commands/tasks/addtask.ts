@@ -4,7 +4,7 @@ import {
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
 import dayjs from "dayjs";
-import { db, ensureUserExists } from "../../models/db.ts";
+import { db, ensureUserExists, fetchUserTimezone } from "../../db/db.ts";
 import { tasksTable } from "../../db/schema.ts";
 import { DAILY_TASK_LIMIT } from "../../utils/dailyTaskManager.ts";
 import { eq } from "drizzle-orm";

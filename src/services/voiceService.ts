@@ -4,7 +4,7 @@ import {
   db,
   getUserHouse,
   checkAndPerformHouseMonthlyReset,
-} from "../models/db.ts";
+} from "../db/db.ts";
 import type { GuildMember } from "discord.js";
 
 

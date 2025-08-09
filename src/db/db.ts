@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { drizzle } from "drizzle-orm/node-postgres";
-import * as schema from "../db/schema.ts";
+import * as schema from "./schema.ts";
 import type { GuildMember } from "discord.js";
 import assert from "node:assert";
 import { eq } from "drizzle-orm";

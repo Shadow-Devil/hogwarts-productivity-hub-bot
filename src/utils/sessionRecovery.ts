@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { db } from "../models/db.ts";
+import { db } from "../db/db.ts";
 import * as voiceService from "../services/voiceService.ts";
 
 /**
