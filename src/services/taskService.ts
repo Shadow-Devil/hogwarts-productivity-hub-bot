@@ -79,39 +79,6 @@ export async function reclaimTaskSlot(discordId: string, taskCreatedAt: number) 
   };
 }
 
-// Add a new task for a user
-export async function addTask(discordId: string, title: string) {
-  // Check daily task limit first
-  const limitCheck = await DailyTaskManager.canUserAddTask(discordId);
-  if (!limitCheck.canAdd) {
-    return {
-      success: false,
-      message: `🚫 **Daily Task Limit Reached!**\n\nYou've reached your daily limit of **${limitCheck.limit} tasks** (${limitCheck.currentActions}/${limitCheck.limit}). Your limit resets at midnight.\n\n💡 **Tip:** Focus on completing your existing tasks to earn points!`,
-      limitReached: true,
-      stats: limitCheck,
-    } as const;
-  }
-
-  // First ensure user exists in database
-  await ensureUserExists(discordId);
-
-  const result = await db.$client.query(
-    `INSERT INTO tasks (user_id, discord_id, title)
-        VALUES ((SELECT id FROM users WHERE discord_id = $1), $1, $2)
-        RETURNING id, title, created_at`,
-    [discordId, title]
-  );
-
-  // Record task action for daily limit tracking
-  await DailyTaskManager.recordTaskAction(discordId, "add");
-
-  const task = result.rows[0];
-  return {
-    success: true,
-    task,
-    stats: await DailyTaskManager.getUserDailyStats(discordId),
-  } as const;
-}
 
 // Remove a task by its number (position in user's task list)
 export async function removeTask(discordId: string, taskNumber: number) {
@@ -212,9 +179,6 @@ export async function completeTask(discordId: string, taskNumber: number, member
     [pointsAwarded, taskToComplete.id]
   );
 
-  // Record task action for daily limit tracking
-  await DailyTaskManager.recordTaskAction(discordId, "complete");
-
   // Award points to user using voice service
   await voiceService.calculateAndAwardPoints(
     discordId,
@@ -261,15 +225,7 @@ async function validateTaskAge(taskId: string) {
   return { valid: true };
 }
 
-// Ensure user exists in database
-async function ensureUserExists(discordId: string) {
-  await db.$client.query(
-    `INSERT INTO users (discord_id, username)
-             VALUES ($1, $1)
-             ON CONFLICT (discord_id) DO NOTHING`,
-    [discordId]
-  );
-}
+
 
 // Get task statistics for a user (using optimized/fallback pattern)
 export async function getTaskStats(discordId: string) {

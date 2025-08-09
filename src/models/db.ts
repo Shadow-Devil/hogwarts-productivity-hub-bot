@@ -3,8 +3,22 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "../db/schema.ts";
 import type { GuildMember } from "discord.js";
 import assert from "node:assert";
+import { eq } from "drizzle-orm";
 
-export const db = drizzle({connection: process.env.DATABASE_URL!, schema});
+export const db = drizzle({connection: process.env.DATABASE_URL!, schema, casing: 'snake_case'});
+
+export async function ensureUserExists(discordId: string) {
+  await db.insert(schema.usersTable).values({ discordId }).onConflictDoNothing();
+}
+
+
+export async function fetchUserTimezone(discordId: string) {
+  return await db.select({ timezone: schema.usersTable.timezone })
+    .from(schema.usersTable)
+    .where(eq(schema.usersTable.discordId, discordId))
+    .then(rows => rows[0]?.timezone || "UTC");
+}
+
 
 // Check and perform monthly reset for houses if needed
 async function checkAndPerformHouseMonthlyReset() {

@@ -7,14 +7,6 @@ import {
 } from "../models/db.ts";
 import type { GuildMember } from "discord.js";
 
-/**
- * Convert minutes to hours with proper precision
- * @param {number} minutes - Minutes to convert
- * @returns {number} Hours as decimal
- */
-function minutesToHours(minutes: number): number {
-  return (minutes || 0) / 60;
-}
 
 /**
  * Round hours using the 55-minute rule
@@ -721,7 +713,7 @@ async function getUserDailyTime(discordId: string, date: string | null = null) {
     );
 
     const dailyMinutes = result.rows[0]?.total_minutes || 0;
-    const dailyHours = minutesToHours(dailyMinutes);
+    const dailyHours = (dailyMinutes || 0) / 60;
 
     // Use centralized daily limit calculation with timezone awareness
     const limitInfo = calculateDailyLimitInfo(dailyHours, 15, userTimezone);

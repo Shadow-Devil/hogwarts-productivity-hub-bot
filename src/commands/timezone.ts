@@ -88,14 +88,6 @@ async function evaluateStreakDuringTimezoneChange(
   }
 }
 
-
-/**
- * Handle timezone change for a user
- * @param {string} userId - User's Discord ID
- * @param {string} oldTimezone - Previous timezone
- * @param {string} newTimezone - New timezone
- * @returns {Promise<object>} Migration result
- */
 async function handleTimezoneChange(userId: string, oldTimezone: string, newTimezone: string) {
   try {
     // Validate new timezone before proceeding
@@ -108,7 +100,7 @@ async function handleTimezoneChange(userId: string, oldTimezone: string, newTime
     // Update timezone in database
     const result = await db.update(usersTable).set({
       timezone: newTimezone,
-    }).where(eq(usersTable.discord_id, userId));
+    }).where(eq(usersTable.discordId, userId));
 
     if (result.rowCount === 0) {
       throw new Error("User not found");

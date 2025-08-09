@@ -408,66 +408,13 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
   }
 }
 
-/**
- * Check if user can add more tasks today
- */
-export async function canUserAddTask(discordId: string) {
-  const today = dayjs().format("YYYY-MM-DD");
 
-  // Get today's task stats
-  const result = await db.$client.query(
-    "SELECT total_task_actions FROM daily_task_stats WHERE discord_id = $1 AND date = $2",
-    [discordId, today]
-  );
-
-  const currentActions = result.rows[0]?.total_task_actions || 0;
-  const remaining = Math.max(0, DAILY_TASK_LIMIT - currentActions);
-
-  return {
-    canAdd: currentActions < DAILY_TASK_LIMIT,
-    currentActions,
-    remaining,
-    limit: DAILY_TASK_LIMIT,
-  };
-}
 
 /**
  * Check if user can complete more tasks today
  */
 export async function canUserCompleteTask(discordId: string) {
   return await canUserAddTask(discordId); // Same logic for both
-}
-
-/**
- * Record a task action (add or complete)
- */
-export async function recordTaskAction(discordId: string, actionType: string) {
-  const today = dayjs().format("YYYY-MM-DD");
-
-  // Ensure user exists
-  await db.$client.query(
-    `INSERT INTO users (discord_id, username)
-                    VALUES ($1, $1)
-                    ON CONFLICT (discord_id) DO NOTHING`,
-    [discordId]
-  );
-
-  // Update or create daily task stats
-  const incrementField =
-    actionType === "add" ? "tasks_added" : "tasks_completed";
-
-  await db.$client.query(
-    `
-    INSERT INTO daily_task_stats (user_id, discord_id, date, ${incrementField}, total_task_actions)
-    VALUES ((SELECT id FROM users WHERE discord_id = $1), $1, $2, 1, 1)
-    ON CONFLICT (discord_id, date)
-    DO UPDATE SET
-        ${incrementField} = daily_task_stats.${incrementField} + 1,
-        total_task_actions = daily_task_stats.total_task_actions + 1,
-        updated_at = CURRENT_TIMESTAMP
-    `,
-    [discordId, today]
-  );
 }
 
 /**

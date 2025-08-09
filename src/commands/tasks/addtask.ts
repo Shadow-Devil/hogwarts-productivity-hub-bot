@@ -1,11 +1,13 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
-import * as taskService from "../../services/taskService.ts";
 import {
   createSuccessTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
-import { safeDeferReply, safeErrorReply } from "../../utils/interactionUtils.ts";
 import dayjs from "dayjs";
+import { db, ensureUserExists } from "../../models/db.ts";
+import { tasksTable } from "../../db/schema.ts";
+import { DAILY_TASK_LIMIT } from "../../utils/dailyTaskManager.ts";
+import { eq } from "drizzle-orm";
 
 export default {
   data: new SlashCommandBuilder()
@@ -20,96 +22,59 @@ export default {
         .setMaxLength(500)
     ),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    try {
-      // Immediately defer to prevent timeout
-      const deferred = await safeDeferReply(interaction);
-      if (!deferred) {
-        console.warn("Failed to defer addtask interaction");
-        return;
-      }
+    await interaction.deferReply();
 
-      const title = interaction.options.getString("title", true);
+    const title = interaction.options.getString("title", true);
+    const discordId = interaction.user.id;
 
-      // Validate title length and content
-      if (title.trim().length === 0) {
-        const embed = createErrorTemplate(
+    // Validate title length and content
+    if (title.trim().length === 0 || title.length > 500) {
+      await interaction.editReply({
+        embeds: [createErrorTemplate(
           `❌ Invalid Task Title`,
-          "Task title cannot be empty. Please provide a meaningful description for your task.",
-          {
-            helpText: `ℹ️ Try: \`/addtask Write project proposal\``,
-          }
-        );
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
+          `Task title cannot be empty and must be less then 500 characters.\nCurrent length: ${title.length}/500 characters`,
+        )]
+      });
+      return;
+    }
 
-      if (title.length > 500) {
-        const embed = createErrorTemplate(
-          `⚠️ Task Title Too Long`,
-          "Task title must be 500 characters or less for optimal readability.",
-          {
-            helpText: `ℹ️ Current length: ${title.length}/500 characters`,
-          }
-        );
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
+    await ensureUserExists(discordId);
 
-      // Add the task
-      const result = await taskService.addTask(
-        interaction.user.id,
-        title.trim()
+    const userTimezone = await fetchUserTimezone(discordId);
+
+    // Check daily task limit first
+    const currentTaskCount = await db.$count(tasksTable, eq(tasksTable.discordId, discordId));
+    if (currentTaskCount >= DAILY_TASK_LIMIT) {
+      const resetTime = Math.floor(
+        dayjs().tz(userTimezone).add(1, "day").startOf("day").valueOf() / 1000
       );
 
-      if (result.success === false) {
-        if (result.limitReached) {
-          const resetTime = Math.floor(
-            dayjs().add(1, "day").startOf("day").valueOf() / 1000
-          );
+      await interaction.editReply({
+        embeds: [createErrorTemplate(
+          `⚠️ Daily Task Limit Reached`,
+          `**Remaining:** ${DAILY_TASK_LIMIT - currentTaskCount} actions • **Resets:** <t:${resetTime}:R>`,
+          {
+            helpText: `ℹ️ Daily Progress: ${currentTaskCount}/${DAILY_TASK_LIMIT} task actions used`,
+          }
+        )]
+      });
+      return;
+    }
 
-          const embed = createErrorTemplate(
-            `⚠️ Daily Task Limit Reached`,
-            result.message,
-            {
-              helpText: `ℹ️ Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
-              additionalInfo: `**Remaining:** ${result.stats.remaining} actions • **Resets:** <t:${resetTime}:R>`,
-            }
-          );
-          await interaction.editReply({ embeds: [embed] });
-          return;
-        } else {
-          const embed = createErrorTemplate(
-            `❌ Task Creation Failed`,
-            result,
-            { helpText: `ℹ️ Please try again` }
-          );
-          await interaction.editReply({ embeds: [embed] });
-          return;
-        }
-      }
+    const result = await db.insert(tasksTable).values({
+      discordId,
+      title,
+    }).returning({ title: tasksTable.title });
 
-      const embed = createSuccessTemplate(
+    await interaction.editReply({
+      embeds: [createSuccessTemplate(
         `✅ Task Added Successfully!`,
-        `**${result.task.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
+        `**${result[0]?.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
         {
           celebration: true,
           points: 2,
         }
-      );
-
-      await interaction.editReply({ embeds: [embed] });
-    } catch (error) {
-      console.error("Error in /addtask:", error);
-
-      const embed = createErrorTemplate(
-        `❌ Task Creation Failed`,
-        "An unexpected error occurred while adding your task. Please try again in a moment.",
-        {
-          helpText: `ℹ️ If this problem persists, contact support`,
-        }
-      );
-
-      await safeErrorReply(interaction, embed);
-    }
-  },
+      )]
+    });
+  }
 };

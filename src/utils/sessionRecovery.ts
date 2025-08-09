@@ -54,11 +54,11 @@ async function recoverIncompleteSessions() {
   // Find incomplete sessions (no left_at timestamp)
   const result = await db.$client.query(
     `
-                    SELECT * FROM vc_sessions
-                    WHERE left_at IS NULL
-                    AND joined_at > $1
-                    ORDER BY joined_at ASC
-                `,
+        SELECT * FROM vc_sessions
+        WHERE left_at IS NULL
+        AND joined_at > $1
+        ORDER BY joined_at ASC
+    `,
     [staleThreshold]
   );
 
