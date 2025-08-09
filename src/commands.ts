@@ -1,4 +1,5 @@
 import {
+  AutocompleteInteraction,
   ChatInputCommandInteraction,
   Collection,
   SharedSlashCommand,
@@ -26,6 +27,9 @@ export type Command = {
   execute: (
     interaction: ChatInputCommandInteraction,
     options?: any
+  ) => Promise<void>;
+  autocomplete?: (
+    interaction: AutocompleteInteraction
   ) => Promise<void>;
 };
 

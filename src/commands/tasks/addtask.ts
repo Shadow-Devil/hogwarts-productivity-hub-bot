@@ -27,19 +27,7 @@ export default {
     const title = interaction.options.getString("title", true);
     const discordId = interaction.user.id;
 
-    // Validate title length and content
-    if (title.trim().length === 0 || title.length > 500) {
-      await interaction.editReply({
-        embeds: [createErrorTemplate(
-          `❌ Invalid Task Title`,
-          `Task title cannot be empty and must be less then 500 characters.\nCurrent length: ${title.length}/500 characters`,
-        )]
-      });
-      return;
-    }
-
     await ensureUserExists(discordId);
-
     const userTimezone = await fetchUserTimezone(discordId);
 
     // Check daily task limit first
@@ -61,7 +49,7 @@ export default {
       return;
     }
 
-    const result = await db.insert(tasksTable).values({
+    const tasks = await db.insert(tasksTable).values({
       discordId,
       title,
     }).returning({ title: tasksTable.title });
@@ -69,7 +57,7 @@ export default {
     await interaction.editReply({
       embeds: [createSuccessTemplate(
         `✅ Task Added Successfully!`,
-        `**${result[0]?.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
+        `**${tasks[0]?.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
         {
           celebration: true,
           points: 2,

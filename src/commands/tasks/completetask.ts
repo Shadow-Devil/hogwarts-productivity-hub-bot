@@ -1,14 +1,15 @@
-import { ChatInputCommandInteraction, GuildMember, SlashCommandBuilder } from "discord.js";
-import * as taskService from "../../services/taskService.ts";
+import { AutocompleteInteraction, ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import {
   createSuccessTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
-import {
-  safeDeferReply,
-  safeErrorReply,
-} from "../../utils/interactionUtils.ts";
 import dayjs from "dayjs";
+import { db } from "../../db/db.ts";
+import { tasksTable, usersTable } from "../../db/schema.ts";
+import { eq, and, sql } from "drizzle-orm";
+
+const TASK_POINT_SCORE = 2;
+
 
 export default {
   data: new SlashCommandBuilder()
@@ -16,87 +17,89 @@ export default {
     .setDescription("Mark a task as complete and earn 2 points")
     .addIntegerOption((option) =>
       option
-        .setName("number")
+        .setName("task")
         .setDescription(
           "The task number to complete (use /viewtasks to see numbers)"
         )
         .setRequired(true)
-        .setMinValue(1)
+        .setAutocomplete(true)
     ),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    try {
-      // Immediately defer to prevent timeout
-      const deferred = await safeDeferReply(interaction);
-      if (!deferred) {
-        console.warn("Failed to defer completetask interaction");
-        return;
-      }
+    await interaction.deferReply();
 
-      const discordId = interaction.user.id;
-      const taskNumber = interaction.options.getInteger("number", true);
-      const member = interaction.member as GuildMember | null;
+    const discordId = interaction.user.id;
+    const taskId = interaction.options.getInteger("task", true);
 
-      const result = await taskService.completeTask(
-        discordId,
-        taskNumber,
-        member
-      );
+    // Get all incomplete tasks for the user, ordered by creation date
+    const tasksResult = await db.select().from(tasksTable).where(and(
+      eq(tasksTable.discordId, discordId),
+      eq(tasksTable.isCompleted, false),
+      eq(tasksTable.id, taskId))
+    ).orderBy(tasksTable.createdAt);
 
-      if (result.success === false) {
-        if ("limitReached" in result && result.limitReached) {
-          const resetTime = Math.floor(
-            dayjs().add(1, "day").startOf("day").valueOf() / 1000
-          );
-
-          const embed = createErrorTemplate(
-            `⚠️ Daily Task Limit Reached`,
-            result.message,
-            {
-              helpText: `ℹ️ Daily Progress: ${result.stats.currentActions}/${result.stats.limit} task actions used`,
-              additionalInfo: `**Remaining:** ${result.stats.remaining} actions\n**Resets:** <t:${resetTime}:R>`,
-            }
-          );
-          await interaction.editReply({ embeds: [embed] });
-          return;
-        } else {
-          const embed = createErrorTemplate(
-            `❌ Task Completion Failed`,
-            result.message!!,
-            {
-              helpText: `ℹ️ Use \`/viewtasks\` to check your task numbers`,
-            }
-          );
-          await interaction.editReply({ embeds: [embed] });
-          return;
-        }
-      } else {
-        const embed = createSuccessTemplate(
-          `✅ Task Completed Successfully!`,
-          `**${result.message}**\n\n🚀 Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
-          {
-            celebration: true,
-            points: 2,
-            includeEmoji: true,
-            useEnhancedLayout: true,
-            useTableFormat: true,
-            showBigNumbers: true,
-          }
-        );
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
-    } catch (error) {
-      console.error("Error in /completetask:", error);
-
-      const embed = createErrorTemplate(
-        `❌ Task Completion Error`,
-        "An unexpected error occurred while completing your task. Please try again in a moment.",
-        {
-          helpText: `ℹ️ If this problem persists, contact support`,
-        }
-      );
-
-      await safeErrorReply(interaction, embed);
+    if (tasksResult.length === 0) {
+      await interaction.editReply({
+        embeds: [createErrorTemplate(
+          `❌ Task Completion Failed`,
+          `Could not find task. Use \`/viewtasks\` to check your tasks`,
+        )]
+      });
+      return;
     }
+
+    const taskToComplete = tasksResult[0]!!;
+    if (dayjs().diff(dayjs(taskToComplete.createdAt), 'minute') < 20) {
+      await interaction.editReply({
+        embeds: [createErrorTemplate(
+          `❌ Task Completion Failed`,
+          `You can only complete tasks that are at least 20 minutes old. Please try again later.`,
+        )]
+      });
+      return;
+    }
+
+
+    // Mark task as complete
+    db.transaction(async (tx) => {
+      await tx.update(tasksTable)
+        .set({
+          isCompleted: true,
+          completedAt: new Date(),
+        })
+        .where(eq(tasksTable.id, taskToComplete.id));
+      // Update user's total points
+      await tx.update(usersTable)
+        .set({
+          totalPoints: sql`${usersTable.totalPoints} + ${TASK_POINT_SCORE}`,
+        })
+        .where(eq(usersTable.discordId, discordId));
+    });
+
+    await interaction.editReply({
+      embeds: [(createSuccessTemplate(
+        `✅ Task Completed Successfully!`,
+        `**✅ Completed: "${taskToComplete.title}" (+${TASK_POINT_SCORE} points)**\n\n🚀 Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
+        {
+          celebration: true,
+          points: 2,
+          includeEmoji: true,
+          useEnhancedLayout: true,
+          useTableFormat: true,
+          showBigNumbers: true,
+        }
+      ))]
+    });
   },
+  autocomplete: async (interaction: AutocompleteInteraction) => {
+    const results = await db.select({ title: tasksTable.title, id: tasksTable.id }).from(tasksTable).where(
+      and(
+        eq(tasksTable.discordId, interaction.user.id),
+        eq(tasksTable.isCompleted, false)
+      )
+    );
+    interaction.respond(results.map((task) => ({
+      name: task.title,
+      value: task.id,
+    })));
+  }
 };

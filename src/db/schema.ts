@@ -12,7 +12,7 @@ export const usersTable = pgTable("users", {
     timezone: varchar({length: 50}).default("UTC"),
 
     // Score fields
-    total_points: integer().default(0),
+    totalPoints: integer().default(0),
     streak: integer().default(0),
 });
 

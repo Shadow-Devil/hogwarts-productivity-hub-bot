@@ -1,10 +1,8 @@
-import * as voiceService from "./voiceService.ts";
 import * as DailyTaskManager from "../utils/dailyTaskManager.ts";
 import { db } from "../db/db.ts";
 import { tasksTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 import dayjs from "dayjs";
-import type { GuildMember } from "discord.js";
 
 
 /**
@@ -123,97 +121,6 @@ export async function removeTask(discordId: string, taskNumber: number) {
     slotReclaimed: reclaimResult.slotReclaimed,
   };
 }
-
-// Mark a task as complete
-export async function completeTask(discordId: string, taskNumber: number, member: GuildMember | null) {
-  // Get all incomplete tasks for the user, ordered by creation date
-  const tasksResult = await db.$client.query(
-    `SELECT id, title, created_at FROM tasks
-                  WHERE discord_id = $1 AND is_complete = FALSE
-                  ORDER BY created_at ASC`,
-    [discordId]
-  );
-
-  if (tasksResult.rows.length === 0) {
-    return {
-      success: false,
-      message: "You have no incomplete tasks.",
-    } as const;
-  }
-
-  if (taskNumber < 1 || taskNumber > tasksResult.rows.length) {
-    return {
-      success: false,
-      message: `Invalid task number. You have ${tasksResult.rows.length} incomplete task(s).`,
-    } as const;
-  }
-
-  const taskToComplete = tasksResult.rows[taskNumber - 1];
-
-  // Check if task is at least 20 minutes old
-  const taskValidation = await validateTaskAge(taskToComplete.id);
-  if (!taskValidation.valid) {
-    return { success: false, message: taskValidation.message };
-  }
-
-  const pointsAwarded = 2; // 2 points per completed task
-
-  // Mark task as complete
-  await db.$client.query(
-    `UPDATE tasks SET
-                    is_complete = TRUE,
-                    completed_at = CURRENT_TIMESTAMP,
-                    points_awarded = $1
-                  WHERE id = $2`,
-    [pointsAwarded, taskToComplete.id]
-  );
-
-  // Award points to user using voice service
-  await voiceService.calculateAndAwardPoints(
-    discordId,
-    0,
-    member,
-    pointsAwarded
-  );
-
-  return {
-    success: true,
-    task: taskToComplete,
-    points: pointsAwarded,
-    message: `✅ Completed: "${taskToComplete.title}" (+${pointsAwarded} points)`,
-    stats: await DailyTaskManager.getUserDailyStats(discordId),
-  } as const;
-}
-
-async function validateTaskAge(taskId: string) {
-  // Check task creation time
-  const taskResult = await db.$client.query(
-    "SELECT created_at FROM tasks WHERE id = $1",
-    [taskId]
-  );
-
-  if (taskResult.rows.length === 0) {
-    return {
-      valid: false,
-      message: "❌ Task not found.",
-    };
-  }
-
-  const createdAt = new Date(taskResult.rows[0].created_at).getTime();
-  const now = new Date().getTime();
-  const minutesSinceCreation = (now - createdAt) / (1000 * 60);
-
-  if (minutesSinceCreation < 20) {
-    const remainingTime = Math.ceil(20 - minutesSinceCreation);
-    return {
-      valid: false,
-      message: `⏰ Task must be at least 20 minutes old before it can be completed. Time remaining: ${remainingTime} minute(s).`,
-    };
-  }
-
-  return { valid: true };
-}
-
 
 
 // Get task statistics for a user (using optimized/fallback pattern)

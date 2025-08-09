@@ -1,11 +1,12 @@
 import { MessageFlags, type Interaction } from "discord.js";
 import { commands } from "../commands.ts";
+import assert from "node:assert";
 
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
 
 export async function execute(interaction: Interaction): Promise<void> {
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand() && !interaction.isAutocomplete()) return;
 
     const command = commands.get(interaction.commandName);
     if (!command) {
@@ -28,7 +29,12 @@ export async function execute(interaction: Interaction): Promise<void> {
     );
 
     try {
-        await command.execute(interaction, { activeVoiceTimers });
+        if (interaction.isAutocomplete()) {
+            assert(command.autocomplete, `Command /${interaction.commandName} does not support autocomplete`);
+            command.autocomplete(interaction);
+        } else {
+            await command.execute(interaction, { activeVoiceTimers });
+        }
     } catch (error) {
         console.error(`💥 Command execution failed: /${interaction.commandName}`, {
             user: interaction.user.tag,
@@ -36,6 +42,7 @@ export async function execute(interaction: Interaction): Promise<void> {
             error,
             isTimeout: error instanceof Error && error?.message === "Command execution timeout",
         });
+        if (interaction.isAutocomplete()) return;
 
         // Improved error response handling with interaction state checks
         try {
@@ -56,12 +63,10 @@ export async function execute(interaction: Interaction): Promise<void> {
             }
             // If interaction is already replied, we can't send another response
         } catch (replyError) {
-
             console.error(
                 `💥 Failed to send error response for /${interaction.commandName}:`,
                 replyError
             );
-
         }
     }
 }
