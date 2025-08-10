@@ -46,24 +46,6 @@ export async function start() {
   isRunning = true;
 }
 
-/**
- * Stop the central reset service
- * Gracefully shuts down all scheduled jobs
- */
-export async function stop() {
-  if (!isRunning) {
-    return;
-  }
-
-  // Stop all scheduled jobs
-  for (const [, job] of scheduledJobs.entries()) {
-    await job.destroy();
-  }
-
-  scheduledJobs.clear();
-  isRunning = false;
-}
-
 export async function processDailyResets() {
   const usersNeedingPotentialReset = await db.select({
     discordId: userTable.discordId,

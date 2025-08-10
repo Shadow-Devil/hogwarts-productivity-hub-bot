@@ -6,7 +6,7 @@
 
 // Get grace period sessions if available
 import { client } from "../client.ts";
-import { activeVoiceSessions, gracePeriodSessions } from "../events/voiceStateUpdate.ts";
+import { activeVoiceSessions } from "../events/voiceStateUpdate.ts";
 import * as voiceService from "../services/voiceService.ts";
 import { BaseGuildVoiceChannel, ChannelType, Collection, type Guild } from "discord.js";
 
@@ -25,12 +25,9 @@ let scanResults: {
 
 /**
  * Scan all voice channels and start tracking for users already in voice
- * @param {Client} client - Discord client instance
- * @param {Map} activeVoiceSessions - Active voice sessions map from voiceStateUpdate
  * @returns {Object} Scan results
  */
-export async function scanAndStartTracking(
-) {
+export async function scanAndStartTracking() {
   if (isScanning) {
     console.log("🔄 Voice state scan already in progress, skipping...");
     return scanResults;
@@ -54,8 +51,7 @@ export async function scanAndStartTracking(
       console.log(`🏰 Scanning guild: ${guild.name} (${guild.id})`);
       await scanGuildVoiceStates(
         guild,
-        activeVoiceSessions,
-        gracePeriodSessions
+        activeVoiceSessions
       );
     }
 
@@ -110,12 +106,10 @@ export async function scanAndStartTracking(
  * Scan voice states for a specific guild
  * @param {Guild} guild - Discord guild
  * @param {Map} activeVoiceSessions - Active voice sessions map
- * @param {Map} gracePeriodSessions - Grace period sessions map
  */
 async function scanGuildVoiceStates(
   guild: Guild,
   activeVoiceSessions: Map<string, any>,
-  gracePeriodSessions: Map<string, any> | null = null
 ) {
   try {
     // Get all voice channels in the guild
@@ -131,7 +125,6 @@ async function scanGuildVoiceStates(
       await scanVoiceChannel(
         channel,
         activeVoiceSessions,
-        gracePeriodSessions
       );
     }
   } catch (error) {
@@ -148,8 +141,7 @@ async function scanGuildVoiceStates(
  */
 async function scanVoiceChannel(
   channel: BaseGuildVoiceChannel,
-  activeVoiceSessions: Map<string, any>,
-  gracePeriodSessions: Map<string, any> | null = null
+  activeVoiceSessions: Map<string, any>
 ) {
   try {
     const members = channel.members;
@@ -182,31 +174,6 @@ async function scanVoiceChannel(
         if (activeVoiceSessions.has(memberId)) {
           console.log(
             `⏭️  User ${member.user.username} already being tracked, skipping...`
-          );
-          continue;
-        }
-
-        // Check if user is in grace period - if so, resume their session
-        if (gracePeriodSessions && gracePeriodSessions.has(memberId)) {
-          console.log(
-            `🔄 User ${member.user.username} found in voice during grace period - resuming session`
-          );
-
-          const sessionData = gracePeriodSessions.get(memberId);
-          sessionData.lastSeen = new Date();
-          sessionData.channelId = channel.id; // Update channel in case they switched
-          delete sessionData.gracePeriodStart;
-
-          // Remove from grace period and ensure they're in active sessions
-          gracePeriodSessions.delete(memberId);
-          if (!activeVoiceSessions.has(memberId)) {
-            activeVoiceSessions.set(memberId, sessionData);
-          }
-
-          scanResults.trackingStarted++;
-          usersStarted.push(member.user.username);
-          console.log(
-            `✅ Session resumed for ${member.user.username} in ${channel.name}`
           );
           continue;
         }

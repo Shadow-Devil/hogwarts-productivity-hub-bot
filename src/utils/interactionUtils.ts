@@ -3,11 +3,9 @@
  * Prevents timeout and acknowledgment errors
  */
 
-import type {
-  CommandInteraction,
-  Guild,
-  GuildMember,
-  InteractionDeferReplyOptions,
+import {
+    type CommandInteraction,
+    type InteractionDeferReplyOptions, MessageFlags,
 } from "discord.js";
 
 /**
@@ -105,7 +103,7 @@ async function safeErrorReply(
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: "❌ An error occurred while processing your command.",
-          ephemeral: true,
+            flags: MessageFlags.Ephemeral
         });
         return true;
       }
@@ -117,40 +115,8 @@ async function safeErrorReply(
   }
 }
 
-/**
- * Optimized member fetch that avoids slow API calls when possible
- * @param {Guild} guild - Discord guild
- * @param {string} userId - User ID to fetch
- * @param {boolean} useCache - Whether to prefer cache over API
- * @returns {Promise<GuildMember|null>} - Guild member or null
- */
-async function fastMemberFetch(
-  guild: Guild | null,
-  userId: string,
-  useCache: boolean = true
-): Promise<GuildMember | null> {
-  try {
-    if (!guild || !userId) return null;
-
-    // Try cache first if requested
-    if (useCache) {
-      const cachedMember = guild.members.cache.get(userId);
-      if (cachedMember) return cachedMember;
-    }
-
-    // Fallback to API fetch with timeout
-    const fetchPromise = guild.members.fetch(userId);
-
-    return await fetchPromise;
-  } catch (error) {
-    console.warn(`Failed to fetch member ${userId}:`, error);
-    return null;
-  }
-}
-
 export {
   safeDeferReply,
   safeReply,
   safeErrorReply,
-  fastMemberFetch,
 };

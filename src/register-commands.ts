@@ -3,6 +3,7 @@ import "dotenv/config";
 import { REST, Routes } from "discord.js";
 import { commands } from "./commands.ts";
 import assert from "node:assert/strict";
+import { db } from "./db/db.ts";
 
 assert(process.env.CLIENT_ID)
 assert(process.env.GUILD_ID)
@@ -18,4 +19,7 @@ await rest.put(
   ),
   { body: commands.map((command) => command.data.toJSON()) }
 );
+
+await db.$client.end()
+
 console.log("Successfully registered all slash commands");

@@ -7,8 +7,6 @@ import {
 import tasks from "./commands/tasks.ts";
 
 import debug from "./commands/admin/debug.ts";
-import graceperiod from "./commands/admin/graceperiod.ts";
-import recovery from "./commands/admin/recovery.ts";
 import voicescan from "./commands/admin/voicescan.ts";
 
 import housepoints from "./commands/stats/housepoints.ts";
@@ -34,8 +32,6 @@ export const commands = new Collection<string, Command>();
 commands.set(tasks.data.name, tasks);
 
 commands.set(debug.data.name, debug);
-commands.set(graceperiod.data.name, graceperiod);
-commands.set(recovery.data.name, recovery);
 commands.set(voicescan.data.name, voicescan);
 
 commands.set(housepoints.data.name, housepoints);

@@ -12,7 +12,6 @@ import {
 } from "../../utils/visualHelpers.ts";
 import {
   activeVoiceSessions,
-  gracePeriodSessions,
 } from "../../events/voiceStateUpdate.ts";
 
 export default {
@@ -31,7 +30,6 @@ export default {
 
       // Get session tracking information
       const userSession = activeVoiceSessions.get(interaction.user.id);
-      const userInGracePeriod = gracePeriodSessions.get(interaction.user.id);
 
       // Test voice channel detection
       const voiceChannel = await getUserVoiceChannel(interaction);
@@ -70,7 +68,6 @@ export default {
         // Debug overview with enhanced grace period info
         let sessionTracked = "❌ Not Tracked";
         let sessionAge = 0;
-        let gracePeriodInfo = "N/A";
 
         if (userSession) {
           sessionTracked = "✅ Tracked";
@@ -79,14 +76,7 @@ export default {
           );
         }
 
-        if (userInGracePeriod) {
-          const gracePeriodElapsed = Math.floor(
-            (Date.now() - userInGracePeriod.gracePeriodStart) / (1000 * 60)
-          );
-          const gracePeriodRemaining = Math.max(0, 5 - gracePeriodElapsed);
-          sessionTracked = "⏸️ Grace Period";
-          gracePeriodInfo = `${gracePeriodRemaining} min remaining`;
-        }
+
 
         const debugStats = createStatsCard(
           "Debug Status",
@@ -95,7 +85,6 @@ export default {
             "Channel Members": `${voiceChannel.members.size}`,
             "Session Tracking": sessionTracked,
             "Session Age": userSession ? `${sessionAge} min` : "N/A",
-            "Grace Period": gracePeriodInfo,
             "Timer Status": timerStatus,
             Phase: timerPhase,
           },
@@ -155,9 +144,6 @@ export default {
 
         // Get global session statistics with grace period info
         const totalActiveSessions = activeVoiceSessions.size;
-        const totalGracePeriodSessions = gracePeriodSessions
-          ? gracePeriodSessions.size
-          : 0;
         const sessionsOlderThanHour = Array.from(
           activeVoiceSessions.values()
         ).filter(
@@ -182,7 +168,6 @@ export default {
             Detection: "❌ No Channel",
             "User Status": "Not in Voice",
             "Active Sessions": `${totalActiveSessions}`,
-            "Grace Period": `${totalGracePeriodSessions}`,
             "Long Sessions": `${sessionsOlderThanHour}`,
             Recommendation: "Join Voice Channel",
             "Commands Available": "Limited",

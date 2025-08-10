@@ -2,29 +2,21 @@ import { db } from "../db/db.ts";
 import * as voiceService from "../services/voiceService.ts";
 import { voiceSessionTable } from "../db/schema.ts";
 import { and, gt, isNull } from "drizzle-orm";
-import { activeVoiceSessions, gracePeriodSessions } from "../events/voiceStateUpdate.ts";
+import { activeVoiceSessions } from "../events/voiceStateUpdate.ts";
 
 /**
  * Session Recovery System
  * Handles crash recovery, periodic session saves, and graceful shutdowns
  * Enhanced with grace period session support for unstable connections
  */
-let isShuttingDown = false;
 let periodicSaveInterval: NodeJS.Timeout | null = null;
 
 // Configuration
-const config: {
-  saveIntervalMs: number; // Save every 2 minutes
-  maxSessionDurationHours: number; // Consider sessions over 24h as stale (increased for long study sessions)
-  recoveryGracePeriodMs: number; // 5 minutes grace period for recovery
-} = {
-  saveIntervalMs: 2 * 60 * 1000,
-  maxSessionDurationHours: 24,
-  recoveryGracePeriodMs: 5 * 60 * 1000,
+const config = {
+  saveIntervalMs: 2 * 60 * 1000,// Save every 2 minutes
+  maxSessionDurationHours: 24, // Consider sessions over 24h as stale (increased for long study sessions)
+  recoveryGracePeriodMs: 5 * 60 * 1000, // 5 minutes grace period for recovery
 };
-
-
-setupGracefulShutdown();
 
 /**
  * Initialize the session recovery system
@@ -35,7 +27,7 @@ export async function initialize() {
   const recoveredSessions = await recoverIncompleteSessions();
 
   if (recoveredSessions > 0) {
-    console.debug(`📈 Recovered ${recoveredSessions} incomplete sessions from previous runs`);
+    console.debug(`Recovered ${recoveredSessions} incomplete sessions from previous runs`);
   }
 
   // Start periodic session state saving
@@ -154,15 +146,7 @@ function startPeriodicSaving() {
     clearInterval(periodicSaveInterval);
   }
 
-  periodicSaveInterval = setInterval(async () => {
-    if (!isShuttingDown) {
-      try {
-        await saveActiveSessionStates();
-      } catch (error) {
-        console.error("❌ Error during periodic session save:", error);
-      }
-    }
-  }, config.saveIntervalMs);
+  periodicSaveInterval = setInterval(saveActiveSessionStates, config.saveIntervalMs);
 }
 
 /**
@@ -202,194 +186,3 @@ async function saveActiveSessionStates() {
     `💾 Heartbeat saved for ${activeSessions.length} active sessions`
   );
 }
-
-/**
- * Handle graceful shutdown
- */
-export async function handleGracefulShutdown() {
-  isShuttingDown = true;
-
-  console.log("🛑 Starting graceful shutdown of session recovery system...");
-
-  // Stop periodic saving
-  if (periodicSaveInterval) {
-    clearInterval(periodicSaveInterval);
-    periodicSaveInterval = null;
-  }
-
-  // Close all active sessions
-  await closeAllActiveSessions();
-
-  console.log("✅ Session recovery system shutdown complete");
-}
-
-/**
- * Close all currently active sessions during shutdown
- */
-async function closeAllActiveSessions() {
-  if (!activeVoiceSessions || activeVoiceSessions.size === 0) {
-    console.log("ℹ️ No active sessions to close");
-    return;
-  }
-  const now = new Date();
-  let closedSessions = 0;
-
-  console.log(
-    `🔄 Closing ${activeVoiceSessions.size} active voice sessions...`
-  );
-
-  for (const [userId, sessionData] of activeVoiceSessions.entries()) {
-    try {
-      // Calculate session duration
-      const durationMs = now.getTime() - sessionData.joinTime.getTime();
-      const durationMinutes = Math.floor(durationMs / (1000 * 60));
-
-      // Update session in database
-      await db.$client.query(
-        `
-            UPDATE voice_sessions
-            SET left_at = $1, duration_minutes = $2, recovery_note = 'Graceful shutdown'
-            WHERE id = $3 AND left_at IS NULL
-        `,
-        [now, durationMinutes, sessionData.sessionId]
-      );
-
-      // Award points if session was long enough
-      if (durationMinutes > 0) {
-        const pointsResult = await voiceService.calculateAndAwardPoints(
-          userId,
-          durationMinutes
-        );
-        const pointsEarned =
-          typeof pointsResult === "object"
-            ? pointsResult.pointsEarned
-            : pointsResult;
-
-        await voiceService.updateDailyStats(
-          userId,
-          durationMinutes,
-          pointsEarned
-        );
-
-        console.log(
-          `✅ Closed session for ${userId}: ${durationMinutes} minutes, ${pointsEarned} points`
-        );
-      }
-
-      closedSessions++;
-    } catch (error) {
-      console.error(`❌ Error closing session for user ${userId}:`, error);
-    }
-  }
-
-  // Clear both active sessions and grace period sessions maps
-  activeVoiceSessions.clear();
-
-  // Also clear grace period sessions and end any pending sessions
-  if (gracePeriodSessions && gracePeriodSessions.size > 0) {
-    console.log(
-      `🔄 Processing ${gracePeriodSessions.size} grace period sessions...`
-    );
-
-    for (const [userId, sessionData] of gracePeriodSessions.entries()) {
-      try {
-        console.log(
-          `⏰ Ending grace period session for ${userId} during shutdown`
-        );
-        await voiceService.endVoiceSession(
-          userId,
-          sessionData.channelId,
-          null
-        );
-      } catch (error) {
-        console.error(
-          `Error ending grace period session for ${userId}:`,
-          error
-        );
-      }
-    }
-    gracePeriodSessions.clear();
-    console.log("✅ Grace period sessions cleared during shutdown");
-  }
-
-  console.log(
-    `✅ Successfully closed ${closedSessions} voice sessions during shutdown`
-  );
-}
-
-/**
- * Setup graceful shutdown handlers
- */
-function setupGracefulShutdown() {
-  // Note: SIGINT/SIGTERM are handled by main index.js shutdown()
-  // This only handles unexpected crashes and exceptions
-
-  // Handle uncaught exceptions
-  process.on("uncaughtException", async (error) => {
-    console.error(
-      "💥 Uncaught Exception - attempting session recovery:",
-      error
-    );
-    try {
-      await forceSave();
-    } catch (saveError) {
-      console.error(
-        "❌ Failed to save sessions during uncaught exception:",
-        saveError
-      );
-    }
-    process.exit(1);
-  });
-
-  // Handle unhandled promise rejections
-  process.on("unhandledRejection", async (reason, _promise) => {
-    console.error(
-      "💥 Unhandled Rejection - attempting session recovery:",
-      reason
-    );
-    try {
-      await forceSave();
-    } catch (saveError) {
-      console.error(
-        "❌ Failed to save sessions during unhandled rejection:",
-        saveError
-      );
-    }
-  });
-}
-
-/**
- * Force save all session states (emergency)
- */
-export async function forceSave() {
-  if (isShuttingDown) return;
-
-  console.log("🚨 Emergency session state save triggered...");
-  try {
-    await saveActiveSessionStates();
-    console.log("✅ Emergency save completed");
-  } catch (error) {
-    console.error("❌ Emergency save failed:", error);
-    throw error;
-  }
-}
-
-/**
- * Get recovery system statistics
- */
-export function getRecoveryStats() {
-  return {
-    isShuttingDown: isShuttingDown,
-    isPeriodicSavingActive: !!periodicSaveInterval,
-    activeSessions: activeVoiceSessions
-      ? activeVoiceSessions.size
-      : 0,
-    gracePeriodSessions: gracePeriodSessions
-      ? gracePeriodSessions.size
-      : 0,
-    saveInterval: config.saveIntervalMs,
-    maxSessionDurationHours: config.maxSessionDurationHours,
-    isInitialized: false,
-  };
-}
-

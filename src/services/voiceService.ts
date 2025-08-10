@@ -1,10 +1,5 @@
 import dayjs from "dayjs";
-import {
-  db,
-  getUserHouse,
-  checkAndPerformHouseMonthlyReset,
-  fetchUserTimezone,
-} from "../db/db.ts";
+import { checkAndPerformHouseMonthlyReset, db, fetchUserTimezone, getUserHouse, } from "../db/db.ts";
 import type { GuildMember } from "discord.js";
 
 
@@ -17,49 +12,6 @@ import type { GuildMember } from "discord.js";
 function roundHoursFor55MinRule(hours: number): number {
   const minutes = (hours % 1) * 60; // Get the minutes portion
   return minutes >= 55 ? Math.ceil(hours) : Math.floor(hours);
-}
-
-/**
- * Calculate daily limit information for a user
- * @param {number} dailyHours - Current hours spent today
- * @param {number} dailyLimitHours - Daily limit (default 15)
- * @param {string} userTimezone - User's timezone (IANA identifier, e.g., 'America/New_York')
- * @returns {Object} Daily limit information
- */
-function calculateDailyLimitInfo(
-  dailyHours: number,
-  dailyLimitHours: number = 15,
-  userTimezone: string | null = null
-) {
-  // Calculate hours remaining in the daily allowance
-  const allowanceHoursRemaining = Math.max(0, dailyLimitHours - dailyHours);
-
-  // Calculate hours remaining until midnight (when daily limit resets)
-  // CRITICAL FIX: Use user's timezone for accurate midnight calculation
-  const now = userTimezone ? dayjs().tz(userTimezone) : dayjs();
-  const endOfDay = userTimezone
-    ? dayjs().tz(userTimezone).endOf("day")
-    : dayjs().endOf("day");
-  const hoursUntilMidnight = endOfDay.diff(now, "hour", true); // true for decimal precision
-
-  // CRITICAL FIX: The actual remaining hours is the MINIMUM of:
-  // 1. Hours left in daily allowance (15 - current hours used)
-  // 2. Hours until midnight reset (when a fresh 15 hours becomes available)
-  const remainingHours = Math.max(
-    0,
-    Math.min(allowanceHoursRemaining, hoursUntilMidnight)
-  );
-
-  return {
-    dailyHours,
-    allowanceHoursRemaining,
-    hoursUntilMidnight,
-    remainingHours,
-    limitReached: dailyHours >= dailyLimitHours,
-    canEarnPoints: dailyHours < dailyLimitHours,
-    isLimitedByAllowance: allowanceHoursRemaining <= hoursUntilMidnight,
-    isLimitedByTime: hoursUntilMidnight < allowanceHoursRemaining,
-  };
 }
 
 /**
@@ -569,13 +521,11 @@ export async function updateDailyStats(
 
     // Recalculate points based on total daily hours with 55-minute rounding
     const roundedDailyHours = roundHoursFor55MinRule(newTotalHours);
-    const recalculatedDailyPoints = calculatePointsForHours(
+    // Apply daily 15-hour limit to points calculation
+    let finalDailyPoints = calculatePointsForHours(
       0,
       roundedDailyHours
     );
-
-    // Apply daily 15-hour limit to points calculation
-    let finalDailyPoints = recalculatedDailyPoints;
     if (newTotalHours > 15) {
       // Cap at 15 hours worth of points
       const roundedLimitedHours = roundHoursFor55MinRule(
@@ -700,45 +650,6 @@ export async function handleMidnightCrossover(discordId: string, voiceChannelId:
   };
 }
 
-// Get user's daily voice time for limit checking (timezone-aware)
-async function getUserDailyTime(discordId: string, date: string | null = null) {
-  try {
-    // Use user's timezone for accurate date calculation
-    const targetDate =
-      date || (await getTodayInUserTimezone(discordId));
-    // Get user's timezone for accurate limit calculations
-    const userTimezone = await fetchUserTimezone(discordId);
-
-    // COMPATIBLE WITH DAILY CUMULATIVE POINTS SYSTEM:
-    // Query both current and archived daily stats to get accurate daily totals
-    const result = await db.$client.query(
-      `SELECT total_minutes FROM daily_voice_stats
-                     WHERE discord_id = $1 AND date = $2
-                     AND (archived IS NULL OR archived = false)`,
-      [discordId, targetDate]
-    );
-
-    const dailyMinutes = result.rows[0]?.total_minutes || 0;
-    const dailyHours = (dailyMinutes || 0) / 60;
-
-    // Use centralized daily limit calculation with timezone awareness
-    const limitInfo = calculateDailyLimitInfo(dailyHours, 15, userTimezone);
-
-    return {
-      dailyMinutes,
-      dailyHours: limitInfo.dailyHours,
-      remainingHours: limitInfo.remainingHours,
-      allowanceHoursRemaining: limitInfo.allowanceHoursRemaining,
-      hoursUntilMidnight: limitInfo.hoursUntilMidnight,
-      limitReached: limitInfo.limitReached,
-      canEarnPoints: limitInfo.canEarnPoints,
-    };
-  } catch (error) {
-    console.error("Error getting user daily time:", error);
-    throw error;
-  }
-}
-
 // Update user streak (only increment once per day) - timezone-aware
 async function updateStreak(discordId: string, sessionDate: number, userTimezone: string | null = null) {
   try {
@@ -770,33 +681,36 @@ async function updateStreak(discordId: string, sessionDate: number, userTimezone
     } else {
       const daysDiff = today.diff(lastVcDate, "day");
 
-      if (daysDiff === 1) {
-        // Consecutive day - increment streak
-        newStreak = userData.current_streak + 1;
-        shouldUpdateLastVcDate = true;
-      } else if (daysDiff > 1) {
-        // Missed days - reset streak to 1
-        newStreak = 1;
-        shouldUpdateLastVcDate = true;
-      } else if (daysDiff === 0) {
-        // Same day - don't change streak or date
-        console.log(
-          `🔥 Streak maintained for ${discordId}: ${newStreak} days (same day session in ${timezone})`
-        );
-        return; // No database update needed
+        if (daysDiff === 1) {
+          // Consecutive day - increment streak
+          newStreak = userData.current_streak + 1;
+          shouldUpdateLastVcDate = true;
+        } else if (daysDiff > 1) {
+          // Missed days - reset streak to 1
+          newStreak = 1;
+          shouldUpdateLastVcDate = true;
+        } else if (daysDiff === 0) {
+          // Same day - don't change streak or date
+          console.log(
+            `🔥 Streak maintained for ${discordId}: ${newStreak} days (same day session in ${timezone})`
+          );
+          return; // No database update needed
+        }
       }
-    }
 
     const newLongestStreak = Math.max(userData.longest_streak, newStreak);
 
     // Only update if streak changed or it's a new day
     if (shouldUpdateLastVcDate) {
       await db.$client.query(
-        `UPDATE users
-                     SET current_streak = $1, longest_streak = $2, last_vc_date = $3, updated_at = CURRENT_TIMESTAMP
-                     WHERE discord_id = $4`,
-        [newStreak, newLongestStreak, sessionDate, discordId]
-      );
+                `UPDATE users
+                 SET current_streak = $1,
+                     longest_streak = $2,
+                     last_vc_date = $3,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE discord_id = $4`,
+          [newStreak, newLongestStreak, sessionDate, discordId]
+        );
 
       console.log(
         `🔥 Streak updated for ${discordId}: ${newStreak} days (timezone: ${timezone})`
@@ -806,162 +720,4 @@ async function updateStreak(discordId: string, sessionDate: number, userTimezone
     console.error("Error updating streak:", error);
     throw error;
   }
-}
-
-// ========================================================================
-// OPTIMIZED METHODS USING DATABASE VIEWS (40-60% PERFORMANCE IMPROVEMENT)
-// ========================================================================
-
-// Get user voice stats using optimized view (replaces getUserStats)
-export async function getUserStatsOptimized(discordId: string) {
-  // Check and perform monthly reset if needed
-  await checkAndPerformMonthlyReset(discordId);
-
-  // Single query using optimized view - replaces 4+ separate queries
-  const result = await db.$client.query(
-    "SELECT * FROM user_complete_profile WHERE discord_id = $1",
-    [discordId]
-  );
-
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  const data = result.rows[0];
-
-  // Get daily limit information
-  const dailyLimitInfo = await getUserDailyTime(discordId);
-
-  const optimizedResult = {
-    user: {
-      id: data.id,
-      discord_id: data.discord_id,
-      username: data.username,
-      house: data.house,
-      monthly_points: data.monthly_points,
-      monthly_hours: data.monthly_hours,
-      all_time_points: data.all_time_points,
-      all_time_hours: data.all_time_hours,
-      current_streak: data.current_streak,
-      longest_streak: data.longest_streak,
-    },
-    today: {
-      minutes: data.today_minutes || 0,
-      sessions: data.today_sessions || 0,
-      points: data.today_points || 0,
-      hours: (data.today_minutes || 0) / 60,
-      // Add daily limit information
-      dailyHours: dailyLimitInfo.dailyHours,
-      remainingHours: dailyLimitInfo.remainingHours,
-      limitReached: dailyLimitInfo.limitReached,
-      canEarnPoints: dailyLimitInfo.canEarnPoints,
-    },
-    thisMonth: {
-      minutes: data.month_minutes || 0,
-      sessions: data.month_sessions || 0,
-      points: data.monthly_points,
-      hours: parseFloat(data.monthly_hours) || 0,
-    },
-    allTime: {
-      minutes:
-        (parseFloat(data.all_time_hours) + parseFloat(data.monthly_hours)) *
-        60,
-      sessions: data.month_sessions || 0, // Approximation
-      points: data.total_all_time_points,
-      hours: parseFloat(data.total_all_time_hours) || 0,
-    },
-    tasks: {
-      total: data.total_tasks || 0,
-      completed: data.completed_tasks || 0,
-      pending: data.pending_tasks || 0,
-      points: data.total_task_points || 0,
-    },
-    isCurrentlyInVoice: data.currently_in_voice,
-  };
-
-  return optimizedResult;
-}
-
-// Get leaderboard using optimized views
-export async function getLeaderboardOptimized(type = "monthly") {
-  let result;
-
-  if (type === "monthly") {
-    // Use monthly_leaderboard view - single optimized query
-    result = await db.$client.query("SELECT * FROM monthly_leaderboard");
-  } else {
-    // Use alltime_leaderboard view - single optimized query
-    result = await db.$client.query("SELECT * FROM alltime_leaderboard");
-  }
-
-  const optimizedResult = result.rows.map((entry) => ({
-    rank: entry.rank,
-    discord_id: entry.discord_id,
-    username: entry.username || "Unknown User",
-    house: entry.house,
-    hours: parseFloat(entry.hours) || 0,
-    points: parseInt(entry.points) || 0,
-  }));
-
-  return optimizedResult;
-}
-
-// Get house leaderboard using optimized views
-export async function getHouseLeaderboardOptimized(type: "monthly" | "alltime" = "monthly") {
-  // Use house_leaderboard_with_champions view - single optimized query
-  const result = await db.$client.query(
-    "SELECT * FROM house_leaderboard_with_champions"
-  );
-
-  const optimizedResult = result.rows.map((entry) => ({
-    rank: parseInt(entry.house_rank) || 0,
-    name: entry.house_name,
-    points:
-      type === "monthly"
-        ? parseInt(entry.house_monthly_points) || 0
-        : parseInt(entry.house_all_time_points) || 0,
-    monthlyPoints: parseInt(entry.house_monthly_points) || 0,
-    allTimePoints: parseInt(entry.house_all_time_points) || 0,
-    champion: {
-      discord_id: entry.champion_discord_id,
-      username: entry.champion_username,
-      points: parseInt(entry.champion_points) || 0,
-    },
-  }));
-
-  return optimizedResult;
-}
-
-
-
-/**
- * Reset daily voice statistics for a user
- * Called by centralResetService for timezone-aware daily resets
- * @param {string} discordId - Discord user ID
- * @returns {Promise<boolean>} Success status
- */
-export async function resetDailyStats(discordId: string): Promise<boolean> {
-  // Reset daily voice stats and limits
-  const result = await db.$client.query(
-    `
-      UPDATE users
-      SET
-          daily_hours = 0,
-          daily_limit_reached = false,
-          last_daily_reset_tz = NOW()
-      WHERE discord_id = $1
-      RETURNING discord_id`,
-    [discordId]
-  );
-
-  if (result.rowCount === 0) {
-    throw new Error(`User ${discordId} not found for daily reset`);
-  }
-
-  console.debug("Daily voice stats reset successfully", {
-    userId: discordId,
-    timestamp: new Date().toISOString(),
-  });
-
-  return true;
 }

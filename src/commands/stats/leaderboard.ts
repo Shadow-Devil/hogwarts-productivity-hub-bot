@@ -125,7 +125,7 @@ async function createLeaderboardTemplate(
         : username;
 
       leaderboardData.push([`${positionDisplay} ${userDisplay}`, `${hours}h • ${entry.points}pts`]);
-    };
+    }
 
     embed.addFields([
       {

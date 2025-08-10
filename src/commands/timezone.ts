@@ -69,26 +69,23 @@ async function viewTimezone(interaction: ChatInputCommandInteraction, discordId:
 
 async function setTimezone(interaction: ChatInputCommandInteraction, discordId: string, newTimezone: string) {
   // Validate timezone
-  try {
-    if (!dayjs().tz(newTimezone).isValid()) {
-      throw new Error(`Invalid timezone: ${newTimezone}`);
-    }
-  } catch (_error) {
+if (!dayjs().tz(newTimezone).isValid()) {
     await interaction.editReply({
-      embeds: [(new EmbedBuilder()
-        .setColor(BotColors.ERROR)
-        .setTitle(`❌ Invalid Timezone`)
-        .setDescription(`The timezone \`${newTimezone}\` is not valid.`)
-        .addFields({
-          name: "💡 Tips",
-          value: [
-            "• Check [IANA timezone list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)",
-            "• Format: `Continent/City` (e.g., `America/New_York`)",
-          ].join("\n"),
-        }))]
+        embeds: [(new EmbedBuilder()
+            .setColor(BotColors.ERROR)
+            .setTitle(`❌ Invalid Timezone`)
+            .setDescription(`The timezone \`${newTimezone}\` is not valid.`)
+            .addFields({
+                name: "💡 Tips",
+                value: [
+                    "• Check [IANA timezone list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)",
+                    "• Format: `Continent/City` (e.g., `America/New_York`)",
+                ].join("\n"),
+            }))]
     });
     return;
-  }
+}
+
 
   // Get current timezone for comparison
   const oldTimezone = await fetchUserTimezone(discordId);

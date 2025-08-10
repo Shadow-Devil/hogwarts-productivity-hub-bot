@@ -1,16 +1,16 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
 
-import type { User } from "discord.js";
-import { BotColors } from "./constants.ts";
+import type {User} from "discord.js";
+import {BotColors} from "./constants.ts";
 import {
-  createHeader,
-  createProgressBar,
-  formatDataGrid,
-  formatDataTable,
-  createStatsCard,
-  createProgressSection,
-  createStyledEmbed,
+    createHeader,
+    createProgressBar,
+    createProgressSection,
+    createStatsCard,
+    createStyledEmbed,
+    formatDataGrid,
+    formatDataTable,
 } from "./visualHelpers.ts";
 import dayjs from "dayjs";
 
@@ -33,7 +33,7 @@ function createTaskTemplate(
   const embed = createStyledEmbed("primary")
     .setTitle("📋 Personal Task Dashboard")
     .setThumbnail(user.displayAvatarURL());
-  ;
+
 
   if (emptyState || (Array.isArray(tasks) && tasks.length === 0)) {
     embed.setDescription(
@@ -298,26 +298,7 @@ function createHealthTemplate(
     includeTimestamp = true,
   } = {}
 ) {
-  // Handle both old and new parameter formats for backwards compatibility
-  let data,
-    type = "overview";
-  if (typeof title === "string") {
-    // New format: title, healthData, options
-    data = healthData;
-  } else {
-    // Old format: healthData, type, options (fallback)
-    data = title;
-    type = healthData || "overview";
-    title =
-      {
-        overview: "🩺 Bot Health Overview",
-        detailed: "🔍 Detailed Health Report",
-        database: "🗄️ Database Health Report",
-        performance: "⚡ Performance Health Report",
-      }[type] || "🩺 Bot Health Overview";
-  }
-
-  const {
+    const {
     status,
     statusEmoji,
     systemHealth,
@@ -332,7 +313,7 @@ function createHealthTemplate(
     troubleshooting = [],
     initializationNote,
     estimatedWait,
-  } = data;
+  } = healthData;
 
   // Determine status emoji and health state
   const finalStatusEmoji =
@@ -871,175 +852,10 @@ function createErrorTemplate(
   return embed;
 }
 
-// 👑 Enhanced House Champions Template
-function createChampionTemplate(
-  monthlyChampions: any[],
-  allTimeChampions: any[],
-  currentUser: { house: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin" | null },
-  { useEnhancedLayout = true, useTableFormat = true, showUserInfo = true } = {}
-) {
-  const houseEmojis = {
-    Gryffindor: "🦁",
-    Hufflepuff: "🦡",
-    Ravenclaw: "🦅",
-    Slytherin: "🐍",
-  };
-
-  const embed = createStyledEmbed().setColor(BotColors.PREMIUM).setTimestamp();
-
-  if (useEnhancedLayout) {
-    embed
-      .setTitle("👑 House Champions")
-      .setDescription("Top contributors from each house");
-  } else {
-    embed
-      .setTitle("👑 House Champions")
-      .setDescription("Top contributing members from each house");
-  }
-
-  // Define all houses for consistent display
-  const allHouses = ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"] as const;
-
-  // Monthly champions section - always show all houses
-  const monthlyChampionData = allHouses.map((house) => {
-    const emoji = houseEmojis[house];
-    const champion = (monthlyChampions || []).find((c) => c.house === house);
-    if (champion) {
-      return [
-        `${emoji} ${house}`,
-        `${champion.username} • ${champion.points.toLocaleString()} pts`,
-      ];
-    } else {
-      return [`${emoji} ${house}`, "No champion yet"];
-    }
-  });
-
-  if (useTableFormat) {
-    embed.addFields([
-      {
-        name: createHeader("Monthly Champions", null, "🗓️", "emphasis"),
-        value: formatDataTable(monthlyChampionData, [18, 25]),
-        inline: false,
-      },
-    ]);
-  } else {
-    let monthlyText = "";
-    allHouses.forEach((house) => {
-      const emoji = houseEmojis[house] || "🏠";
-      const champion = (monthlyChampions || []).find((c) => c.house === house);
-      if (champion) {
-        monthlyText += `${emoji} **${house}**: ${champion.username}\n`;
-        monthlyText += `   ${champion.points.toLocaleString()} points\n\n`;
-      } else {
-        monthlyText += `${emoji} **${house}**: No champion yet\n`;
-        monthlyText += "   0 points\n\n";
-      }
-    });
-
-    embed.addFields([
-      {
-        name: "🗓️ Monthly Champions",
-        value: monthlyText,
-        inline: true,
-      },
-    ]);
-  }
-
-  // All-time champions section - always show all houses
-  const allTimeChampionData = allHouses.map((house) => {
-    const emoji = houseEmojis[house] || "🏠";
-    const champion = (allTimeChampions || []).find((c) => c.house === house);
-    if (champion) {
-      return [
-        `${emoji} ${house}`,
-        `${champion.username} • ${champion.points.toLocaleString()} pts`,
-      ];
-    } else {
-      return [`${emoji} ${house}`, "No champion yet"];
-    }
-  });
-
-  if (useTableFormat) {
-    embed.addFields([
-      {
-        name: createHeader("All-Time Champions", null, "⭐", "emphasis"),
-        value: formatDataTable(allTimeChampionData, [18, 25]),
-        inline: false,
-      },
-    ]);
-  } else {
-    let allTimeText = "";
-    allHouses.forEach((house) => {
-      const emoji = houseEmojis[house] || "🏠";
-      const champion = (allTimeChampions || []).find((c) => c.house === house);
-      if (champion) {
-        allTimeText += `${emoji} **${house}**: ${champion.username}\n`;
-        allTimeText += `   ${champion.points.toLocaleString()} points\n\n`;
-      } else {
-        allTimeText += `${emoji} **${house}**: No champion yet\n`;
-        allTimeText += "   0 points\n\n";
-      }
-    });
-
-    embed.addFields([
-      {
-        name: "⭐ All-Time Champions",
-        value: allTimeText,
-        inline: true,
-      },
-    ]);
-  }
-
-  // User's house information
-  if (showUserInfo && currentUser && currentUser.house) {
-    const emoji = houseEmojis[currentUser.house] || "🏠";
-    embed.addFields([
-      {
-        name: createHeader("Your House", null, "🏠", "emphasis"),
-        value: `${emoji} **${currentUser.house}**`,
-        inline: false,
-      },
-    ]);
-  }
-
-  // Champions statistics - always show
-  const actualMonthlyChampions = (monthlyChampions || []).length;
-  const actualAllTimeChampions = (allTimeChampions || []).length;
-  const totalChampions = new Set([
-    ...(monthlyChampions || []).map((c) => c.house),
-    ...(allTimeChampions || []).map((c) => c.house),
-  ]).size;
-
-  const statsData = [
-    ["Houses Represented", totalChampions || 0],
-    ["Monthly Champions", actualMonthlyChampions],
-    ["All-Time Champions", actualAllTimeChampions],
-  ];
-
-  const statsDisplay = useTableFormat
-    ? formatDataTable(statsData, [18, 12])
-    : formatDataGrid(statsData);
-
-  embed.addFields([
-    {
-      name: createHeader("Champion Statistics", null, "📊", "emphasis"),
-      value: statsDisplay,
-      inline: false,
-    },
-  ]);
-
-  embed.setFooter({
-    text: "House champions are the highest point earners in each house",
-  });
-
-  return embed;
-}
-
 export {
   createTaskTemplate,
   createTimerTemplate,
   createHouseTemplate,
-  createChampionTemplate,
   createHealthTemplate,
   createSuccessTemplate,
   createErrorTemplate,
