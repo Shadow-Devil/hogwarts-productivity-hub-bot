@@ -588,14 +588,13 @@ function createTimerTemplate(
   return embed;
 }
 
-// ❌ Error Template
 function createErrorTemplate(
   title: string,
-  message: string,
+  ...messages: string[]
 ) {
   return createStyledEmbed("error")
     .setTitle(`❌ ${title}`)
-    .setDescription(message);
+    .setDescription(messages.join("\n"));
 }
 
 export {

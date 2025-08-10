@@ -58,8 +58,6 @@ export async function scanAndStartTracking() {
 
     const scanDuration = Date.now() - startTime;
 
-    console.log("✅ Voice state scan completed");
-    console.log("═".repeat(40));
     console.log("📊 VOICE SCAN SUMMARY:");
     console.log(`   🔍 Scan Duration: ${scanDuration}ms`);
     console.log(`   👥 Users Found: ${scanResults.totalUsersFound}`);

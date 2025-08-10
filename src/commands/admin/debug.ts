@@ -13,6 +13,7 @@ import {
 import { voiceSessionTable } from "../../db/schema.ts";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../../db/db.ts";
+import type { Command } from "../../commands.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -20,7 +21,7 @@ export default {
     .setDescription("Debug voice channel detection"),
   async execute(
     interaction: ChatInputCommandInteraction,
-    { activeVoiceTimers }: { activeVoiceTimers: Map<string, any> }
+    { activeVoiceTimers }
   ) {
     try {
       // Defer reply immediately to prevent timeout issues
@@ -47,9 +48,9 @@ export default {
         let timeRemaining = 0;
 
         if (activeVoiceTimers.has(voiceChannel.id)) {
-          const timer = activeVoiceTimers.get(voiceChannel.id);
+          const timer = activeVoiceTimers.get(voiceChannel.id)!;
           timeRemaining = Math.ceil(
-            (timer.endTime - new Date().getTime()) / 60000
+            (timer.endTime.getTime() - new Date().getTime()) / 60000
           );
           timerStatus = "Active timer detected";
           timerPhase = timer.phase.toUpperCase();
@@ -218,4 +219,4 @@ export default {
       }
     }
   },
-};
+} as Command;

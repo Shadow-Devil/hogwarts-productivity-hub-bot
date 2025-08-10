@@ -74,7 +74,7 @@ export default {
     if (leaderboard.length === 0) {
       await interaction.editReply({
         embeds: [(createErrorTemplate(
-          `ℹNo Leaderboard Data`,
+          `No Leaderboard Data`,
           "No data is available for the leaderboard yet. Be the first to start tracking your voice time!"
         ))]
       });

@@ -4,13 +4,9 @@ import {
   createSuccessTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
-import {
-  safeDeferReply,
-  safeErrorReply,
-  safeReply,
-} from "../../utils/interactionUtils.ts";
 import dayjs from "dayjs";
 import { fetchUserTimezone } from "../../db/db.ts";
+import type { Command } from "../../commands.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -18,17 +14,9 @@ export default {
     .setDescription("Stop the active Pomodoro timer in your voice channel"),
   async execute(
     interaction: ChatInputCommandInteraction,
-    { activeVoiceTimers }: {
-      activeVoiceTimers: Map<string, { endTime: number; phase: string; startTime: number; workTimeout?: NodeJS.Timeout; breakTimeout?: NodeJS.Timeout }>;
-    }
+    { activeVoiceTimers }
   ): Promise<void> {
-    try {
-      // Immediately defer to prevent timeout
-      const deferred = await safeDeferReply(interaction);
-      if (!deferred) {
-        console.warn("Failed to defer stoptimer interaction");
-        return;
-      }
+    await interaction.deferReply();
 
       // Use the reliable voice channel detection utility
       const voiceChannel = await getUserVoiceChannel(interaction);
@@ -38,7 +26,7 @@ export default {
           `Voice Channel Required`,
           "You must be in a voice channel to stop a timer and manage your productivity sessions.\nJoin the voice channel with an active timer\nTimer controls are tied to your current voice channel location.",
         );
-        await safeReply(interaction, { embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
         return;
       }
 
@@ -81,17 +69,6 @@ export default {
         });
       }
 
-      await interaction.editReply({ embeds: [embed] });
-      return;
-    } catch (error) {
-      console.error("Error in /stoptimer:", error);
-
-      const embed = createErrorTemplate(
-        `Timer Stop Failed`,
-        "An error occurred while stopping your timer. Please try again in a moment.",
-      );
-
-      await safeErrorReply(interaction, embed);
-    }
+    await interaction.editReply({ embeds: [embed] });
   },
-};
+} as Command;

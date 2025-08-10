@@ -20,7 +20,7 @@ export type Command = {
   data: SharedSlashCommand;
   execute: (
     interaction: ChatInputCommandInteraction,
-    options?: any
+    options: { activeVoiceTimers: Map<string, { endTime: Date; phase: "work" | "break"; startTime: number; workTimeout?: NodeJS.Timeout; breakTimeout?: NodeJS.Timeout }>; }
   ) => Promise<void>;
   autocomplete?: (
     interaction: AutocompleteInteraction

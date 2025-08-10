@@ -46,8 +46,6 @@ export async function getUserVoiceChannel(
   return null;
 }
 
-
-
 // Start a voice session when user joins VC (timezone-aware)
 export async function startVoiceSession(
   discordId: string,
