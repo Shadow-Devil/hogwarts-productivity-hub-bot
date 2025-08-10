@@ -114,7 +114,8 @@ async function createLeaderboardTemplate(
 
         positionDisplay = `#${position}`;
 
-      const hours = entry.voiceTime ? (entry.voiceTime / 3600).toFixed(1) : "0.0";
+      const hours = entry.voiceTime ? Math.floor(entry.voiceTime / 3600) : "0";
+      const minutes = entry.voiceTime ? Math.floor((entry.voiceTime % 3600) / 60) : "0";
 
       // Highlight current user
       const isCurrentUser = entry.discordId === interaction.user.id;
@@ -124,7 +125,7 @@ async function createLeaderboardTemplate(
         ? `**${username}**`
         : username;
 
-      leaderboardData.push([`${positionDisplay} ${userDisplay}`, `${hours}h • ${entry.points}pts`]);
+      leaderboardData.push([`${positionDisplay} ${userDisplay}`, `${hours}h ${minutes}min • ${entry.points}pts`]);
     }
 
     embed.addFields([
