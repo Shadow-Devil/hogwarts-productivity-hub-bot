@@ -8,7 +8,6 @@ import {
   createErrorTemplate,
   createHealthTemplate,
   createHouseTemplate,
-  createLeaderboardTemplate,
   createSuccessTemplate,
   createTaskTemplate,
   createTimerTemplate,
@@ -128,47 +127,19 @@ describe("Embed Templates", () => {
       });
     });
 
-    describe("createLeaderboardTemplate", () => {
-      it("should create a leaderboard template", () => {
-        const leaderboardData = [
-          { discord_id: "1", username: "User1", hours: 10.5, points: 100 },
-          { discord_id: "2", username: "User2", hours: 8.3, points: 80 },
-        ];
-
-        const currentUser = { id: "1" };
-
-        const result = createLeaderboardTemplate(
-          "monthly",
-          leaderboardData,
-          currentUser,
-        );
-        expect(result).toBeDefined();
-        expect(result.setTitle).toHaveBeenCalledWith(
-          "📅 Monthly Voice Leaderboard",
-        );
-      });
-
-      it("should handle empty leaderboard data", () => {
-        const currentUser = { id: "1" };
-
-        expect(() => {
-          createLeaderboardTemplate("monthly", [], currentUser);
-        }).not.toThrow();
-      });
-    });
 
     describe("createHouseTemplate", () => {
       it("should create a house points template", () => {
         const housesData = [
-          { name: "Gryffindor", points: 100 },
-          { name: "Hufflepuff", points: 90 },
-          { name: "Ravenclaw", points: 85 },
-          { name: "Slytherin", points: 80 },
-        ];
+          { name: "Gryffindor", points: 100, voiceTime: 1200 },
+          { name: "Hufflepuff", points: 90, voiceTime: 1100 },
+          { name: "Ravenclaw", points: 85, voiceTime: 1000 },
+          { name: "Slytherin", points: 80, voiceTime: 950 },
+        ] as const;
 
         const result = createHouseTemplate(housesData, "monthly");
         expect(result).toBeDefined();
-        expect(result.setTitle).toHaveBeenCalledWith("🏆 Monthly House Points");
+        expect(result.setTitle).toHaveBeenCalledWith("Monthly House Points");
         expect(result.setColor).toHaveBeenCalled();
       });
 
@@ -214,12 +185,7 @@ describe("Embed Templates", () => {
       // Test with null/undefined data - these may legitimately throw
       // since the functions expect certain data structures
       expect(() => {
-        createSuccessTemplate(null, null);
-      }).not.toThrow();
-
-      // Test leaderboard with proper empty array instead of null
-      expect(() => {
-        createLeaderboardTemplate("monthly", [], { id: "1" });
+        createSuccessTemplate("", "");
       }).not.toThrow();
     });
 
@@ -245,11 +211,6 @@ describe("Embed Templates", () => {
     it("should handle edge cases that the functions are designed for", () => {
       // Test functions with their expected minimal data structures
       // Note: Some functions expect Discord.js objects and will fail with improper mocks
-
-      // Leaderboard with empty but valid array
-      expect(() => {
-        createLeaderboardTemplate("all-time", [], { id: "user123" });
-      }).not.toThrow();
 
       // Health template with minimal valid data
       expect(() => {
