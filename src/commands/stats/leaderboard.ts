@@ -1,11 +1,11 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import {
-  createLeaderboardTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
 import { db } from "../../db/db.ts";
 import { userTable } from "../../db/schema.ts";
 import { desc } from "drizzle-orm";
+import { createStyledEmbed, formatDataTable } from "../../utils/visualHelpers.ts";
 
 
 export default {
@@ -85,11 +85,56 @@ export default {
       embeds: [await createLeaderboardTemplate(
         leaderboardType,
         leaderboard,
-        interaction.user,
-        {
-          useTableFormat: true,
-        }, interaction
+        interaction
       )]
     });
   },
 };
+
+async function createLeaderboardTemplate(
+  type: string,
+  data: Array<{
+    discordId: string;
+    points: number | null;
+    voiceTime: number | null;
+  }>,
+  interaction: ChatInputCommandInteraction
+) {
+  const title = type === "daily" ? "Daily Leaderboard" : 
+    type === "monthly" ? "Monthly Leaderboard"
+    : "All-Time Leaderboard";
+
+  const embed = createStyledEmbed("premium").setTitle(title);
+
+
+    const leaderboardData = []
+    for (const [index, entry] of data.entries()) {
+      const position = index + 1;
+      let positionDisplay = "";
+
+        positionDisplay = `#${position}`;
+
+      const hours = entry.voiceTime ? (entry.voiceTime / 3600).toFixed(1) : "0.0";
+
+      // Highlight current user
+      const isCurrentUser = entry.discordId === interaction.user.id;
+      const username = await interaction.client.users.fetch(entry.discordId).then(user => user.username);
+      
+      const userDisplay = isCurrentUser
+        ? `**${username}**`
+        : username;
+
+      leaderboardData.push([`${positionDisplay} ${userDisplay}`, `${hours}h • ${entry.points}pts`]);
+    };
+
+    embed.addFields([
+      {
+        name: "🏆 Top Rankings",
+        value:
+          formatDataTable(leaderboardData, [20, 15]) || "No rankings available",
+        inline: false,
+      },
+    ]);
+
+  return embed;
+}

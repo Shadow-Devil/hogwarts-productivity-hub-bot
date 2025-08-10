@@ -8,7 +8,7 @@ export const userTable = pgTable("user", {
     updatedAt: timestamp().notNull().defaultNow(),
 
     // User customization fields
-    house: varchar({length: 50}),
+    house: varchar({length: 50, enum: ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"]}),
     timezone: varchar({length: 50}).default("UTC"),
 
     // Score fields

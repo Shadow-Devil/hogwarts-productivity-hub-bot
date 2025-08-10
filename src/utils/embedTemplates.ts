@@ -1,7 +1,7 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
 
-import type { ChatInputCommandInteraction, User } from "discord.js";
+import type { User } from "discord.js";
 import { BotColors } from "./constants.ts";
 import {
   createHeader,
@@ -235,80 +235,13 @@ function createTaskTemplate(
   return embed;
 }
 
-// 🏆 Enhanced Leaderboard Template
-async function createLeaderboardTemplate(
-  type: string,
-  data: Array<{
-    discordId: string;
-    points: number | null;
-    voiceTime: number | null;
-  }>,
-  currentUser: User,
-  {
-    useTableFormat = true,
-  } = {},
-  interaction: ChatInputCommandInteraction
-) {
-  const title = type === "daily" ? "Daily Leaderboard" : 
-    type === "monthly" ? "Monthly Leaderboard"
-    : "All-Time Leaderboard";
 
-  const embed = createStyledEmbed("premium").setTitle(title);
-
-  // Get current user's position
-  const userPosition =
-    data.findIndex((entry) => entry.discordId === currentUser.id) + 1;
-
-    const leaderboardData = []
-    for (const [index, entry] of data.entries()) {
-      const position = index + 1;
-      let positionDisplay = "";
-
-        positionDisplay = `#${position}`;
-
-      const hours = entry.voiceTime ? (entry.voiceTime / 3600).toFixed(1) : "0.0";
-
-      // Highlight current user
-      const isCurrentUser = entry.discordId === currentUser.id;
-      const username = await interaction.client.users.fetch(entry.discordId).then(user => user.username);
-      
-      const userDisplay = isCurrentUser
-        ? `**${username}**`
-        : username;
-
-      leaderboardData.push([`${positionDisplay} ${userDisplay}`, `${hours}h • ${entry.points}pts`]);
-    };
-
-    embed.addFields([
-      {
-        name: "🏆 Top Rankings",
-        value:
-          formatDataTable(leaderboardData, [20, 15]) || "No rankings available",
-        inline: false,
-      },
-    ]);
-
-  return embed;
-}
 
 // ⏱️ Enhanced Timer Status Template
 // 🏠 Enhanced House Points Template
 function createHouseTemplate(
-  houses: Array<{ name: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin"; points: number }>,
+  houses: Array<{ house: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin"; points: number, voiceTime: number }>,
   type: string,
-  {
-    showEmojis = true,
-    includeStats = true,
-    useEnhancedLayout = true,
-    useTableFormat = true,
-    currentUser = null,
-  }: {
-    showEmojis?: boolean;
-    includeStats?: boolean;
-    useEnhancedLayout?: boolean;
-    useTableFormat?: boolean;
-    currentUser?: { house: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin" } | null;
-  } = {},
 ) {
   const houseEmojis = {
     Gryffindor: "🦁",
@@ -322,38 +255,25 @@ function createHouseTemplate(
     Hufflepuff: BotColors.HOUSE_HUFFLEPUFF,
     Ravenclaw: BotColors.HOUSE_RAVENCLAW,
     Slytherin: BotColors.HOUSE_SLYTHERIN,
-  };
+  } as const;
 
-  const isMonthly = type === "monthly";
-  const title = isMonthly
-    ? "🏆 Monthly House Points"
-    : "⭐ All-Time House Points";
-  const subtitle = isMonthly
-    ? "House competition rankings for this month"
-    : "All-time house standings and legacy";
+  const title = type === "daily" ? "Daily House Points" :
+    type === "monthly" ? "Monthly House Points"
+    : "All-Time House Points";
 
   // Use the leading house's color
   const topHouse = houses[0];
   const embedColor = topHouse
-    ? houseColors[topHouse.name] || BotColors.PRIMARY
+    ? houseColors[topHouse.house] || BotColors.PRIMARY
     : BotColors.PRIMARY;
 
   const embed = createStyledEmbed().setColor(embedColor).setTitle(title);
 
-  if (useEnhancedLayout) {
-    embed.setDescription(
-      createHeader("House Competition", subtitle, "🏰", "emphasis"),
-    );
-  } else {
-    embed.setDescription(createHeader("House Competition", subtitle, "🏰"));
-  }
-
   // Add house rankings with enhanced table format
   if (houses && houses.length > 0) {
-    if (useTableFormat) {
       const houseData = houses.map((house, index) => {
         const position = index + 1;
-        const emoji = showEmojis ? houseEmojis[house.name] || "🏠" : "";
+        const emoji = houseEmojis[house.house];
         const medal =
           position === 1
             ? "🥇"
@@ -363,101 +283,17 @@ function createHouseTemplate(
                 ? "🥉"
                 : `#${position}`;
 
-        return [`${medal} ${emoji} ${house.name}`, `${house.points} points`];
+        return [`${medal} ${emoji} ${house.house}`, `${house.points} points`];
       });
 
       embed.addFields([
         {
-          name: "🏆 House Rankings",
+          name: "House Rankings",
           value: formatDataTable(houseData, [18, 12]),
           inline: false,
         },
       ]);
-    } else {
-      const houseRankings = houses
-        .map((house, index) => {
-          const position = index + 1;
-          const emoji = showEmojis ? houseEmojis[house.name] || "🏠" : "";
-          const medal =
-            position === 1
-              ? "🥇"
-              : position === 2
-                ? "🥈"
-                : position === 3
-                  ? "🥉"
-                  : `**${position}.**`;
-
-          return `${medal} ${emoji} **${house.name}**\n    💰 ${house.points} points`;
-        })
-        .join("\n\n");
-
-      embed.addFields([
-        {
-          name: "🏆 House Rankings",
-          value: houseRankings,
-          inline: false,
-        },
-      ]);
-    }
   }
-
-  // Add house statistics
-  if (includeStats && houses && houses.length > 0) {
-    const totalPoints = houses.reduce((sum, house) => sum + house.points, 0);
-    const averagePoints = Math.round(totalPoints / houses.length);
-    const leadingHouse = houses[0]!!;
-
-    const statsData = [
-      ["Total Points", totalPoints],
-      ["Average Points", averagePoints],
-      [
-        "Leading House",
-        `${houseEmojis[leadingHouse.name]} ${leadingHouse.name}`,
-      ],
-      [
-        "Point Spread",
-        `${leadingHouse.points - houses[houses.length - 1]!!.points}`,
-      ],
-    ];
-
-    const statsDisplay = useTableFormat
-      ? formatDataTable(statsData, [15, 12])
-      : formatDataGrid(statsData);
-
-    embed.addFields([
-      {
-        name: "📊 Competition Statistics",
-        value: statsDisplay,
-        inline: false,
-      },
-    ]);
-  }
-
-  // Add user personalization if available
-  if (currentUser && currentUser.house && houses && houses.length > 0) {
-    const userHouseName = currentUser.house;
-    const userHouseData = houses.find((house) => house.name === userHouseName);
-
-    if (userHouseData) {
-      const userPosition =
-        houses.findIndex((house) => house.name === userHouseName) + 1;
-      const emoji = houseEmojis[userHouseName] || "🏠";
-
-      embed.addFields([
-        {
-          name: `${emoji} Your House: ${userHouseName}`,
-          value: `**Rank:** #${userPosition} of ${houses.length}\n**Points:** ${userHouseData.points}\n**Status:** ${userPosition === 1 ? "Leading the competition! 🏆" : `${houses[0]!!.points - userHouseData.points} points behind first place`}`,
-          inline: false,
-        },
-      ]);
-    }
-  }
-
-  embed.setFooter({
-    text: isMonthly
-      ? "House points reset on the 1st of each month"
-      : "House legacy and pride through the ages",
-  });
 
   return embed;
 }
@@ -1213,7 +1049,6 @@ function createChampionTemplate(
 
 export {
   createTaskTemplate,
-  createLeaderboardTemplate,
   createTimerTemplate,
   createHouseTemplate,
   createChampionTemplate,
