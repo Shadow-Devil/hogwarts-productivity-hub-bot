@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import * as CentralResetService from "./services/centralResetService.ts";
+import * as CentralResetService from "./scheduler/centralResetService.ts";
 import { client } from "./client.ts";
 import { Events, type Client } from "discord.js";
 import * as VoiceStateUpdate from "./events/voiceStateUpdate.ts";
