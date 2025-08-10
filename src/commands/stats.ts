@@ -1,17 +1,11 @@
 import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from "discord.js";
 import * as voiceService from "../services/voiceService.ts";
-import * as timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
 import { BotColors } from "../utils/constants.ts";
 import { createErrorTemplate } from "../utils/embedTemplates.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
-import { db } from "../db/db.ts";
+import { db, fetchUserTimezone } from "../db/db.ts";
 
-// Extend dayjs with timezone support
-dayjs.extend(utc);
-dayjs.extend(timezone);
 
 
 // Get task statistics for a user (using optimized/fallback pattern)
@@ -300,7 +294,7 @@ export default {
 
       // Add timezone context to footer for user awareness
       try {
-        const userTimezone = await timezoneService.getUserTimezone(discordId);
+        const userTimezone = await fetchUserTimezone(discordId);
         const userLocalTime = dayjs().tz(userTimezone);
         const nextMidnight = dayjs()
           .tz(userTimezone)

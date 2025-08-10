@@ -1,9 +1,9 @@
 import dayjs from "dayjs";
-import * as timezoneService from "./timezoneService.ts";
 import {
   db,
   getUserHouse,
   checkAndPerformHouseMonthlyReset,
+  fetchUserTimezone,
 } from "../db/db.ts";
 import type { GuildMember } from "discord.js";
 
@@ -263,8 +263,8 @@ async function getOrCreateUser(discordId: string, username: string) {
  * @returns {Promise<string>} Today's date in user's timezone
  */
 async function getTodayInUserTimezone(userId: string) {
-  const userTime = await timezoneService.getCurrentTimeInUserTimezone(userId);
-  return userTime.format("YYYY-MM-DD");
+  const userTime = await fetchUserTimezone(userId);
+  return dayjs().tz(userTime).format("YYYY-MM-DD");
 }
 
 // Start a voice session when user joins VC (timezone-aware)
@@ -347,7 +347,7 @@ export async function endVoiceSession(discordId: string, voiceChannelId: string,
   // Update streak if user spent at least 15 minutes (timezone-aware)
   if (durationMinutes >= 15) {
     // Get user's timezone for streak calculation
-    const userTimezone = await timezoneService.getUserTimezone(discordId);
+    const userTimezone = await fetchUserTimezone(discordId);
     await updateStreak(discordId, session.date, userTimezone);
   }
 
@@ -613,8 +613,8 @@ export async function updateDailyStats(
 export async function handleMidnightCrossover(discordId: string, voiceChannelId: string, member: GuildMember | null = null) {
   // Use user's timezone for accurate midnight calculation
   const userTime =
-    await timezoneService.getCurrentTimeInUserTimezone(discordId);
-  const startOfToday = userTime.startOf("day").toDate().getTime();
+    await fetchUserTimezone(discordId);
+  const startOfToday = dayjs().tz(userTime).startOf("day").toDate().getTime();
 
   // Find active session that started yesterday
   const result = await db.$client.query(
@@ -707,7 +707,7 @@ async function getUserDailyTime(discordId: string, date: string | null = null) {
     const targetDate =
       date || (await getTodayInUserTimezone(discordId));
     // Get user's timezone for accurate limit calculations
-    const userTimezone = await timezoneService.getUserTimezone(discordId);
+    const userTimezone = await fetchUserTimezone(discordId);
 
     // COMPATIBLE WITH DAILY CUMULATIVE POINTS SYSTEM:
     // Query both current and archived daily stats to get accurate daily totals

@@ -17,16 +17,10 @@
  */
 
 import cron from "node-cron";
-import * as timezoneService from "./timezoneService.ts";
 import * as voiceService from "./voiceService.ts";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
-import { db } from "../db/db.ts";
+import { db, fetchUserTimezone } from "../db/db.ts";
 
-// Extend dayjs with timezone support
-dayjs.extend(utc);
-dayjs.extend(timezone);
 
 /**
  * Get users who need monthly reset
@@ -478,7 +472,7 @@ async function performHealthCheck() {
 
     // Check timezone service
     try {
-      await timezoneService.getUserTimezone("health-check");
+      await fetchUserTimezone("health-check");
       healthData.timezoneServiceOk = true;
     } catch (_error) {
       healthData.systemStatus = "degraded";

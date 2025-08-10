@@ -5,15 +5,10 @@ import {
   createErrorTemplate,
 } from "../utils/embedTemplates.ts";
 import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
-import * as timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
 import assert from "node:assert/strict";
+import { fetchUserTimezone } from "../db/db.ts";
 
-// Extend dayjs with timezone support
-dayjs.extend(utc);
-dayjs.extend(timezone);
 
 export default {
   data: new SlashCommandBuilder()
@@ -96,7 +91,7 @@ export default {
 
       // Add timezone context to timer status
       try {
-        const userTimezone = await timezoneService.getUserTimezone(
+        const userTimezone = await fetchUserTimezone(
           interaction.user.id
         );
         const sessionEndTime = dayjs(timer.endTime).tz(userTimezone);

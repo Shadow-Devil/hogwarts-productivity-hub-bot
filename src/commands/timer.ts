@@ -9,15 +9,10 @@ import {
   safeErrorReply,
   safeReply,
 } from "../utils/interactionUtils.ts";
-import * as timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
 import type { Command } from "../commands.ts";
+import { fetchUserTimezone } from "../db/db.ts";
 
-// Extend dayjs with timezone support for timer displays
-dayjs.extend(utc);
-dayjs.extend(timezone);
 
 export default {
   data: new SlashCommandBuilder()
@@ -134,7 +129,7 @@ export default {
           flags: MessageFlags.Ephemeral,
         });
       }
-      const userTimezone = await timezoneService.getUserTimezone(
+      const userTimezone = await fetchUserTimezone(
         interaction.user.id
       );
       const now = dayjs().tz(userTimezone);

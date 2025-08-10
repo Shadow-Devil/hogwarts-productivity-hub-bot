@@ -5,20 +5,11 @@ import {
   AutocompleteInteraction,
   MessageFlags,
 } from "discord.js";
-import * as timezoneService from "../services/timezoneService.ts";
 import { BotColors } from "../utils/constants.ts";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
-import relativeTime from "dayjs/plugin/relativeTime.js";
 import { db, ensureUserExists, fetchUserTimezone } from "../db/db.ts";
 import { usersTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
-
-// Extend dayjs with timezone and relative time support
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(relativeTime);
 
 export default {
   data: new SlashCommandBuilder()
@@ -101,7 +92,7 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
   }
 
   // Get current timezone for comparison
-  const oldTimezone = await timezoneService.getUserTimezone(discordId);
+  const oldTimezone = await fetchUserTimezone(discordId);
   if (oldTimezone === newTimezone) {
     await interaction.editReply({
       embeds: [new EmbedBuilder()
