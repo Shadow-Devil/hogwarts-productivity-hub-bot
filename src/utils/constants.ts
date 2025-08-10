@@ -3,6 +3,8 @@
  * Consolidates commonly used visual elements to reduce import fragmentation
  */
 
+export type House = "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin";
+
 // Bot Color Scheme - Consistent across all embeds
 export const BotColors = {
   PRIMARY: 0x4b82f3,

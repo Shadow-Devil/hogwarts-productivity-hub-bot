@@ -1,6 +1,8 @@
-import { MessageFlags, type Interaction } from "discord.js";
+import { GuildMember, MessageFlags, type Interaction } from "discord.js";
 import { commands } from "../commands.ts";
 import assert from "node:assert/strict";
+import { ensureUserExists } from "../db/db.ts";
+import { getHouseFromMember } from "../utils/houseUtils.ts";
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
 
@@ -35,7 +37,9 @@ export async function execute(interaction: Interaction): Promise<void> {
         );
     }
 
+
     try {
+        await ensureUserExists(interaction.user.id, getHouseFromMember(interaction.member as GuildMember));
         if (interaction.isAutocomplete()) {
             assert(command.autocomplete, `Command /${interaction.commandName} does not support autocomplete`);
             await command.autocomplete(interaction);

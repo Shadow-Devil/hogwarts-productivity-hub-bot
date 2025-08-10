@@ -4,7 +4,7 @@ import {
   createErrorTemplate,
 } from "../utils/embedTemplates.ts";
 import dayjs from "dayjs";
-import { db, ensureUserExists, fetchTasks, fetchUserTimezone } from "../db/db.ts";
+import { db, fetchTasks, fetchUserTimezone } from "../db/db.ts";
 import { taskTable, userTable } from "../db/schema.ts";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { BotColors, DAILY_TASK_LIMIT, TASK_MIN_TIME, TASK_POINT_SCORE } from "../utils/constants.ts";
@@ -65,8 +65,6 @@ export default {
     await interaction.deferReply();
     const discordId = interaction.user.id;
 
-
-    await ensureUserExists(discordId);
     const userTimezone = await fetchUserTimezone(discordId);
     const startOfDay = dayjs().tz(userTimezone).startOf("day").toDate();
     console.info(`User timezone: ${userTimezone}, start of day: ${startOfDay}`);

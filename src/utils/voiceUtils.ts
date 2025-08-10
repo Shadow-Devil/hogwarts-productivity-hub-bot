@@ -23,23 +23,11 @@ export async function getUserVoiceChannel(
   }
   const member = interaction.member as GuildMember;
 
-  // Method 1: Try cached member data first (fastest)
   if (member.voice?.channel) {
     console.log(
       `Voice channel found via cached member: ${member.voice.channel.name} (${member.voice.channel.id})`
     );
     return member.voice.channel;
-  }
-
-  // Method 2: Try fetching from voice states directly (fast, no API call)
-  const voiceState = await interaction.guild.voiceStates.fetch(
-    interaction.user.id,
-  );
-  if (voiceState?.channel) {
-    console.log(
-      `Voice channel found via voice states cache: ${voiceState.channel.name} (${voiceState.channel.id})`
-    );
-    return voiceState.channel;
   }
 
   console.log(`User ${interaction.user.tag} is not in any voice channel`);
@@ -57,8 +45,8 @@ export async function startVoiceSession(
     ));
 
     if (existingVoiceSession > 0) {
-      console.error(`Voice session already active for ${discordId}, cannot start a new one`);
-      return;
+      console.error(`Voice session already active for ${discordId}, closing and starting a new one`);
+      await endVoiceSession(discordId, false); // End existing session without tracking
     }
 
     await tx.insert(voiceSessionTable).values({ discordId });

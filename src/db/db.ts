@@ -4,11 +4,17 @@ import * as schema from "./schema.ts";
 import type { GuildMember } from "discord.js";
 import assert from "node:assert/strict";
 import { eq, and } from "drizzle-orm";
+import type { House } from "../utils/constants.ts";
 
 export const db = drizzle({connection: process.env.DATABASE_URL!, schema, casing: 'snake_case'});
 
-export async function ensureUserExists(discordId: string) {
-  await db.insert(schema.userTable).values({ discordId }).onConflictDoNothing();
+export async function ensureUserExists(discordId: string, house: House | null) {
+  await db.insert(schema.userTable).values({ discordId }).onConflictDoUpdate({
+    target: schema.userTable.discordId,
+    set: {
+      house
+    }
+  });
 }
 
 

@@ -7,7 +7,7 @@ import {
 } from "discord.js";
 import { BotColors } from "../utils/constants.ts";
 import dayjs from "dayjs";
-import { db, ensureUserExists, fetchUserTimezone } from "../db/db.ts";
+import { db, fetchUserTimezone } from "../db/db.ts";
 import { userTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
@@ -30,8 +30,6 @@ export default {
 
     const newTimezone = interaction.options.getString("timezone");
     const discordId = interaction.user.id;
-
-    await ensureUserExists(discordId);
 
     if (!newTimezone) {
       await viewTimezone(interaction, discordId);

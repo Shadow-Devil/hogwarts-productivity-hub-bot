@@ -1,0 +1,24 @@
+import type { GuildMember } from "discord.js";
+import assert from "node:assert/strict";
+import type { House } from "./constants.ts";
+
+export function getHouseFromMember(member: GuildMember): House | null {
+    let house: House | null = null;
+    if (member.roles.cache.has(process.env.GRYFFINDOR_ROLE_ID!)) {
+        assert(house === null, `member ${member.user.tag} has multiple house roles: ${member.roles.cache.map(r => r.name).join(", ")}`);
+        house = "Gryffindor";
+    }
+    if (member.roles.cache.has(process.env.SLYTHERIN_ROLE_ID!)) {
+        assert(house === null, `member ${member.user.tag} has multiple house roles: ${member.roles.cache.map(r => r.name).join(", ")}`);
+        house = "Slytherin";
+    }
+    if (member.roles.cache.has(process.env.HUFFLEPUFF_ROLE_ID!)) {
+        assert(house === null, `member ${member.user.tag} has multiple house roles: ${member.roles.cache.map(r => r.name).join(", ")}`);
+        house = "Hufflepuff";
+    }
+    if (member.roles.cache.has(process.env.RAVENCLAW_ROLE_ID!)) {
+        assert(house === null, `member ${member.user.tag} has multiple house roles: ${member.roles.cache.map(r => r.name).join(", ")}`);
+        house = "Ravenclaw";
+    }
+    return house;
+}
