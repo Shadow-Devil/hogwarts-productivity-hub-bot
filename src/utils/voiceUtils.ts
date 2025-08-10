@@ -33,7 +33,7 @@ export async function getUserVoiceChannel(
 
   // Method 2: Try fetching from voice states directly (fast, no API call)
   const voiceState = await interaction.guild.voiceStates.fetch(
-    interaction.user.id
+    interaction.user.id,
   );
   if (voiceState?.channel) {
     console.log(
