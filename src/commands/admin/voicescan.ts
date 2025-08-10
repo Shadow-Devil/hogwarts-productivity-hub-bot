@@ -12,8 +12,6 @@ import {
   createStatsCard,
 } from "../../utils/visualHelpers.ts";
 import { safeDeferReply } from "../../utils/interactionUtils.ts";
-// Get active voice sessions from the voice state update handler
-import { activeVoiceSessions } from "../../events/voiceStateUpdate.ts";
 
 export default {
   data: new SlashCommandBuilder()

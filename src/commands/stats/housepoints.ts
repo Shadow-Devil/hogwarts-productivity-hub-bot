@@ -1,16 +1,9 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
-import * as voiceService from "../../services/voiceService.ts";
 import {
   createHouseTemplate,
-  createChampionTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
-import {
-  safeDeferReply,
-  safeErrorReply,
-  fastMemberFetch,
-} from "../../utils/interactionUtils.ts";
-import { db, getUserHouse } from "../../db/db.ts";
+import { db } from "../../db/db.ts";
 import { isNotNull, sql } from "drizzle-orm";
 import { userTable } from "../../db/schema.ts";
 
@@ -30,12 +23,11 @@ export default {
         )
     ),
   async execute(interaction: ChatInputCommandInteraction) {
-    interaction.deferReply();
+    await interaction.deferReply();
 
-      const leaderboardType = interaction.options.getString("type", true) as "daily" | "monthly" | "alltime";
+    const leaderboardType = interaction.options.getString("type", true) as "daily" | "monthly" | "alltime";
 
-        await showHouseLeaderboard(interaction, leaderboardType);
-
+    await showHouseLeaderboard(interaction, leaderboardType);
   },
 };
 
@@ -59,28 +51,30 @@ async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, ty
       break;
   }
   const houseLeaderboard = await db.select({
-        house: userTable.house,
-        points: sql<number>`cast(count(${pointsColumn}) as int)`,
-        voiceTime: sql<number>`cast(sum(${voiceTimeColumn}) as int)`,
-      }).from(userTable)
-      .where(isNotNull(userTable.house))
-      .groupBy(userTable.house);
+    house: userTable.house,
+    points: sql<number>`cast(count(${pointsColumn}) as int)`,
+    voiceTime: sql<number>`cast(sum(${voiceTimeColumn}) as int)`,
+  }).from(userTable)
+    .where(isNotNull(userTable.house))
+    .groupBy(userTable.house);
 
   if (houseLeaderboard.length === 0) {
-    return interaction.editReply({ embeds: [(createErrorTemplate(
+    return interaction.editReply({
+      embeds: [(createErrorTemplate(
         `ℹ️ No House Data`,
         "No house data is available yet. Houses need to earn points first!",
         {
           helpText: "Join a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.",
         }
-      ))] });
+      ))]
+    });
   }
 
   const embed = createHouseTemplate(houseLeaderboard as {
     house: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin";
     points: number;
     voiceTime: number;
-}[], type);
+  }[], type);
 
   await interaction.editReply({ embeds: [embed] });
 }
