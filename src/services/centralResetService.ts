@@ -3,7 +3,7 @@
  * Handles timezone-aware daily and monthly resets for all users
  *
  * This service centralizes all reset logic to ensure consistency across the bot.
- * It uses node-cron for scheduling and winston for structured logging.
+ * It uses node-cron for scheduling.
  *
  * Key Features:
  * - Per-user timezone-aware daily resets (streaks, voice limits)
@@ -14,7 +14,6 @@
  *
  * References:
  * - node-cron: https://www.npmjs.com/package/node-cron
- * - winston: https://github.com/winstonjs/winston
  */
 
 import cron from "node-cron";
@@ -177,6 +176,7 @@ export async function start() {
     dailyResetJob.start();
     monthlyResetJob.start();
     healthCheckJob.start();
+    console.log("CentralResetService started successfully");
 
     isRunning = true;
 

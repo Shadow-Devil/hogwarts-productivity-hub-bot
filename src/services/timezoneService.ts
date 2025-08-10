@@ -113,12 +113,4 @@ export async function getCurrentTimeInUserTimezone(userId: string) {
   }
 }
 
-/**
- * Get today's date in user's timezone (YYYY-MM-DD format)
- * @param {string} userId - User's Discord ID
- * @returns {Promise<string>} Today's date in user's timezone
- */
-export async function getTodayInUserTimezone(userId: string) {
-  const userTime = await getCurrentTimeInUserTimezone(userId);
-  return userTime.format("YYYY-MM-DD");
-}
+

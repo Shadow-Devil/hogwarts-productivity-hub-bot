@@ -14,11 +14,12 @@ import assert from "node:assert/strict";
 export default {
   data: new SlashCommandBuilder()
     .setName("tasks")
-    .addSubcommand((subcommand) =>
+    .setDescription("Manage your personal todo list")
+    .addSubcommand(subcommand =>
       subcommand
         .setName("add")
         .setDescription("Add a new task to your personal to-do list")
-        .addStringOption((option) =>
+        .addStringOption(option =>
           option
             .setName("title")
             .setDescription("The task description")
@@ -26,15 +27,15 @@ export default {
             .setMinLength(1)
             .setMaxLength(500)
         )
-    ).addSubcommand((subcommand) =>
+    ).addSubcommand(subcommand =>
       subcommand
         .setName("view")
         .setDescription("View all your tasks with their numbers"),
-    ).addSubcommand((subcommand) =>
+    ).addSubcommand(subcommand =>
       subcommand
         .setName("cancel")
         .setDescription("Remove a task from your to-do list")
-        .addIntegerOption((option) =>
+        .addIntegerOption(option =>
           option
             .setName("task")
             .setDescription(
@@ -42,10 +43,10 @@ export default {
             )
             .setRequired(true)
             .setAutocomplete(true))
-    ).addSubcommand((subcommand) =>
+    ).addSubcommand(subcommand =>
       subcommand.setName("complete")
         .setDescription("Mark a task as complete and earn 2 points")
-        .addIntegerOption((option) =>
+        .addIntegerOption(option =>
           option
             .setName("task")
             .setDescription(
@@ -66,10 +67,10 @@ export default {
         await viewTasks(interaction, discordId);
         break;
       case "complete":
-        await completetask(interaction, discordId);
+        await completeTask(interaction, discordId);
         break;
-      case "remove":
-        await removetask(interaction, discordId);
+      case "cancel":
+        await cancelTask(interaction, discordId);
         break;
       default:
         await interaction.editReply({
@@ -125,7 +126,6 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
       `**${tasks[0]?.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
       {
         celebration: true,
-        points: 2,
       }
     )]
   });
@@ -146,7 +146,7 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
     const embed = createTaskTemplate(interaction.user, [], {
       emptyState: true,
       emptyStateMessage:
-        "🌟 **Ready to get productive?**\nUse `/addtask <description>` to create your first task!",
+        "🌟 **Ready to get productive?**\nUse `/tasks add <title>` to create your first task!",
       helpText: `Tip: Completing tasks earns you ${TASK_POINT_SCORE} points each!`,
       useEnhancedLayout: true,
     });
@@ -193,7 +193,7 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
   return;
 }
 
-async function completetask(interaction: ChatInputCommandInteraction, discordId: string): Promise<void> {
+async function completeTask(interaction: ChatInputCommandInteraction, discordId: string): Promise<void> {
   const taskId = interaction.options.getInteger("task", true);
 
   // Get all incomplete tasks for the user, ordered by creation date
@@ -257,7 +257,7 @@ async function completetask(interaction: ChatInputCommandInteraction, discordId:
   });
 }
 
-async function removetask(interaction: ChatInputCommandInteraction, discordId: string): Promise<void> {
+async function cancelTask(interaction: ChatInputCommandInteraction, discordId: string): Promise<void> {
   const taskId = interaction.options.getInteger("task", true);
 
   const tasksResult = await db.delete(tasksTable).where(

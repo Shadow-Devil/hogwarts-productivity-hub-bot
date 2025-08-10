@@ -257,6 +257,16 @@ async function getOrCreateUser(discordId: string, username: string) {
   return user;
 }
 
+/**
+ * Get today's date in user's timezone (YYYY-MM-DD format)
+ * @param {string} userId - User's Discord ID
+ * @returns {Promise<string>} Today's date in user's timezone
+ */
+async function getTodayInUserTimezone(userId: string) {
+  const userTime = await timezoneService.getCurrentTimeInUserTimezone(userId);
+  return userTime.format("YYYY-MM-DD");
+}
+
 // Start a voice session when user joins VC (timezone-aware)
 export async function startVoiceSession(
   discordId: string,
@@ -268,11 +278,11 @@ export async function startVoiceSession(
   const now = new Date();
 
   // Use user's timezone for accurate date calculation
-  const today = await timezoneService.getTodayInUserTimezone(discordId);
+  const today = await getTodayInUserTimezone(discordId);
 
   // Insert new session
   const session = await db.$client.query(
-    `INSERT INTO vc_sessions (user_id, discord_id, voice_channel_id, voice_channel_name, joined_at, date)
+    `INSERT INTO voice_sessions (user_id, discord_id, voice_channel_id, voice_channel_name, joined_at, date)
                      VALUES ($1, $2, $3, $4, $5, $6)
                      RETURNING *`,
     [user.id, discordId, voiceChannelId, voiceChannelName, now, today]
@@ -290,7 +300,7 @@ export async function endVoiceSession(discordId: string, voiceChannelId: string,
 
   // Find the active session
   const result = await db.$client.query(
-    `SELECT * FROM vc_sessions
+    `SELECT * FROM voice_sessions
                   WHERE discord_id = $1 AND voice_channel_id = $2 AND left_at IS NULL
                   ORDER BY joined_at DESC LIMIT 1`,
     [discordId, voiceChannelId]
@@ -310,7 +320,7 @@ export async function endVoiceSession(discordId: string, voiceChannelId: string,
 
   // Update the session with end time and duration
   await db.$client.query(
-    `UPDATE vc_sessions
+    `UPDATE voice_sessions
                   SET left_at = $1, duration_minutes = $2
                   WHERE id = $3`,
     [now, durationMinutes, session.id]
@@ -330,7 +340,6 @@ export async function endVoiceSession(discordId: string, voiceChannelId: string,
   // Update daily stats
   await updateDailyStats(
     discordId,
-    session.date,
     durationMinutes,
     pointsEarned
   );
@@ -378,7 +387,7 @@ export async function calculateAndAwardPoints(
     const currentMonthlyHours = parseFloat(user.monthly_hours) || 0;
 
     // Get daily stats for voice time points calculation (timezone-aware)
-    const today = await timezoneService.getTodayInUserTimezone(discordId);
+    const today = await getTodayInUserTimezone(discordId);
     const dailyStats = await db.$client.query(
       "SELECT total_minutes, points_earned FROM daily_voice_stats WHERE discord_id = $1 AND date = $2",
       [discordId, today]
@@ -539,7 +548,6 @@ export async function calculateAndAwardPoints(
 // Update daily voice stats
 export async function updateDailyStats(
   discordId: string,
-  date: string,
   additionalMinutes: number,
   _pointsEarned = 0
 ) {
@@ -552,7 +560,7 @@ export async function updateDailyStats(
       `SELECT total_minutes, points_earned FROM daily_voice_stats
                      WHERE discord_id = $1 AND date = $2
                      AND (archived IS NULL OR archived = false)`,
-      [discordId, date]
+      [discordId]
     );
 
     const currentMinutes = currentStats.rows[0]?.total_minutes || 0;
@@ -588,7 +596,6 @@ export async function updateDailyStats(
                         updated_at = CURRENT_TIMESTAMP`,
       [
         discordId,
-        date,
         additionalMinutes,
         finalDailyPoints,
         discordId,
@@ -611,7 +618,7 @@ export async function handleMidnightCrossover(discordId: string, voiceChannelId:
 
   // Find active session that started yesterday
   const result = await db.$client.query(
-    `SELECT * FROM vc_sessions
+    `SELECT * FROM voice_sessions
                      WHERE discord_id = $1 AND voice_channel_id = $2 AND left_at IS NULL
                      AND joined_at < $3
                      ORDER BY joined_at DESC LIMIT 1`,
@@ -632,7 +639,7 @@ export async function handleMidnightCrossover(discordId: string, voiceChannelId:
 
   // End the yesterday session at midnight
   await db.$client.query(
-    `UPDATE vc_sessions
+    `UPDATE voice_sessions
                      SET left_at = $1, duration_minutes = $2
                      WHERE id = $3`,
     [startOfToday, durationUntilMidnight, yesterdaySession.id]
@@ -654,7 +661,6 @@ export async function handleMidnightCrossover(discordId: string, voiceChannelId:
   // Update daily stats for yesterday
   await updateDailyStats(
     discordId,
-    yesterdaySession.date,
     durationUntilMidnight,
     yesterdayPoints
   );
@@ -699,7 +705,7 @@ async function getUserDailyTime(discordId: string, date: string | null = null) {
   try {
     // Use user's timezone for accurate date calculation
     const targetDate =
-      date || (await timezoneService.getTodayInUserTimezone(discordId));
+      date || (await getTodayInUserTimezone(discordId));
     // Get user's timezone for accurate limit calculations
     const userTimezone = await timezoneService.getUserTimezone(discordId);
 

@@ -24,7 +24,7 @@ export async function execute(interaction: Interaction): Promise<void> {
     }
 
     console.log(
-        `🎯 Command executed: /${interaction.commandName} by ${interaction.user.tag} in #${channelName}`
+        `🎯 Command executed: /${interaction.commandName} by ${interaction.user.tag} in ${channelName}`
     );
 
     try {

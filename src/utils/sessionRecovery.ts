@@ -1,6 +1,7 @@
-import dayjs from "dayjs";
 import { db } from "../db/db.ts";
 import * as voiceService from "../services/voiceService.ts";
+import { voiceSessionsTable } from "../db/schema.ts";
+import { and, gt, isNull } from "drizzle-orm";
 
 /**
  * Session Recovery System
@@ -52,18 +53,13 @@ async function recoverIncompleteSessions() {
   );
 
   // Find incomplete sessions (no left_at timestamp)
-  const result = await db.$client.query(
-    `
-        SELECT * FROM vc_sessions
-        WHERE left_at IS NULL
-        AND joined_at > $1
-        ORDER BY joined_at ASC
-    `,
-    [staleThreshold]
-  );
+  const result = await db.select()
+    .from(voiceSessionsTable)
+    .where(and(isNull(voiceSessionsTable.leftAt), gt(voiceSessionsTable.joinedAt, staleThreshold)))
+    .orderBy(voiceSessionsTable.joinedAt);
 
   let recoveredCount = 0;
-  for (const session of result.rows) {
+  for (const session of result) {
     try {
       await processIncompleteSession(session, now);
       recoveredCount++;
@@ -78,28 +74,15 @@ async function recoverIncompleteSessions() {
 /**
  * Process a single incomplete session
  */
-async function processIncompleteSession(session: { joined_at: number; last_heartbeat: number | null; id: string; discord_id: string; date: string }, now: Date) {
-  const sessionStartTime = new Date(session.joined_at);
+async function processIncompleteSession(session: { joinedAt: Date; id: number; discordId: string; }, now: Date) {
+  const sessionStartTime = session.joinedAt;
   const sessionDurationMs = now.getTime() - sessionStartTime.getTime();
 
   // Use last heartbeat if available, otherwise estimate end time
-  const lastHeartbeat = session.last_heartbeat
-    ? new Date(session.last_heartbeat)
-    : null;
-  let estimatedEndTime;
-
-  if (lastHeartbeat) {
-    // Add grace period to last heartbeat
-    estimatedEndTime = new Date(
-      lastHeartbeat.getTime() + config.recoveryGracePeriodMs
-    );
-  } else {
-    // No heartbeat data, estimate based on reasonable session length
-    estimatedEndTime = new Date(
+  const estimatedEndTime = new Date(
       sessionStartTime.getTime() +
       Math.min(sessionDurationMs, 3 * 60 * 60 * 1000)
     ); // Max 3 hours
-  }
 
   const estimatedDurationMs =
     estimatedEndTime.getTime() - sessionStartTime.getTime();
@@ -111,7 +94,7 @@ async function processIncompleteSession(session: { joined_at: number; last_heart
   if (sessionDurationMinutes < 1) {
     await db.$client.query(
       `
-          UPDATE vc_sessions
+          UPDATE voice_sessions
           SET left_at = $1, duration_minutes = 0, recovery_note = 'Recovered: Session too short'
           WHERE id = $2
       `,
@@ -119,7 +102,7 @@ async function processIncompleteSession(session: { joined_at: number; last_heart
     );
 
     console.log(
-      `🔄 Recovered short session for ${session.discord_id}: 0 minutes`
+      `🔄 Recovered short session for ${session.discordId}: 0 minutes`
     );
     return;
   }
@@ -127,7 +110,7 @@ async function processIncompleteSession(session: { joined_at: number; last_heart
   // Update the session with estimated end time and duration
   await db.$client.query(
     `
-        UPDATE vc_sessions
+        UPDATE voice_sessions
         SET left_at = $1, duration_minutes = $2, recovery_note = 'Recovered from crash'
         WHERE id = $3
     `,
@@ -137,7 +120,7 @@ async function processIncompleteSession(session: { joined_at: number; last_heart
   // Calculate and award points for the recovered session
   try {
     const pointsResult = await voiceService.calculateAndAwardPoints(
-      session.discord_id,
+      session.discordId,
       sessionDurationMinutes
     );
     const pointsEarned =
@@ -147,14 +130,13 @@ async function processIncompleteSession(session: { joined_at: number; last_heart
 
     // Update daily stats
     await voiceService.updateDailyStats(
-      session.discord_id,
-      session.date,
+      session.discordId,
       sessionDurationMinutes,
       pointsEarned
     );
 
     console.log(
-      `✅ Recovered session for ${session.discord_id}: ${sessionDurationMinutes} minutes, ${pointsEarned} points`
+      `✅ Recovered session for ${session.discordId}: ${sessionDurationMinutes} minutes, ${pointsEarned} points`
     );
   } catch (error) {
     console.error(
@@ -202,7 +184,7 @@ async function saveActiveSessionStates() {
       // Update the session with current progress (heartbeat)
       await db.$client.query(
         `
-          UPDATE vc_sessions
+          UPDATE voice_sessions
           SET last_heartbeat = $1, current_duration_minutes = $2
           WHERE id = $3 AND left_at IS NULL
       `,
@@ -265,7 +247,7 @@ async function closeAllActiveSessions() {
       // Update session in database
       await db.$client.query(
         `
-            UPDATE vc_sessions
+            UPDATE voice_sessions
             SET left_at = $1, duration_minutes = $2, recovery_note = 'Graceful shutdown'
             WHERE id = $3 AND left_at IS NULL
         `,
@@ -283,11 +265,8 @@ async function closeAllActiveSessions() {
             ? pointsResult.pointsEarned
             : pointsResult;
 
-        // Update daily stats
-        const sessionDate = dayjs(sessionData.joinTime).format("YYYY-MM-DD");
         await voiceService.updateDailyStats(
           userId,
-          sessionDate,
           durationMinutes,
           pointsEarned
         );

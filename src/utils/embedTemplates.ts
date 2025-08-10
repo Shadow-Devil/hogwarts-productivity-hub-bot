@@ -237,7 +237,7 @@ function createTaskTemplate(
   embed.setFooter({
     text:
       helpText ||
-      "Use /completetask <number> to complete tasks • /removetask <number> to remove tasks",
+      "Use /task complete <number> to complete tasks • /task cancel <number> to remove tasks",
   });
 
   return embed;
