@@ -2,8 +2,8 @@ import dayjs from "dayjs";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema.ts";
 import type { GuildMember } from "discord.js";
-import assert from "node:assert";
-import { eq } from "drizzle-orm";
+import assert from "node:assert/strict";
+import { eq, and } from "drizzle-orm";
 
 export const db = drizzle({connection: process.env.DATABASE_URL!, schema, casing: 'snake_case'});
 
@@ -18,6 +18,16 @@ export async function fetchUserTimezone(discordId: string) {
     .where(eq(schema.usersTable.discordId, discordId))
     .then(rows => rows[0]?.timezone || "UTC");
 }
+
+export async function fetchTasks(discordId: string) {
+  return await db.select({ title: schema.tasksTable.title, id: schema.tasksTable.id }).from(schema.tasksTable).where(
+    and(
+      eq(schema.tasksTable.discordId, discordId),
+      eq(schema.tasksTable.isCompleted, false)
+    )
+  );
+}
+
 
 
 // Check and perform monthly reset for houses if needed

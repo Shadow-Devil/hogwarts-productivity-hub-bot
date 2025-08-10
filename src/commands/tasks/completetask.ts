@@ -4,11 +4,11 @@ import {
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
 import dayjs from "dayjs";
-import { db } from "../../db/db.ts";
+import { db, fetchTasks } from "../../db/db.ts";
 import { tasksTable, usersTable } from "../../db/schema.ts";
 import { eq, and, sql } from "drizzle-orm";
+import { TASK_POINT_SCORE } from "../../utils/constants.ts";
 
-const TASK_POINT_SCORE = 2;
 
 
 export default {
@@ -91,13 +91,8 @@ export default {
     });
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
-    const results = await db.select({ title: tasksTable.title, id: tasksTable.id }).from(tasksTable).where(
-      and(
-        eq(tasksTable.discordId, interaction.user.id),
-        eq(tasksTable.isCompleted, false)
-      )
-    );
-    interaction.respond(results.map((task) => ({
+    const results = await fetchTasks(interaction.user.id);
+    interaction.respond(results.map(task => ({
       name: task.title,
       value: task.id,
     })));

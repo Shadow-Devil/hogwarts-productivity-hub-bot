@@ -4,7 +4,7 @@
  */
 
 // Bot Color Scheme - Consistent across all embeds
-const BotColors = {
+export const BotColors = {
   PRIMARY: 0x4b82f3,
   SUCCESS: 0x00c853,
   WARNING: 0xff8f00,
@@ -20,4 +20,5 @@ const BotColors = {
 };
 
 
-export { BotColors };
+export const TASK_POINT_SCORE = 2;
+export const DAILY_TASK_LIMIT = 10;

@@ -2,7 +2,7 @@ import "dotenv/config";
 
 import { REST, Routes } from "discord.js";
 import { commands } from "./commands.ts";
-import assert from "node:assert";
+import assert from "node:assert/strict";
 
 assert(process.env.CLIENT_ID)
 assert(process.env.GUILD_ID)

@@ -6,7 +6,7 @@ import {
 } from "discord.js";
 import addtask from "./commands/tasks/addtask.ts";
 import viewtasks from "./commands/tasks/viewtasks.ts";
-import removetask from "./commands/tasks/removetask.ts";
+import removetask from "./commands/tasks/canceltask.ts";
 import completetask from "./commands/tasks/completetask.ts";
 
 import debug from "./commands/admin/debug.ts";

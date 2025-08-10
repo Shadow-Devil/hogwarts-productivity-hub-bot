@@ -1,7 +1,6 @@
 import { MessageFlags, type Interaction } from "discord.js";
 import { commands } from "../commands.ts";
-import assert from "node:assert";
-
+import assert from "node:assert/strict";
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
 

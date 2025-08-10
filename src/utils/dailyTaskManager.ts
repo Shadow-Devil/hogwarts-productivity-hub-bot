@@ -13,8 +13,6 @@ import {
 import * as voiceService from "../services/voiceService.ts";
 import { client } from "../client.ts";
 
-
-export const DAILY_TASK_LIMIT = 10;
 let cleanupInterval: NodeJS.Timeout | null = null;
 let isRunning = false;
 
@@ -407,32 +405,3 @@ Ready to boost your productivity? Use \`/addtask\` to get started! 🚀`;
     );
   }
 }
-
-/**
- * Get user's daily task stats
- */
-export async function getUserDailyStats(discordId: string) {
-  const today = dayjs().format("YYYY-MM-DD");
-
-  const result = await db.$client.query(
-    `SELECT tasks_added, tasks_completed, total_task_actions
-                    FROM daily_task_stats
-                    WHERE discord_id = $1 AND date = $2`,
-    [discordId, today]
-  );
-
-  const stats = result.rows[0] || {
-    tasks_added: 0,
-    tasks_completed: 0,
-    total_task_actions: 0,
-  };
-  const remaining = Math.max(0, DAILY_TASK_LIMIT - stats.total_task_actions);
-
-  return {
-    ...stats,
-    remaining,
-    limit: DAILY_TASK_LIMIT,
-    limitReached: stats.total_task_actions >= DAILY_TASK_LIMIT,
-  };
-}
-

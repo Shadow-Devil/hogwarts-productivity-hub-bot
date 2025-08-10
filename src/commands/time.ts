@@ -9,7 +9,7 @@ import * as timezoneService from "../services/timezoneService.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
-import assert from "node:assert";
+import assert from "node:assert/strict";
 
 // Extend dayjs with timezone support
 dayjs.extend(utc);
