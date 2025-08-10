@@ -15,6 +15,7 @@ import relativeTime from "dayjs/plugin/relativeTime.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(relativeTime);
+dayjs.tz.setDefault("UTC");
 
 function registerEvents(client: Client) {
   client.on(Events.ClientReady, ClientReady.execute);

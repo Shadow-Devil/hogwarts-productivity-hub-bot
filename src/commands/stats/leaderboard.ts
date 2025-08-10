@@ -1,12 +1,11 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
-import * as voiceService from "../../services/voiceService.ts";
-import dayjs from "dayjs";
 import {
   createLeaderboardTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
-import { db, fetchUserTimezone } from "../../db/db.ts";
+import { db } from "../../db/db.ts";
 import { userTable } from "../../db/schema.ts";
+import { desc } from "drizzle-orm";
 
 
 export default {
@@ -29,78 +28,68 @@ export default {
 
     const leaderboardType = interaction.options.getString("type", true);
 
+    let leaderboard: Array<{
+      discordId: string;
+      points: number | null;
+      voiceTime: number | null;
+    }>;
+
     switch (leaderboardType) {
       case "daily":
-        await db.select()
+        leaderboard = await db.select({
+          discordId: userTable.discordId,
+          points: userTable.dailyPoints,
+          voiceTime: userTable.dailyVoiceTime,
+        })
           .from(userTable)
-          .orderBy(userTable.dailyPoints, )
+          .orderBy(desc(userTable.dailyPoints), desc(userTable.dailyVoiceTime))
+          .limit(10);
         break;
       case "monthly":
+        leaderboard = await db.select({
+          discordId: userTable.discordId,
+          points: userTable.monthlyPoints,
+          voiceTime: userTable.monthlyVoiceTime,
+        })
+          .from(userTable)
+          .orderBy(desc(userTable.monthlyPoints), desc(userTable.monthlyVoiceTime))
+          .limit(10);
         break;
       case "alltime":
+        leaderboard = await db.select({
+          discordId: userTable.discordId,
+          points: userTable.totalPoints,
+          voiceTime: userTable.totalVoiceTime,
+        })
+          .from(userTable)
+          .orderBy(desc(userTable.totalPoints), desc(userTable.totalVoiceTime))
         break;
+      default:
+        await interaction.editReply({
+          embeds: [createErrorTemplate("Invalid Leaderboard Type", "Please select a valid leaderboard type: daily, monthly, or all time.")],
+        });
+        return;
     }
-    const leaderboard =
-      await voiceService.getLeaderboardOptimized(leaderboardType);
 
-    if (!leaderboard || leaderboard.length === 0) {
-      const embed = createErrorTemplate(
-        `ℹ️ No Leaderboard Data`,
-        "No data is available for the leaderboard yet. Be the first to start tracking your voice time!",
-        {
-          helpText: "Join a voice channel to start accumulating hours",
-          additionalInfo:
-            "Your time in voice channels automatically contributes to both monthly and all-time rankings.",
-        }
-      );
-      await interaction.editReply({ embeds: [embed] });
+    if (leaderboard.length === 0) {
+      await interaction.editReply({
+        embeds: [(createErrorTemplate(
+          `ℹNo Leaderboard Data`,
+          "No data is available for the leaderboard yet. Be the first to start tracking your voice time!"
+        ))]
+      });
       return;
     }
 
-    // Get current user information for the template
-    const currentUserId = interaction.user.id;
-
-    const embed = createLeaderboardTemplate(
-      leaderboardType,
-      leaderboard,
-      {
-        id: currentUserId,
-        username: interaction.user.username,
-      },
-      {
-        maxEntries: 10,
-        showUserPosition: true,
-        includeMedals: true,
-        includeStats: true,
-        useEnhancedLayout: true,
-        useTableFormat: true,
-      }
-    );
-
-    // Add timezone context to footer for monthly leaderboards
-    if (leaderboardType === "monthly") {
-      try {
-        const userTimezone = await fetchUserTimezone(currentUserId);
-        const monthStart = dayjs().tz(userTimezone).startOf("month");
-        const monthEnd = dayjs().tz(userTimezone).endOf("month");
-
-        const footerText = `🗓️ Monthly period: ${monthStart.format("MMM D")} - ${monthEnd.format("MMM D, YYYY")} (${userTimezone}) | Global rankings update hourly`;
-        embed.setFooter({ text: footerText });
-      } catch (error) {
-        console.warn(
-          "Could not add timezone info to leaderboard:",
-          error
-        );
-        embed.setFooter({
-          text: "🗓️ Monthly rankings reset on 1st of each month | Global rankings update hourly",
-        });
-      }
-    } else {
-      embed.setFooter({
-        text: "🏆 All-time rankings since bot launch | Updated in real-time",
-      });
-    }
-
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({
+      embeds: [await createLeaderboardTemplate(
+        leaderboardType,
+        leaderboard,
+        interaction.user,
+        {
+          useTableFormat: true,
+        }, interaction
+      )]
+    });
   },
 };

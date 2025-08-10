@@ -1,7 +1,7 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
 
-import type { User } from "discord.js";
+import type { ChatInputCommandInteraction, User } from "discord.js";
 import { BotColors } from "./constants.ts";
 import {
   createHeader,
@@ -236,75 +236,48 @@ function createTaskTemplate(
 }
 
 // 🏆 Enhanced Leaderboard Template
-function createLeaderboardTemplate(
+async function createLeaderboardTemplate(
   type: string,
-  data: Array<any>,
-  currentUser: { id: string; username: string },
+  data: Array<{
+    discordId: string;
+    points: number | null;
+    voiceTime: number | null;
+  }>,
+  currentUser: User,
   {
-    maxEntries = 10,
-    showUserPosition = true,
-    includeMedals = true,
-    includeStats = true,
-    useEnhancedLayout = true,
     useTableFormat = true,
   } = {},
+  interaction: ChatInputCommandInteraction
 ) {
-  const isMonthly = type === "monthly";
-  const title = isMonthly
-    ? "📅 Monthly Voice Leaderboard"
-    : "🌟 All-Time Voice Leaderboard";
-  const subtitle = isMonthly
-    ? "Top performers by voice channel activity this month"
-    : "All-time voice channel activity champions";
+  const title = type === "daily" ? "Daily Leaderboard" : 
+    type === "monthly" ? "Monthly Leaderboard"
+    : "All-Time Leaderboard";
 
-  const embed = createStyledEmbed("premium");
-
-  if (useEnhancedLayout) {
-    embed
-      .setTitle(title)
-      .setDescription(createHeader("Rankings", subtitle, "🏆", "emphasis"));
-  } else {
-    embed
-      .setTitle(title)
-      .setDescription(createHeader("Rankings", subtitle, "🏆"));
-  }
+  const embed = createStyledEmbed("premium").setTitle(title);
 
   // Get current user's position
   const userPosition =
-    data.findIndex((entry) => entry.discord_id === currentUser.id) + 1;
+    data.findIndex((entry) => entry.discordId === currentUser.id) + 1;
 
-  // Add leaderboard entries with enhanced formatting
-  const topEntries = data.slice(0, maxEntries);
-
-  if (useTableFormat) {
-    const leaderboardData = topEntries.map((entry, index) => {
+    const leaderboardData = []
+    for (const [index, entry] of data.entries()) {
       const position = index + 1;
       let positionDisplay = "";
 
-      if (includeMedals) {
-        positionDisplay =
-          position === 1
-            ? "🥇"
-            : position === 2
-              ? "🥈"
-              : position === 3
-                ? "🥉"
-                : `#${position}`;
-      } else {
         positionDisplay = `#${position}`;
-      }
 
-      const hours = entry.hours.toFixed(1);
-      const points = entry.points;
+      const hours = entry.voiceTime ? (entry.voiceTime / 3600).toFixed(1) : "0.0";
 
       // Highlight current user
-      const isCurrentUser = entry.discord_id === currentUser.id;
+      const isCurrentUser = entry.discordId === currentUser.id;
+      const username = await interaction.client.users.fetch(entry.discordId).then(user => user.username);
+      
       const userDisplay = isCurrentUser
-        ? `**${entry.username}** ⭐`
-        : entry.username;
+        ? `**${username}**`
+        : username;
 
-      return [`${positionDisplay} ${userDisplay}`, `${hours}h • ${points}pts`];
-    });
+      leaderboardData.push([`${positionDisplay} ${userDisplay}`, `${hours}h • ${entry.points}pts`]);
+    };
 
     embed.addFields([
       {
@@ -314,117 +287,6 @@ function createLeaderboardTemplate(
         inline: false,
       },
     ]);
-  } else {
-    let leaderboardText = "";
-    topEntries.forEach((entry, index) => {
-      const position = index + 1;
-      let medal = "";
-
-      if (includeMedals) {
-        medal =
-          position === 1
-            ? "🥇"
-            : position === 2
-              ? "🥈"
-              : position === 3
-                ? "🥉"
-                : `**${position}.**`;
-      } else {
-        medal = `**${position}.**`;
-      }
-
-      const hours = entry.hours.toFixed(1);
-      const points = entry.points;
-
-      // Highlight current user
-      const isCurrentUser = entry.discord_id === currentUser.id;
-      const userDisplay = isCurrentUser
-        ? `**${entry.username}** ⭐`
-        : entry.username;
-
-      leaderboardText += `${medal} ${userDisplay}\n`;
-      leaderboardText += `    🕒 ${hours}h • 💰 ${points} points\n\n`;
-    });
-
-    embed.addFields([
-      {
-        name: "🏆 Top Rankings",
-        value: leaderboardText || "No rankings available",
-        inline: false,
-      },
-    ]);
-  }
-
-  // Add user's position with enhanced formatting
-  if (showUserPosition) {
-    if (userPosition > maxEntries && userPosition <= data.length) {
-      const userEntry = data[userPosition - 1];
-      const positionInfo = [
-        ["Your Rank", `#${userPosition}`],
-        ["Time Tracked", `${userEntry.hours.toFixed(1)}h`],
-        ["Points Earned", userEntry.points],
-      ];
-
-      embed.addFields([
-        {
-          name: "📍 Your Position",
-          value: useTableFormat
-            ? formatDataTable(positionInfo, [12, 10])
-            : `**#${userPosition}** • 🕒 ${userEntry.hours.toFixed(1)}h • 💰 ${userEntry.points} points`,
-          inline: false,
-        },
-      ]);
-    } else if (userPosition > 0 && userPosition <= maxEntries) {
-      embed.addFields([
-        {
-          name: "📍 Your Position",
-          value: `### 🎉 Top Performer!\nYou're ranked **#${userPosition}** in the top ${maxEntries}!`,
-          inline: false,
-        },
-      ]);
-    } else if (userPosition === 0) {
-      embed.addFields([
-        {
-          name: "📍 Your Position",
-          value:
-            "### 🚀 Get Started\nJoin a voice channel to appear on the leaderboard!",
-          inline: false,
-        },
-      ]);
-    }
-  }
-
-  // Add statistics with enhanced table format
-  if (includeStats && data.length > 0) {
-    const totalUsers = data.length;
-    const totalHours = data.reduce((sum, entry) => sum + entry.hours, 0);
-    const avgHours =
-      totalUsers > 0 ? (totalHours / totalUsers).toFixed(1) : "0.0";
-
-    const statsData = [
-      ["Total Users", totalUsers],
-      ["Total Hours", `${totalHours.toFixed(1)}h`],
-      ["Average Hours", `${avgHours}h`],
-    ];
-
-    const statsDisplay = useTableFormat
-      ? formatDataTable(statsData, [15, 12])
-      : formatDataGrid(statsData);
-
-    embed.addFields([
-      {
-        name: "📊 Community Statistics",
-        value: statsDisplay,
-        inline: false,
-      },
-    ]);
-  }
-
-  embed.setFooter({
-    text: isMonthly
-      ? "Monthly rankings reset on the 1st of each month"
-      : "All-time productivity champions",
-  });
 
   return embed;
 }
