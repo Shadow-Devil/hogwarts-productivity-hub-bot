@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-export const usersTable = pgTable("users", {
+export const userTable = pgTable("user", {
     // Technical fields
     discordId: varchar({length: 255}).primaryKey().notNull(),
     createdAt: timestamp().notNull().defaultNow(),
@@ -12,15 +12,21 @@ export const usersTable = pgTable("users", {
     timezone: varchar({length: 50}).default("UTC"),
 
     // Score fields
+    dailyPoints: integer().default(0),
+    monthlyPoints: integer().default(0),
     totalPoints: integer().default(0),
+
+    dailyVoiceTime: integer().default(0),
+    monthlyVoiceTime: integer().default(0),
+    totalVoiceTime: integer().default(0),
+
     streak: integer().default(0),
 });
 
-
-export const voiceSessionsTable = pgTable("voice_sessions", {
+export const voiceSessionTable = pgTable("voice_session", {
     // Technical fields
     id: serial().primaryKey(),
-    discordId: varchar({length: 255}).notNull().references(() => usersTable.discordId),
+    discordId: varchar({length: 255}).notNull().references(() => userTable.discordId),
     createdAt: timestamp().notNull().defaultNow(),
 
     joinedAt: timestamp().notNull().defaultNow(),
@@ -28,10 +34,10 @@ export const voiceSessionsTable = pgTable("voice_sessions", {
     duration: integer().generatedAlwaysAs(sql`EXTRACT(EPOCH FROM (left_at - joined_at))`).notNull(),
 });
 
-export const tasksTable = pgTable("tasks", {
+export const taskTable = pgTable("task", {
     // Technical fields
     id: serial().primaryKey(),
-    discordId: varchar({length: 255}).notNull().references(() => usersTable.discordId),
+    discordId: varchar({length: 255}).notNull().references(() => userTable.discordId),
     createdAt: timestamp().notNull().defaultNow(),
 
     // Task fields
@@ -40,7 +46,7 @@ export const tasksTable = pgTable("tasks", {
     completedAt: timestamp(),
 });
 
-export const housePointsTable = pgTable("house_points", {
+export const housePointTable = pgTable("house_point", {
     // Technical fields
     id: serial().primaryKey(),
     name: varchar({length: 50}).notNull(),

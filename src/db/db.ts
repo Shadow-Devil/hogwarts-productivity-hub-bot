@@ -8,22 +8,22 @@ import { eq, and } from "drizzle-orm";
 export const db = drizzle({connection: process.env.DATABASE_URL!, schema, casing: 'snake_case'});
 
 export async function ensureUserExists(discordId: string) {
-  await db.insert(schema.usersTable).values({ discordId }).onConflictDoNothing();
+  await db.insert(schema.userTable).values({ discordId }).onConflictDoNothing();
 }
 
 
 export async function fetchUserTimezone(discordId: string) {
-  return await db.select({ timezone: schema.usersTable.timezone })
-    .from(schema.usersTable)
-    .where(eq(schema.usersTable.discordId, discordId))
+  return await db.select({ timezone: schema.userTable.timezone })
+    .from(schema.userTable)
+    .where(eq(schema.userTable.discordId, discordId))
     .then(rows => rows[0]?.timezone || "UTC");
 }
 
 export async function fetchTasks(discordId: string) {
-  return await db.select({ title: schema.tasksTable.title, id: schema.tasksTable.id }).from(schema.tasksTable).where(
+  return await db.select({ title: schema.taskTable.title, id: schema.taskTable.id }).from(schema.taskTable).where(
     and(
-      eq(schema.tasksTable.discordId, discordId),
-      eq(schema.tasksTable.isCompleted, false)
+      eq(schema.taskTable.discordId, discordId),
+      eq(schema.taskTable.isCompleted, false)
     )
   );
 }

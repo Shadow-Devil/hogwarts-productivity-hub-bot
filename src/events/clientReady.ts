@@ -12,24 +12,16 @@ export async function execute(c: Client<true>): Promise<void> {
     console.log(`Commands Loaded: ${commands.size}`);
 
     try {
-        const recoveryResults = await SessionRecovery.initialize(
+        await SessionRecovery.initialize(
             activeVoiceSessions,
             gracePeriodSessions
         );
-        if (recoveryResults > 0) {
-            console.log(`📈 Recovered ${recoveryResults} incomplete sessions from previous runs`);
-        }
 
-        const scanResults = await VoiceStateScanner.scanAndStartTracking(
+        await VoiceStateScanner.scanAndStartTracking(
             client,
             activeVoiceSessions
         );
 
-        if (scanResults.trackingStarted > 0) {
-            console.log(
-                `🎤 Auto-started tracking for ${scanResults.trackingStarted} users already in voice channels`
-            );
-        }
         console.log("═".repeat(50));
     } catch (error) {
         console.log("❌ Bot Initialization Failed");

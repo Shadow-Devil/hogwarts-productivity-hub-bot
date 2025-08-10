@@ -6,8 +6,8 @@ import {
 } from "../utils/embedTemplates.ts";
 import dayjs from "dayjs";
 import { db, ensureUserExists, fetchTasks, fetchUserTimezone } from "../db/db.ts";
-import { tasksTable, usersTable } from "../db/schema.ts";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { taskTable, userTable } from "../db/schema.ts";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { DAILY_TASK_LIMIT, TASK_POINT_SCORE } from "../utils/constants.ts";
 import assert from "node:assert/strict";
 
@@ -59,18 +59,24 @@ export default {
     await interaction.deferReply();
     const discordId = interaction.user.id;
 
+
+    await ensureUserExists(discordId);
+    const userTimezone = await fetchUserTimezone(discordId);
+    const startOfDay = dayjs().tz(userTimezone).startOf("day").toDate();
+    console.info(`User timezone: ${userTimezone}, start of day: ${startOfDay}`);
+
     switch (interaction.options.getSubcommand()) {
       case "add":
-        await addTask(interaction, discordId);
+        await addTask(interaction, discordId, userTimezone, startOfDay);
         break;
       case "view":
-        await viewTasks(interaction, discordId);
+        await viewTasks(interaction, discordId, startOfDay);
         break;
       case "complete":
-        await completeTask(interaction, discordId);
+        await completeTask(interaction, discordId, startOfDay);
         break;
       case "cancel":
-        await cancelTask(interaction, discordId);
+        await cancelTask(interaction, discordId, startOfDay);
         break;
       default:
         await interaction.editReply({
@@ -90,14 +96,11 @@ export default {
   }
 }
 
-async function addTask(interaction: ChatInputCommandInteraction, discordId: string): Promise<void> {
+async function addTask(interaction: ChatInputCommandInteraction, discordId: string, userTimezone: string, startOfDay: Date): Promise<void> {
   const title = interaction.options.getString("title", true);
 
-  await ensureUserExists(discordId);
-  const userTimezone = await fetchUserTimezone(discordId);
-
   // Check daily task limit first
-  const currentTaskCount = await db.$count(tasksTable, eq(tasksTable.discordId, discordId));
+  const currentTaskCount = await db.$count(taskTable, and(eq(taskTable.discordId, discordId), gte(taskTable.createdAt, startOfDay)));
   if (currentTaskCount >= DAILY_TASK_LIMIT) {
     const resetTime = Math.floor(
       dayjs().tz(userTimezone).add(1, "day").startOf("day").valueOf() / 1000
@@ -115,10 +118,10 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
     return;
   }
 
-  const tasks = await db.insert(tasksTable).values({
+  const tasks = await db.insert(taskTable).values({
     discordId,
     title,
-  }).returning({ title: tasksTable.title });
+  }).returning({ title: taskTable.title });
 
   await interaction.editReply({
     embeds: [createSuccessTemplate(
@@ -131,14 +134,14 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
   });
 }
 
-async function viewTasks(interaction: ChatInputCommandInteraction, discordId: string): Promise<void> {
+async function viewTasks(interaction: ChatInputCommandInteraction, discordId: string, startOfDay: Date): Promise<void> {
   const tasks = await db.select({
-    title: tasksTable.title,
-    isCompleted: tasksTable.isCompleted,
-    completedAt: tasksTable.completedAt,
-  }).from(tasksTable).where(
-    eq(tasksTable.discordId, discordId)
-  ).orderBy(desc(tasksTable.isCompleted), tasksTable.createdAt);
+    title: taskTable.title,
+    isCompleted: taskTable.isCompleted,
+    completedAt: taskTable.completedAt,
+  }).from(taskTable).where(
+    and(eq(taskTable.discordId, discordId), gte(taskTable.createdAt, startOfDay))
+  ).orderBy(desc(taskTable.isCompleted), taskTable.createdAt);
 
   assert(tasks.length < DAILY_TASK_LIMIT, `Expected tasks length to be less than ${DAILY_TASK_LIMIT} but found ${tasks.length}`);
 
@@ -191,15 +194,16 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
   return;
 }
 
-async function completeTask(interaction: ChatInputCommandInteraction, discordId: string): Promise<void> {
+async function completeTask(interaction: ChatInputCommandInteraction, discordId: string, startOfDay: Date): Promise<void> {
   const taskId = interaction.options.getInteger("task", true);
 
   // Get all incomplete tasks for the user, ordered by creation date
-  const tasksResult = await db.select().from(tasksTable).where(and(
-    eq(tasksTable.discordId, discordId),
-    eq(tasksTable.isCompleted, false),
-    eq(tasksTable.id, taskId))
-  ).orderBy(tasksTable.createdAt);
+  const tasksResult = await db.select().from(taskTable).where(and(
+    eq(taskTable.discordId, discordId),
+    eq(taskTable.isCompleted, false),
+    eq(taskTable.id, taskId),
+    gte(taskTable.createdAt, startOfDay))
+  ).orderBy(taskTable.createdAt);
 
   if (tasksResult.length === 0) {
     await interaction.editReply({
@@ -225,18 +229,20 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
 
   // Mark task as complete
   await db.transaction(async (tx) => {
-    await tx.update(tasksTable)
+    await tx.update(taskTable)
       .set({
         isCompleted: true,
         completedAt: new Date(),
       })
-      .where(eq(tasksTable.id, taskToComplete.id));
+      .where(eq(taskTable.id, taskToComplete.id));
     // Update user's total points
-    await tx.update(usersTable)
+    await tx.update(userTable)
       .set({
-        totalPoints: sql`${usersTable.totalPoints} + ${TASK_POINT_SCORE}`,
+        dailyPoints: sql`${userTable.dailyPoints} + ${TASK_POINT_SCORE}`,
+        monthlyPoints: sql`${userTable.monthlyPoints} + ${TASK_POINT_SCORE}`,
+        totalPoints: sql`${userTable.totalPoints} + ${TASK_POINT_SCORE}`,
       })
-      .where(eq(usersTable.discordId, discordId));
+      .where(eq(userTable.discordId, discordId));
   });
 
   await interaction.editReply({
@@ -255,16 +261,17 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
   });
 }
 
-async function cancelTask(interaction: ChatInputCommandInteraction, discordId: string): Promise<void> {
+async function cancelTask(interaction: ChatInputCommandInteraction, discordId: string, startOfDay: Date): Promise<void> {
   const taskId = interaction.options.getInteger("task", true);
 
-  const tasksResult = await db.delete(tasksTable).where(
+  const tasksResult = await db.delete(taskTable).where(
     and(
-      eq(tasksTable.discordId, discordId),
-      eq(tasksTable.isCompleted, false),
-      eq(tasksTable.id, taskId)
+      eq(taskTable.discordId, discordId),
+      eq(taskTable.isCompleted, false),
+      eq(taskTable.id, taskId),
+      gte(taskTable.createdAt, startOfDay)
     )
-  ).returning({ id: tasksTable.id, title: tasksTable.title });
+  ).returning({ id: taskTable.id, title: taskTable.title });
 
   if (tasksResult.length === 0) {
     const embed = createErrorTemplate(

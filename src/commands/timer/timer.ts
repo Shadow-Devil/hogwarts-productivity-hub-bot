@@ -1,17 +1,17 @@
 import { SlashCommandBuilder, MessageFlags, ChatInputCommandInteraction } from "discord.js";
-import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
+import { getUserVoiceChannel } from "../../utils/voiceUtils.ts";
 import {
   createTimerTemplate,
   createErrorTemplate,
-} from "../utils/embedTemplates.ts";
+} from "../../utils/embedTemplates.ts";
 import {
   safeDeferReply,
   safeErrorReply,
   safeReply,
-} from "../utils/interactionUtils.ts";
+} from "../../utils/interactionUtils.ts";
 import dayjs from "dayjs";
-import type { Command } from "../commands.ts";
-import { fetchUserTimezone } from "../db/db.ts";
+import type { Command } from "../../commands.ts";
+import { fetchUserTimezone } from "../../db/db.ts";
 
 
 export default {

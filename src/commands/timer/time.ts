@@ -1,13 +1,13 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
-import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
+import { getUserVoiceChannel } from "../../utils/voiceUtils.ts";
 import {
   createTimerTemplate,
   createErrorTemplate,
-} from "../utils/embedTemplates.ts";
-import { safeDeferReply, safeErrorReply } from "../utils/interactionUtils.ts";
+} from "../../utils/embedTemplates.ts";
+import { safeDeferReply, safeErrorReply } from "../../utils/interactionUtils.ts";
 import dayjs from "dayjs";
 import assert from "node:assert/strict";
-import { fetchUserTimezone } from "../db/db.ts";
+import { fetchUserTimezone } from "../../db/db.ts";
 
 
 export default {

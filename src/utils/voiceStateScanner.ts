@@ -91,6 +91,12 @@ export async function scanAndStartTracking(
     }
     console.log("═".repeat(40));
 
+    if (scanResults.trackingStarted > 0) {
+      console.log(
+        `🎤 Auto-started tracking for ${scanResults.trackingStarted} users already in voice channels`
+      );
+    }
+
     return scanResults;
   } catch (error) {
     console.error("❌ Error during voice state scan:", error);

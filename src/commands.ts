@@ -11,12 +11,11 @@ import graceperiod from "./commands/admin/graceperiod.ts";
 import recovery from "./commands/admin/recovery.ts";
 import voicescan from "./commands/admin/voicescan.ts";
 
-import housepoints from "./commands/housepoints.ts";
-import leaderboard from "./commands/leaderboard.ts";
-import stats from "./commands/stats.ts";
-import stoptimer from "./commands/stoptimer.ts";
-import time from "./commands/time.ts";
-import timer from "./commands/timer.ts";
+import housepoints from "./commands/stats/housepoints.ts";
+import leaderboard from "./commands/stats/leaderboard.ts";
+import stoptimer from "./commands/timer/stoptimer.ts";
+import time from "./commands/timer/time.ts";
+import timer from "./commands/timer/timer.ts";
 import timezoneCommand from "./commands/timezone.ts";
 
 export type Command = {
@@ -41,7 +40,6 @@ commands.set(voicescan.data.name, voicescan);
 
 commands.set(housepoints.data.name, housepoints);
 commands.set(leaderboard.data.name, leaderboard);
-commands.set(stats.data.name, stats);
 commands.set(stoptimer.data.name, stoptimer);
 commands.set(time.data.name, time);
 commands.set(timer.data.name, timer);

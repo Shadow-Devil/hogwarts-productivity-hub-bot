@@ -8,7 +8,7 @@ import {
 import { BotColors } from "../utils/constants.ts";
 import dayjs from "dayjs";
 import { db, ensureUserExists, fetchUserTimezone } from "../db/db.ts";
-import { usersTable } from "../db/schema.ts";
+import { userTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 export default {
@@ -105,9 +105,9 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
   }
 
   // Update timezone in database
-  const result = await db.update(usersTable).set({
+  const result = await db.update(userTable).set({
     timezone: newTimezone,
-  }).where(eq(usersTable.discordId, discordId));
+  }).where(eq(userTable.discordId, discordId));
 
   if (result.rowCount === 0) {
     await interaction.editReply({

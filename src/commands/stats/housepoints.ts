@@ -1,16 +1,16 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
-import * as voiceService from "../services/voiceService.ts";
+import * as voiceService from "../../services/voiceService.ts";
 import {
   createHouseTemplate,
   createChampionTemplate,
   createErrorTemplate,
-} from "../utils/embedTemplates.ts";
+} from "../../utils/embedTemplates.ts";
 import {
   safeDeferReply,
   safeErrorReply,
   fastMemberFetch,
-} from "../utils/interactionUtils.ts";
-import { db, getUserHouse } from "../db/db.ts";
+} from "../../utils/interactionUtils.ts";
+import { db, getUserHouse } from "../../db/db.ts";
 
 export default {
   data: new SlashCommandBuilder()

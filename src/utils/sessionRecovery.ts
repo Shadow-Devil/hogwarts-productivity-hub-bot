@@ -1,6 +1,6 @@
 import { db } from "../db/db.ts";
 import * as voiceService from "../services/voiceService.ts";
-import { voiceSessionsTable } from "../db/schema.ts";
+import { voiceSessionTable } from "../db/schema.ts";
 import { and, gt, isNull } from "drizzle-orm";
 
 /**
@@ -38,6 +38,10 @@ export async function initialize(activeVoiceSessionsMap: Map<string, any>, grace
   // Recover any incomplete sessions from previous runs
   const recoveredSessions = await recoverIncompleteSessions();
 
+  if (recoveredSessions > 0) {
+    console.debug(`📈 Recovered ${recoveredSessions} incomplete sessions from previous runs`);
+  }
+
   // Start periodic session state saving
   startPeriodicSaving();
   return recoveredSessions;
@@ -54,9 +58,9 @@ async function recoverIncompleteSessions() {
 
   // Find incomplete sessions (no left_at timestamp)
   const result = await db.select()
-    .from(voiceSessionsTable)
-    .where(and(isNull(voiceSessionsTable.leftAt), gt(voiceSessionsTable.joinedAt, staleThreshold)))
-    .orderBy(voiceSessionsTable.joinedAt);
+    .from(voiceSessionTable)
+    .where(and(isNull(voiceSessionTable.leftAt), gt(voiceSessionTable.joinedAt, staleThreshold)))
+    .orderBy(voiceSessionTable.joinedAt);
 
   let recoveredCount = 0;
   for (const session of result) {
@@ -80,9 +84,9 @@ async function processIncompleteSession(session: { joinedAt: Date; id: number; d
 
   // Use last heartbeat if available, otherwise estimate end time
   const estimatedEndTime = new Date(
-      sessionStartTime.getTime() +
-      Math.min(sessionDurationMs, 3 * 60 * 60 * 1000)
-    ); // Max 3 hours
+    sessionStartTime.getTime() +
+    Math.min(sessionDurationMs, 3 * 60 * 60 * 1000)
+  ); // Max 3 hours
 
   const estimatedDurationMs =
     estimatedEndTime.getTime() - sessionStartTime.getTime();
