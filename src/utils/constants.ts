@@ -22,3 +22,7 @@ export const BotColors = {
 
 export const TASK_POINT_SCORE = 2;
 export const DAILY_TASK_LIMIT = 10;
+export const MIN_DAILY_MINUTES_FOR_STREAK = 15 * 60; // 15 minutes in seconds
+export const FIRST_HOUR_POINTS = 5;
+export const REST_HOURS_POINTS = 2;
+export const MAX_HOURS_PER_DAY = 15;

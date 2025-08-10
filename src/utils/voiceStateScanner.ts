@@ -5,10 +5,12 @@
  */
 
 // Get grace period sessions if available
+import { isNull } from "drizzle-orm";
 import { client } from "../client.ts";
-import { activeVoiceSessions } from "../events/voiceStateUpdate.ts";
-import * as voiceService from "../services/voiceService.ts";
 import { BaseGuildVoiceChannel, ChannelType, Collection, type Guild } from "discord.js";
+import { voiceSessionTable } from "../db/schema.ts";
+import { db } from "../db/db.ts";
+import { startVoiceSession } from "./voiceUtils.ts";
 
 export let isScanning = false;
 let scanResults: {
@@ -51,7 +53,6 @@ export async function scanAndStartTracking() {
       console.log(`🏰 Scanning guild: ${guild.name} (${guild.id})`);
       await scanGuildVoiceStates(
         guild,
-        activeVoiceSessions
       );
     }
 
@@ -109,7 +110,6 @@ export async function scanAndStartTracking() {
  */
 async function scanGuildVoiceStates(
   guild: Guild,
-  activeVoiceSessions: Map<string, any>,
 ) {
   try {
     // Get all voice channels in the guild
@@ -124,7 +124,6 @@ async function scanGuildVoiceStates(
     for (const [_channelId, channel] of voiceChannels) {
       await scanVoiceChannel(
         channel,
-        activeVoiceSessions,
       );
     }
   } catch (error) {
@@ -136,12 +135,9 @@ async function scanGuildVoiceStates(
 /**
  * Scan a specific voice channel and start tracking for users
  * @param {BaseGuildVoiceChannel} channel - Discord voice channel
- * @param {Map} activeVoiceSessions - Active voice sessions map
- * @param {Map} gracePeriodSessions - Grace period sessions map
  */
 async function scanVoiceChannel(
-  channel: BaseGuildVoiceChannel,
-  activeVoiceSessions: Map<string, any>
+  channel: BaseGuildVoiceChannel
 ) {
   try {
     const members = channel.members;
@@ -161,6 +157,12 @@ async function scanVoiceChannel(
 
     const usersStarted = [];
 
+    const activeVoiceSessions = await db.select({
+      discordId: voiceSessionTable.discordId,
+    }).from(voiceSessionTable).where(
+      isNull(voiceSessionTable.leftAt),
+    ).then(s => s.map(r => r.discordId));
+
     for (const [memberId, member] of members) {
       try {
         // Skip bots
@@ -171,7 +173,7 @@ async function scanVoiceChannel(
         scanResults.totalUsersFound++;
 
         // Check if user already has an active session or is in grace period
-        if (activeVoiceSessions.has(memberId)) {
+        if (memberId in activeVoiceSessions) {
           console.log(
             `⏭️  User ${member.user.username} already being tracked, skipping...`
           );
@@ -179,20 +181,9 @@ async function scanVoiceChannel(
         }
 
         // Start voice session for this user
-        const session = await voiceService.startVoiceSession(
+        await startVoiceSession(
           memberId,
-          member.user.username,
-          channel.id,
-          channel.name
         );
-
-        // Add to active sessions tracking with last seen timestamp
-        activeVoiceSessions.set(memberId, {
-          channelId: channel.id,
-          joinTime: new Date(), // Use current time as join time for scanning
-          sessionId: session.id,
-          lastSeen: new Date(), // Track when user was last confirmed in voice
-        });
 
         scanResults.trackingStarted++;
         usersStarted.push(member.user.username);

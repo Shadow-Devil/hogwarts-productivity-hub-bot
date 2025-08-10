@@ -20,6 +20,6 @@ await rest.put(
   { body: commands.map((command) => command.data.toJSON()) }
 );
 
-await db.$client.end()
+await db.$client.end();
 
 console.log("Successfully registered all slash commands");

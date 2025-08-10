@@ -1,6 +1,5 @@
 import type { Client } from "discord.js";
 import { commands } from "../commands.ts";
-import * as SessionRecovery from "../utils/sessionRecovery.ts";
 import * as VoiceStateScanner from "../utils/voiceStateScanner.ts";
 
 export async function execute(c: Client<true>): Promise<void> {
@@ -9,7 +8,6 @@ export async function execute(c: Client<true>): Promise<void> {
     console.log(`Commands Loaded: ${commands.size}`);
 
     try {
-        await SessionRecovery.initialize();
         await VoiceStateScanner.scanAndStartTracking();
 
         console.log("═".repeat(50));

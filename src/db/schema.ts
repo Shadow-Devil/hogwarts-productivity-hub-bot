@@ -28,12 +28,16 @@ export const userTable = pgTable("user", {
 export const voiceSessionTable = pgTable("voice_session", {
     // Technical fields
     id: serial().primaryKey(),
-    discordId: varchar({length: 255}).notNull().references(() => userTable.discordId),
-    createdAt: timestamp().notNull().defaultNow(),
+    discordId: varchar({ length: 255 }).notNull().references(() => userTable.discordId),
 
     joinedAt: timestamp().notNull().defaultNow(),
     leftAt: timestamp(),
-    duration: integer().generatedAlwaysAs(sql`EXTRACT(EPOCH FROM (left_at - joined_at))`).notNull(),
+
+    // if points and voiceTime were awarded for this session
+    isTracked: boolean().default(false).notNull(),
+
+    // in seconds
+    duration: integer().generatedAlwaysAs(sql`EXTRACT(EPOCH FROM (left_at - joined_at))`),
 });
 
 export const taskTable = pgTable("task", {

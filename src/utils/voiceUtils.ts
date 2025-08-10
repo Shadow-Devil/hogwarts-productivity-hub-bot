@@ -3,6 +3,10 @@ import type {
   GuildMember,
   VoiceBasedChannel,
 } from "discord.js";
+import { db, } from "../db/db.ts";
+import { userTable, voiceSessionTable } from "../db/schema.ts";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import { FIRST_HOUR_POINTS as POINTS_FIRST_HOUR, MIN_DAILY_MINUTES_FOR_STREAK, REST_HOURS_POINTS as POINTS_REST_HOURS, MAX_HOURS_PER_DAY } from "../utils/constants.ts";
 
 /**
  * get the voice channel for a user from an interaction
@@ -40,5 +44,115 @@ export async function getUserVoiceChannel(
 
   console.log(`User ${interaction.user.tag} is not in any voice channel`);
   return null;
-
 }
+
+
+
+// Start a voice session when user joins VC (timezone-aware)
+export async function startVoiceSession(
+  discordId: string,
+) {
+  await db.transaction(async (tx) => {
+    const existingVoiceSession = await tx.$count(voiceSessionTable, and(
+      eq(voiceSessionTable.discordId, discordId),
+      isNull(voiceSessionTable.leftAt)
+    ));
+
+    if (existingVoiceSession > 0) {
+      console.error(`Voice session already active for ${discordId}, cannot start a new one`);
+      return;
+    }
+
+    await tx.insert(voiceSessionTable).values({ discordId });
+
+    console.log(`Voice session started for ${discordId}`);
+  })
+}
+
+/** End a voice session when user leaves VC
+ *  @param {string} discordId - User's Discord ID
+ *  @param {boolean} isTracked - If false, do not update user stats (for deleting old sessions)
+ */
+export async function endVoiceSession(discordId: string, isTracked: boolean = true) {
+  await db.transaction(async (tx) => {
+    const existingVoiceSession = await tx.select({ id: voiceSessionTable.id }).from(voiceSessionTable).where(and(
+      eq(voiceSessionTable.discordId, discordId),
+      isNull(voiceSessionTable.leftAt)
+    ))
+    if (existingVoiceSession.length !== 1) {
+      console.error(`Could not end voice session, found ${existingVoiceSession.length} active voice session found for ${discordId}`);
+      return;
+    }
+
+    const [voiceSessionWithDuration] = await tx.update(voiceSessionTable).set({
+      leftAt: new Date(),
+      isTracked, // Only track if not deleting old session
+    }).where(eq(voiceSessionTable.id, existingVoiceSession[0]!!.id)).returning({
+      duration: voiceSessionTable.duration,
+    });
+    if (!isTracked) {
+      return;
+    }
+
+    const duration = voiceSessionWithDuration!.duration || 0;
+
+    // Update user's voice time stats
+    const [user] = await tx.update(userTable).set({
+      dailyVoiceTime: sql`${userTable.dailyVoiceTime} + ${duration}`,
+      monthlyVoiceTime: sql`${userTable.monthlyVoiceTime} + ${duration}`,
+      totalVoiceTime: sql`${userTable.totalVoiceTime} + ${duration}`,
+    }).where(eq(userTable.discordId, discordId)).returning({
+      dailyVoiceTime: userTable.dailyVoiceTime,
+      isStreakUpdatedToday: userTable.isStreakUpdatedToday,
+    });
+
+    // update streak
+    if (user!.dailyVoiceTime >= MIN_DAILY_MINUTES_FOR_STREAK && !user!.isStreakUpdatedToday) {
+      const streakResult = await db.update(userTable).set({
+        streak: sql`${userTable.streak} + 1`,
+        isStreakUpdatedToday: true,
+      }).where(eq(userTable.discordId, discordId)).returning({
+        streak: userTable.streak,
+      });
+
+      if (streakResult.length === 0) {
+        console.error(`Failed to update streak for ${discordId}, no user found`);
+        return;
+      }
+    }
+
+    // Calculate and award points for this session
+    // TODO Maybe count 55 min as the next hour (ask Sam)
+    const oldDailyVoiceTime = user!.dailyVoiceTime - duration;
+    const newDailyVoiceTime = user!.dailyVoiceTime;
+    const ONE_HOUR = 60 * 60;
+
+    let pointsEarned = 0;
+    if (oldDailyVoiceTime < ONE_HOUR && newDailyVoiceTime >= ONE_HOUR) {
+      // Crossed the 1-hour threshold
+      pointsEarned += POINTS_FIRST_HOUR;
+    }
+
+    if (oldDailyVoiceTime < ONE_HOUR * 2 && newDailyVoiceTime >= ONE_HOUR * 2) {
+      // Crossed the 2-hour threshold
+      const hoursCapped = Math.min(Math.floor(newDailyVoiceTime / ONE_HOUR), MAX_HOURS_PER_DAY);
+
+      // -1 because we already awarded points for the first hour
+      pointsEarned += POINTS_REST_HOURS * (hoursCapped - 1);
+    }
+
+    console.log(
+      `Voice session ended for ${discordId}: ${duration} seconds, awarded ${pointsEarned} points (oldDailyVoiceTime: ${oldDailyVoiceTime}, newDailyVoiceTime: ${newDailyVoiceTime})`
+    );
+
+    if (pointsEarned > 0) {
+      // Award points to user
+      await tx.update(userTable).set({
+        dailyPoints: sql`${userTable.dailyPoints} + ${pointsEarned}`,
+        monthlyPoints: sql`${userTable.monthlyPoints} + ${pointsEarned}`,
+        totalPoints: sql`${userTable.totalPoints} + ${pointsEarned}`,
+      }).where(eq(userTable.discordId, discordId));
+    }
+  })
+}
+

@@ -10,9 +10,9 @@ import {
   formatDataTable,
   createStatsCard,
 } from "../../utils/visualHelpers.ts";
-import {
-  activeVoiceSessions,
-} from "../../events/voiceStateUpdate.ts";
+import { voiceSessionTable } from "../../db/schema.ts";
+import { and, eq, isNull } from "drizzle-orm";
+import { db } from "../../db/db.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -29,7 +29,9 @@ export default {
       console.log(`Debug command triggered by ${interaction.user.tag}`);
 
       // Get session tracking information
-      const userSession = activeVoiceSessions.get(interaction.user.id);
+      const voiceSession = await db.select({
+        joinTime: voiceSessionTable.joinedAt,
+      }).from(voiceSessionTable).where(and(eq(voiceSessionTable.discordId, interaction.user.id), isNull(voiceSessionTable.leftAt)));
 
       // Test voice channel detection
       const voiceChannel = await getUserVoiceChannel(interaction);
@@ -69,10 +71,10 @@ export default {
         let sessionTracked = "❌ Not Tracked";
         let sessionAge = 0;
 
-        if (userSession) {
+        if (voiceSession.length > 0) {
           sessionTracked = "✅ Tracked";
           sessionAge = Math.floor(
-            (Date.now() - userSession.joinTime.getTime()) / (1000 * 60)
+            (Date.now() - voiceSession[0]!.joinTime.getTime()) / (1000 * 60)
           );
         }
 
@@ -84,7 +86,7 @@ export default {
             Detection: "✅ Working",
             "Channel Members": `${voiceChannel.members.size}`,
             "Session Tracking": sessionTracked,
-            "Session Age": userSession ? `${sessionAge} min` : "N/A",
+            "Session Age": voiceSession.length > 0 ? `${sessionAge} min` : "N/A",
             "Timer Status": timerStatus,
             Phase: timerPhase,
           },
@@ -143,12 +145,7 @@ export default {
         console.log(`User ${interaction.user.tag} is not in any voice channel`);
 
         // Get global session statistics with grace period info
-        const totalActiveSessions = activeVoiceSessions.size;
-        const sessionsOlderThanHour = Array.from(
-          activeVoiceSessions.values()
-        ).filter(
-          (session) => Date.now() - session.joinTime.getTime() > 60 * 60 * 1000
-        ).length;
+        const totalActiveSessions = await db.$count(voiceSessionTable, isNull(voiceSessionTable.leftAt));
 
         const embed = new EmbedBuilder()
           .setTitle(
@@ -168,7 +165,6 @@ export default {
             Detection: "❌ No Channel",
             "User Status": "Not in Voice",
             "Active Sessions": `${totalActiveSessions}`,
-            "Long Sessions": `${sessionsOlderThanHour}`,
             Recommendation: "Join Voice Channel",
             "Commands Available": "Limited",
           },

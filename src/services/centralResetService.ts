@@ -2,7 +2,7 @@ import cron from "node-cron";
 import dayjs from "dayjs";
 import { db } from "../db/db.ts";
 import { userTable } from "../db/schema.ts";
-import { inArray, lt } from "drizzle-orm";
+import { inArray, lt, sql } from "drizzle-orm";
 
 let isRunning = false;
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
@@ -78,6 +78,7 @@ export async function processDailyResets() {
       dailyPoints: 0,
       dailyVoiceTime: 0,
       lastDailyReset: dayjs().toDate(),
+      streak: sql`CASE WHEN ${userTable.isStreakUpdatedToday} = false THEN 0 ELSE ${userTable.streak}`,
       isStreakUpdatedToday: false,
     }
   ).where(inArray(userTable.discordId, usersNeedingReset))
