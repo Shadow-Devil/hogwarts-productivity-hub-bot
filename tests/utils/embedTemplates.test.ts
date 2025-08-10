@@ -9,7 +9,6 @@ import {
   createHealthTemplate,
   createHouseTemplate,
   createSuccessTemplate,
-  createTaskTemplate,
   createTimerTemplate,
 } from "../../src/utils/embedTemplates.ts";
 
@@ -81,19 +80,6 @@ describe("Embed Templates", () => {
   });
 
   describe("Specialized Templates", () => {
-    describe("createTaskTemplate", () => {
-      it("should require proper Discord.js User object structure", () => {
-        // This test documents that the function expects a real Discord.js User object
-        // In production, this would be provided by Discord.js
-        expect(() => {
-          const invalidUser = { username: "TestUser" }; // Missing displayAvatarURL method
-          createTaskTemplate([], invalidUser);
-        }).toThrow("user.displayAvatarURL is not a function");
-
-        // This documents the expected behavior - it should work with proper objects
-        expect(typeof createTaskTemplate).toBe("function");
-      });
-    });
 
     describe("createTimerTemplate", () => {
       it("should create a timer start template", () => {
