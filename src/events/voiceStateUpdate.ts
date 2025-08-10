@@ -1,7 +1,6 @@
 import { type VoiceState } from "discord.js";
 import { ensureUserExists } from "../db/db.ts";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
-import { getHouseFromMember } from "../utils/houseUtils.ts";
 
 export async function execute(oldState: VoiceState, newState: VoiceState) {
   const user = newState.member || oldState.member;
@@ -11,7 +10,7 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   const username = user.user.username;
   const oldChannel = oldState.channel;
   const newChannel = newState.channel;
-  await ensureUserExists(userId, getHouseFromMember(user));
+  await ensureUserExists(user);
 
   // User joined a voice channel
   if (!oldChannel && newChannel) {

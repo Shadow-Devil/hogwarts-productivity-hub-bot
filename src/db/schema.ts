@@ -6,6 +6,7 @@ export const userTable = pgTable("user", {
     discordId: varchar({length: 255}).primaryKey().notNull(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow(),
+    username: varchar({ length: 255 }).notNull(),
 
     // User customization fields
     house: varchar({length: 50, enum: ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"]}),
@@ -50,14 +51,4 @@ export const taskTable = pgTable("task", {
     title: varchar({length: 500}).notNull(),
     isCompleted: boolean().default(false),
     completedAt: timestamp(),
-});
-
-export const housePointTable = pgTable("house_point", {
-    // Technical fields
-    id: serial().primaryKey(),
-    name: varchar({length: 50}).notNull(),
-    createdAt: timestamp().notNull().defaultNow(),
-
-    // Points fields
-    points: integer().default(0).notNull(),
 });

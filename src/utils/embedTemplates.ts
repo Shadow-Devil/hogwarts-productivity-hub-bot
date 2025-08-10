@@ -1,6 +1,6 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
-import {BotColors} from "./constants.ts";
+import { BotColors, type House } from "./constants.ts";
 import {
     createHeader,
   createProgressBar,
@@ -14,7 +14,7 @@ import {
 // ⏱️ Enhanced Timer Status Template
 // 🏠 Enhanced House Points Template
 function createHouseTemplate(
-  houses: Array<{ house: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin"; points: number, voiceTime: number }>,
+  houses: Array<{ house: House; points: number, voiceTime: number }>,
   type: string,
 ) {
   const houseEmojis = {

@@ -6,6 +6,7 @@ import {
 import { db } from "../../db/db.ts";
 import { isNotNull, sql } from "drizzle-orm";
 import { userTable } from "../../db/schema.ts";
+import type { House } from "../../utils/constants.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -68,7 +69,7 @@ async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, ty
   }
 
   const embed = createHouseTemplate(houseLeaderboard as {
-    house: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin";
+    house: House;
     points: number;
     voiceTime: number;
   }[], type);
