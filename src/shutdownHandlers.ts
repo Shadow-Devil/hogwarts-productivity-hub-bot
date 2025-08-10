@@ -5,16 +5,16 @@ import * as DailyTaskManager from "./utils/dailyTaskManager.ts";
 
 export function registerShutdownHandlers() {
     // Graceful shutdown handlers
-    process.on("SIGINT", () => {
+    process.on("SIGINT", async () => {
         console.log("\n🛑 Shutdown Signal Received (SIGINT - Ctrl+C)");
         console.log("🔄 Initiating graceful shutdown...");
-        shutdown();
+        await shutdown();
     });
 
-    process.on("SIGTERM", () => {
+    process.on("SIGTERM", async () => {
         console.log("\n🛑 Shutdown Signal Received (SIGTERM - Process Manager)");
         console.log("🔄 Initiating graceful shutdown...");
-        shutdown();
+        await shutdown();
     });
 
     // Global error handlers

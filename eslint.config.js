@@ -3,6 +3,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config([
   eslint.configs.recommended,
+  tseslint.configs.recommended,
   {
     files: ["**/*.ts"],
     languageOptions: {
@@ -24,6 +25,10 @@ export default tseslint.config([
         clearInterval: "readonly",
         NodeJS: true,
       },
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     rules: {
       "no-unused-vars": "off",
@@ -40,10 +45,12 @@ export default tseslint.config([
       "prefer-const": "error",
       "no-redeclare": "off",
       "@typescript-eslint/no-redeclare": "error",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-extra-non-null-assertion": "off",
+    "@typescript-eslint/no-floating-promises": "error"
     },
   },
   tseslint.configs.base,
-
   {
     files: ["**/*.test.js", "**/*.spec.js", "tests/**/*.js"],
     languageOptions: {

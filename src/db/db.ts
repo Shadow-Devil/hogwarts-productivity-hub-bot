@@ -57,13 +57,13 @@ async function checkAndPerformHouseMonthlyReset() {
             : dayjs().subtract(1, "month").format("YYYY-MM");
           await db.$client.query(
             `
-                        INSERT INTO house_monthly_summary (house_id, house_name, year_month, total_points)
-                        VALUES ($1, $2, $3, $4)
-                        ON CONFLICT (house_name, year_month)
-                        DO UPDATE SET
-                            total_points = $4,
-                            updated_at = CURRENT_TIMESTAMP
-                    `,
+                INSERT INTO house_monthly_summary (house_id, house_name, year_month, total_points)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (house_name, year_month)
+                DO UPDATE SET
+                    total_points = $4,
+                    updated_at = CURRENT_TIMESTAMP
+            `,
             [house.id, house.name, lastMonth, house.monthly_points]
           );
         }

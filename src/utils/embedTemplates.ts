@@ -26,29 +26,21 @@ function createTaskTemplate(
     includeRecentCompleted = false,
     maxRecentCompleted = 5,
     helpText = "",
-    useEnhancedLayout = true,
     useTableFormat = true,
     showDailyLimit = false,
   } = {}
 ) {
-  const embed = createStyledEmbed("primary");
-
-  if (useEnhancedLayout) {
-    embed
-      .setTitle("📋 Personal Task Dashboard")
-      .setThumbnail(user.displayAvatarURL());
-  } else {
-    embed
-      .setTitle("📋 Personal Task Dashboard")
-      .setThumbnail(user.displayAvatarURL());
-  }
+  const embed = createStyledEmbed("primary")
+    .setTitle("📋 Personal Task Dashboard")
+    .setThumbnail(user.displayAvatarURL());
+  ;
 
   if (emptyState || (Array.isArray(tasks) && tasks.length === 0)) {
     embed.setDescription(
       "Ready to get productive?" +
-        (emptyStateMessage
-          ? `\n\n${emptyStateMessage}`
-          : "\n\n### 💡 Getting Started\nUse `/addtask <description>` to create your first task!")
+      (emptyStateMessage
+        ? `\n\n${emptyStateMessage}`
+        : "\n\n### 💡 Getting Started\nUse `/addtask <description>` to create your first task!")
     );
     embed.setColor(BotColors.INFO);
 

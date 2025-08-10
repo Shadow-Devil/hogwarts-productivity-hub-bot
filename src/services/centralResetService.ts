@@ -173,9 +173,9 @@ export async function start() {
     scheduledJobs.set("healthCheck", healthCheckJob);
 
     // Start all jobs
-    dailyResetJob.start();
-    monthlyResetJob.start();
-    healthCheckJob.start();
+    await dailyResetJob.start();
+    await monthlyResetJob.start();
+    await healthCheckJob.start();
     console.log("CentralResetService started successfully");
 
     isRunning = true;
@@ -202,7 +202,7 @@ export async function stop() {
   try {
   // Stop all scheduled jobs
     for (const [, job] of scheduledJobs.entries()) {
-      job.destroy();
+      await job.destroy();
     }
 
     scheduledJobs.clear();

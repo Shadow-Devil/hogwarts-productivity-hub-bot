@@ -75,7 +75,7 @@ export default {
       default:
         await interaction.editReply({
           embeds: [createErrorTemplate(
-            "❌ Invalid Subcommand",
+            "Invalid Subcommand",
             "Please use `/tasks add`, `/tasks view`, `/tasks complete`, or `/tasks remove`.",
           )],
         });
@@ -83,7 +83,7 @@ export default {
     }
   }, autocomplete: async (interaction: AutocompleteInteraction) => {
     const results = await fetchTasks(interaction.user.id);
-    interaction.respond(results.map(task => ({
+    await interaction.respond(results.map(task => ({
       name: task.title,
       value: task.id,
     })));
@@ -122,7 +122,7 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
 
   await interaction.editReply({
     embeds: [createSuccessTemplate(
-      `✅ Task Added Successfully!`,
+      `Task Added Successfully!`,
       `**${tasks[0]?.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
       {
         celebration: true,
@@ -148,7 +148,6 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
       emptyStateMessage:
         "🌟 **Ready to get productive?**\nUse `/tasks add <title>` to create your first task!",
       helpText: `Tip: Completing tasks earns you ${TASK_POINT_SCORE} points each!`,
-      useEnhancedLayout: true,
     });
     await interaction.editReply({ embeds: [embed] });
     return;
@@ -183,7 +182,6 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
       {
         showProgress: true,
         includeRecentCompleted: true,
-        useEnhancedLayout: true,
         useTableFormat: true,
         maxRecentCompleted: 5,
         showDailyLimit: true,
@@ -206,7 +204,7 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
   if (tasksResult.length === 0) {
     await interaction.editReply({
       embeds: [createErrorTemplate(
-        `❌ Task Completion Failed`,
+        `Task Completion Failed`,
         `Could not find task. Use \`/tasks view\` to check your tasks`,
       )]
     });
@@ -217,7 +215,7 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
   if (dayjs().diff(dayjs(taskToComplete.createdAt), 'minute') < 20) {
     await interaction.editReply({
       embeds: [createErrorTemplate(
-        `❌ Task Completion Failed`,
+        `Task Completion Failed`,
         `You can only complete tasks that are at least 20 minutes old. Please try again later.`,
       )]
     });
@@ -226,7 +224,7 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
 
 
   // Mark task as complete
-  db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     await tx.update(tasksTable)
       .set({
         isCompleted: true,
@@ -243,8 +241,8 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
 
   await interaction.editReply({
     embeds: [(createSuccessTemplate(
-      `✅ Task Completed Successfully!`,
-      `**✅ Completed: "${taskToComplete.title}" (+${TASK_POINT_SCORE} points)**\n\n🚀 Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
+      `Task Completed Successfully!`,
+      `**Completed: "${taskToComplete.title}" (+${TASK_POINT_SCORE} points)**\n\n🚀 Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
       {
         celebration: true,
         points: 2,
@@ -270,7 +268,7 @@ async function cancelTask(interaction: ChatInputCommandInteraction, discordId: s
 
   if (tasksResult.length === 0) {
     const embed = createErrorTemplate(
-      `❌ Task Removal Failed`,
+      `Task Removal Failed`,
       "Task not found. Use `/tasks view` to check your tasks.",
     );
     await interaction.editReply({ embeds: [embed] });
@@ -281,7 +279,7 @@ async function cancelTask(interaction: ChatInputCommandInteraction, discordId: s
 
   await interaction.editReply({
     embeds: [(createSuccessTemplate(
-      `✅ Task Removed Successfully`,
+      `Task Removed Successfully`,
       `**Removed task: "${tasksResult[0]!!.title}"**\n\nℹ️ The task has been permanently removed from your to-do list.`
     ))]
   });

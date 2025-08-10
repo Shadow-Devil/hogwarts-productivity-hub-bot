@@ -30,7 +30,7 @@ export async function execute(interaction: Interaction): Promise<void> {
     try {
         if (interaction.isAutocomplete()) {
             assert(command.autocomplete, `Command /${interaction.commandName} does not support autocomplete`);
-            command.autocomplete(interaction);
+            await command.autocomplete(interaction);
         } else {
             await command.execute(interaction, { activeVoiceTimers });
         }
