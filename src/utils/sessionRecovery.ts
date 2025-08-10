@@ -2,6 +2,7 @@ import { db } from "../db/db.ts";
 import * as voiceService from "../services/voiceService.ts";
 import { voiceSessionTable } from "../db/schema.ts";
 import { and, gt, isNull } from "drizzle-orm";
+import { activeVoiceSessions, gracePeriodSessions } from "../events/voiceStateUpdate.ts";
 
 /**
  * Session Recovery System
@@ -10,8 +11,6 @@ import { and, gt, isNull } from "drizzle-orm";
  */
 let isShuttingDown = false;
 let periodicSaveInterval: NodeJS.Timeout | null = null;
-let activeVoiceSessions: Map<string, any> | null = null; // Will be set from voiceStateUpdate
-let gracePeriodSessions: Map<string, any> | null = null; // Will be set from voiceStateUpdate
 
 // Configuration
 const config: {
@@ -30,9 +29,7 @@ setupGracefulShutdown();
 /**
  * Initialize the session recovery system
  */
-export async function initialize(activeVoiceSessionsMap: Map<string, any>, gracePeriodSessionsMap: Map<string, any> | null = null) {
-  activeVoiceSessions = activeVoiceSessionsMap;
-  gracePeriodSessions = gracePeriodSessionsMap;
+export async function initialize() {
 
   // Recover any incomplete sessions from previous runs
   const recoveredSessions = await recoverIncompleteSessions();

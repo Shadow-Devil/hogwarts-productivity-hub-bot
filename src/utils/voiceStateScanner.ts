@@ -5,9 +5,10 @@
  */
 
 // Get grace period sessions if available
-import { gracePeriodSessions } from "../events/voiceStateUpdate.ts";
+import { client } from "../client.ts";
+import { activeVoiceSessions, gracePeriodSessions } from "../events/voiceStateUpdate.ts";
 import * as voiceService from "../services/voiceService.ts";
-import { BaseGuildVoiceChannel, ChannelType, Collection, type Client, type Guild } from "discord.js";
+import { BaseGuildVoiceChannel, ChannelType, Collection, type Guild } from "discord.js";
 
 export let isScanning = false;
 let scanResults: {
@@ -29,8 +30,6 @@ let scanResults: {
  * @returns {Object} Scan results
  */
 export async function scanAndStartTracking(
-  client: Client,
-  activeVoiceSessions: Map<string, any>
 ) {
   if (isScanning) {
     console.log("🔄 Voice state scan already in progress, skipping...");

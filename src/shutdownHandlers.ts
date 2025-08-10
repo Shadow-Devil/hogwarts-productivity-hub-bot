@@ -1,7 +1,6 @@
 import { client } from "./client.ts";
 import * as sessionRecovery from "./utils/sessionRecovery.ts";
 import * as CentralResetService from "./services/centralResetService.ts";
-import * as DailyTaskManager from "./utils/dailyTaskManager.ts";
 
 export function registerShutdownHandlers() {
     // Graceful shutdown handlers
@@ -73,8 +72,6 @@ async function shutdown() {
             // Stop Central Reset Service first
             await CentralResetService.stop();
             console.log("✅ Central reset service stopped");
-
-            DailyTaskManager.stop();
         } catch (error) {
             console.warn("⚠️  Scheduler shutdown error:", error);
         }

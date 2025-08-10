@@ -1,6 +1,5 @@
 import "dotenv/config";
 
-import * as DailyTaskManager from "./utils/dailyTaskManager.ts";
 import * as CentralResetService from "./services/centralResetService.ts";
 import { client } from "./client.ts";
 import { Events, type Client } from "discord.js";
@@ -27,7 +26,6 @@ function registerEvents(client: Client) {
 try {
   registerEvents(client);
   await CentralResetService.start();
-  DailyTaskManager.start();
 
   await client.login(process.env.DISCORD_TOKEN);
 } catch (error) {

@@ -79,25 +79,9 @@ export default {
         await interaction.editReply({ embeds: [startEmbed] });
 
         // Run the scan with timeout protection
-        const scanPromise = voiceStateScanner.scanAndStartTracking(
-          interaction.client,
-          activeVoiceSessions
-        );
-        const timeoutPromise = new Promise<{
-          totalUsersFound: number;
-          trackingStarted: number;
-          errors: number;
-          channels: Array<{
-            id: string;
-            name: string;
-            userCount: number;
-          }>;
-        }>(
-          (_, reject) =>
-            setTimeout(() => reject(new Error("SCAN_TIMEOUT")), 10000) // 10 second scan timeout
-        );
+        const scanPromise = voiceStateScanner.scanAndStartTracking();
 
-        const scanResults = await Promise.race([scanPromise, timeoutPromise]);
+        const scanResults = await scanPromise;
 
         // Create comprehensive results embed
         const resultsEmbed = new EmbedBuilder()

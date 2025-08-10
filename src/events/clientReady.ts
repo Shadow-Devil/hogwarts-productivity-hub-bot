@@ -1,10 +1,7 @@
 import type { Client } from "discord.js";
-import { client } from "../client.ts";
 import { commands } from "../commands.ts";
 import * as SessionRecovery from "../utils/sessionRecovery.ts";
 import * as VoiceStateScanner from "../utils/voiceStateScanner.ts";
-import { activeVoiceSessions, gracePeriodSessions } from "./voiceStateUpdate.ts";
-
 
 export async function execute(c: Client<true>): Promise<void> {
     console.log(`Bot User: ${c.user.tag}`);
@@ -12,15 +9,8 @@ export async function execute(c: Client<true>): Promise<void> {
     console.log(`Commands Loaded: ${commands.size}`);
 
     try {
-        await SessionRecovery.initialize(
-            activeVoiceSessions,
-            gracePeriodSessions
-        );
-
-        await VoiceStateScanner.scanAndStartTracking(
-            client,
-            activeVoiceSessions
-        );
+        await SessionRecovery.initialize();
+        await VoiceStateScanner.scanAndStartTracking();
 
         console.log("═".repeat(50));
     } catch (error) {
