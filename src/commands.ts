@@ -4,10 +4,7 @@ import {
   Collection,
   SharedSlashCommand,
 } from "discord.js";
-import addtask from "./commands/tasks/addtask.ts";
-import viewtasks from "./commands/tasks/viewtasks.ts";
-import removetask from "./commands/tasks/canceltask.ts";
-import completetask from "./commands/tasks/completetask.ts";
+import tasks from "./commands/tasks.ts";
 
 import debug from "./commands/admin/debug.ts";
 import graceperiod from "./commands/admin/graceperiod.ts";
@@ -35,10 +32,7 @@ export type Command = {
 
 export const commands = new Collection<string, Command>();
 
-commands.set(addtask.data.name, addtask);
-commands.set(viewtasks.data.name, viewtasks);
-commands.set(removetask.data.name, removetask);
-commands.set(completetask.data.name, completetask);
+commands.set(tasks.data.name, tasks);
 
 commands.set(debug.data.name, debug);
 commands.set(graceperiod.data.name, graceperiod);
