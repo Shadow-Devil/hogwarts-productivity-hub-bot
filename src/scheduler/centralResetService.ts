@@ -2,7 +2,7 @@ import cron from "node-cron";
 import dayjs from "dayjs";
 import { db } from "../db/db.ts";
 import { userTable } from "../db/schema.ts";
-import { gte, inArray, sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 
 let isRunning = false;
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
@@ -51,9 +51,7 @@ export async function processDailyResets() {
     discordId: userTable.discordId,
     timezone: userTable.timezone,
     lastDailyReset: userTable.lastDailyReset,
-  }).from(userTable).where(
-    gte(userTable.lastDailyReset, dayjs().subtract(1, "day").toDate()),
-  )
+  }).from(userTable)
 
   // Filter to only include users who are actually past their local midnight
   const usersNeedingReset = [];

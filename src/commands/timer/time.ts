@@ -33,13 +33,8 @@ export default {
 
       if (!voiceChannel) {
         const embed = createErrorTemplate(
-          `❌ Voice Channel Required`,
-          "You must be in a voice channel to check timer status and track your productivity sessions.",
-          {
-            helpText: "Join a voice channel first, then try again",
-            additionalInfo:
-              "Timer status is tied to your current voice channel location.",
-          }
+          `Voice Channel Required`,
+          `You must be in a voice channel to check timer status and track your productivity sessions.\nJoin a voice channel first, then try again`,
         );
         await interaction.editReply({ embeds: [embed] });
         return;
@@ -118,11 +113,8 @@ export default {
       console.error("Error in /time command:", error);
 
       const embed = createErrorTemplate(
-        `❌ Timer Status Check Failed`,
+        `Timer Status Check Failed`,
         "An error occurred while checking your timer status. Please try again in a moment.",
-        {
-          helpText: `ℹ️ If this problem persists, contact support`,
-        }
       );
 
       await safeErrorReply(interaction, embed);

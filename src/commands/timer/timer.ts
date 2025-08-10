@@ -50,12 +50,7 @@ export default {
       if (voiceChannel === null) {
         const embed = createErrorTemplate(
           `❌ Voice Channel Required`,
-          "You must be in a voice channel to start a Pomodoro timer and track your productivity.",
-          {
-            helpText: `ℹ️ Join any voice channel first, then try again`,
-            additionalInfo:
-              "Timers help you maintain focus during productive voice sessions.",
-          }
+          "You must be in a voice channel to start a Pomodoro timer and track your productivity.\nJoin any voice channel first, then try again.\nTimers help you maintain focus during productive voice sessions.",
         );
 
         await safeReply(interaction, {
@@ -94,11 +89,7 @@ export default {
             // Timer is valid and active, reject the new timer request
             const embed = createErrorTemplate(
               `⚠️ Timer Already Running`,
-              `A Pomodoro timer is already active in <#${voiceChannelId}>! Only one timer per voice channel is allowed.`,
-              {
-                helpText: `ℹ️ Use \`/stoptimer\` to stop the current timer first`,
-                additionalInfo: `**Current Phase:** ${existingTimer.phase.toUpperCase()}\n**Time Remaining:** ${timeRemaining} minutes`,
-              }
+              `A Pomodoro timer is already active in <#${voiceChannelId}>! Only one timer per voice channel is allowed.\nUse \`/stoptimer\` to stop the current timer first\n**Current Phase:** ${existingTimer.phase.toUpperCase()}\n**Time Remaining:** ${timeRemaining} minutes`,
             );
 
             if (!interaction.replied && !interaction.deferred) {
@@ -116,12 +107,7 @@ export default {
       if (work < 20 || (breakTime > 0 && breakTime < 5)) {
         const embed = createErrorTemplate(
           `⚠️ Invalid Timer Values`,
-          "Please ensure your timer values meet the minimum requirements for effective productivity sessions.",
-          {
-            helpText: `ℹ️ Try again with valid values`,
-            additionalInfo:
-              "**Minimum Requirements:** Work Time: **20 minutes** • Break Time: **5 minutes** (if specified)",
-          }
+          "Please ensure your timer values meet the minimum requirements for effective productivity sessions.\nTry again with valid values\n**Minimum Requirements:** Work Time: **20 minutes** • Break Time: **5 minutes** (if specified)",
         );
 
         await safeReply(interaction, {
@@ -245,7 +231,6 @@ export default {
       const embed = createErrorTemplate(
         "Timer Creation Failed",
         "An unexpected error occurred while starting your Pomodoro timer. Please try again in a moment.",
-        { helpText: "If this problem persists, contact support" }
       );
 
       await safeErrorReply(interaction, embed);

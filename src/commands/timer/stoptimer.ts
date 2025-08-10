@@ -35,13 +35,8 @@ export default {
 
       if (!voiceChannel) {
         const embed = createErrorTemplate(
-          `❌ Voice Channel Required`,
-          "You must be in a voice channel to stop a timer and manage your productivity sessions.",
-          {
-            helpText: `ℹ️ Join the voice channel with an active timer`,
-            additionalInfo:
-              "Timer controls are tied to your current voice channel location.",
-          }
+          `Voice Channel Required`,
+          "You must be in a voice channel to stop a timer and manage your productivity sessions.\nJoin the voice channel with an active timer\nTimer controls are tied to your current voice channel location.",
         );
         await safeReply(interaction, { embeds: [embed] });
         return;
@@ -50,13 +45,8 @@ export default {
       const voiceChannelId = voiceChannel.id;
       if (!activeVoiceTimers.has(voiceChannelId)) {
         const embed = createErrorTemplate(
-          `⚠️ No Active Timer Found`,
-          `No Pomodoro timer is currently running in <#${voiceChannelId}>. There's nothing to stop!`,
-          {
-            helpText: `ℹ️ Use \`/timer <work_minutes>\` to start a new Pomodoro session`,
-            additionalInfo:
-              "Check `/time` to see if there are any active timers in your current voice channel.",
-          }
+          `No Active Timer Found`,
+          `No Pomodoro timer is currently running in <#${voiceChannelId}>. There's nothing to stop!\nUse \`/timer <work_minutes>\` to start a new Pomodoro session\nCheck \`/time\` to see if there are any active timers in your current voice channel.`,
         );
         await interaction.reply({ embeds: [embed] });
         return;
@@ -97,11 +87,8 @@ export default {
       console.error("Error in /stoptimer:", error);
 
       const embed = createErrorTemplate(
-        `❌ Timer Stop Failed`,
+        `Timer Stop Failed`,
         "An error occurred while stopping your timer. Please try again in a moment.",
-        {
-          helpText: `ℹ️ If this problem persists, contact support`,
-        }
       );
 
       await safeErrorReply(interaction, embed);

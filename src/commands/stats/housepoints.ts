@@ -61,11 +61,8 @@ async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, ty
   if (houseLeaderboard.length === 0) {
     return interaction.editReply({
       embeds: [(createErrorTemplate(
-        `ℹ️ No House Data`,
-        "No house data is available yet. Houses need to earn points first!",
-        {
-          helpText: "Join a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.",
-        }
+        `No House Data`,
+        "No house data is available yet. Houses need to earn points first!\nJoin a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.",
       ))]
     });
   }

@@ -1,4 +1,4 @@
-import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, Role, SlashCommandBuilder, User, type APIRole } from "discord.js";
+import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, SlashCommandBuilder, User, } from "discord.js";
 import {
   createSuccessTemplate,
   createErrorTemplate,
