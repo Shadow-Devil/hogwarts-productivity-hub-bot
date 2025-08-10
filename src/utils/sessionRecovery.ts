@@ -8,7 +8,6 @@ import { and, gt, isNull } from "drizzle-orm";
  * Handles crash recovery, periodic session saves, and graceful shutdowns
  * Enhanced with grace period session support for unstable connections
  */
-
 let isShuttingDown = false;
 let periodicSaveInterval: NodeJS.Timeout | null = null;
 let activeVoiceSessions: Map<string, any> | null = null; // Will be set from voiceStateUpdate

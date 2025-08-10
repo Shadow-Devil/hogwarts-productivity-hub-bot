@@ -55,7 +55,6 @@ export default {
 };
 
 async function viewTimezone(interaction: ChatInputCommandInteraction, discordId: string) {
-
   const userTimezone = await fetchUserTimezone(discordId);
   const userLocalTime = dayjs()
     .tz(userTimezone)

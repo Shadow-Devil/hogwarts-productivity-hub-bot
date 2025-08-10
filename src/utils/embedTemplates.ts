@@ -250,24 +250,12 @@ function createHouseTemplate(
     Slytherin: "🐍",
   };
 
-  const houseColors = {
-    Gryffindor: BotColors.HOUSE_GRYFFINDOR,
-    Hufflepuff: BotColors.HOUSE_HUFFLEPUFF,
-    Ravenclaw: BotColors.HOUSE_RAVENCLAW,
-    Slytherin: BotColors.HOUSE_SLYTHERIN,
-  } as const;
-
   const title = type === "daily" ? "Daily House Points" :
     type === "monthly" ? "Monthly House Points"
     : "All-Time House Points";
 
-  // Use the leading house's color
-  const topHouse = houses[0];
-  const embedColor = topHouse
-    ? houseColors[topHouse.house] || BotColors.PRIMARY
-    : BotColors.PRIMARY;
 
-  const embed = createStyledEmbed().setColor(embedColor).setTitle(title);
+  const embed = createStyledEmbed().setColor(BotColors.PRIMARY).setTitle(title);
 
   // Add house rankings with enhanced table format
   if (houses && houses.length > 0) {

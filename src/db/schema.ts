@@ -9,18 +9,20 @@ export const userTable = pgTable("user", {
 
     // User customization fields
     house: varchar({length: 50, enum: ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"]}),
-    timezone: varchar({length: 50}).default("UTC"),
+    timezone: varchar({length: 50}).default("UTC").notNull(),
+    lastDailyReset: timestamp().defaultNow().notNull(),
 
     // Score fields
-    dailyPoints: integer().default(0),
-    monthlyPoints: integer().default(0),
-    totalPoints: integer().default(0),
+    dailyPoints: integer().default(0).notNull(),
+    monthlyPoints: integer().default(0).notNull(),
+    totalPoints: integer().default(0).notNull(),
 
-    dailyVoiceTime: integer().default(0),
-    monthlyVoiceTime: integer().default(0),
-    totalVoiceTime: integer().default(0),
+    dailyVoiceTime: integer().default(0).notNull(),
+    monthlyVoiceTime: integer().default(0).notNull(),
+    totalVoiceTime: integer().default(0).notNull(),
 
-    streak: integer().default(0),
+    streak: integer().default(0).notNull(),
+    isStreakUpdatedToday: boolean().default(false).notNull(),
 });
 
 export const voiceSessionTable = pgTable("voice_session", {

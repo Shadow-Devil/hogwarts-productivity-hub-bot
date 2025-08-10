@@ -11,7 +11,7 @@ import {
   fastMemberFetch,
 } from "../../utils/interactionUtils.ts";
 import { db, getUserHouse } from "../../db/db.ts";
-import { sql } from "drizzle-orm";
+import { isNotNull, sql } from "drizzle-orm";
 import { userTable } from "../../db/schema.ts";
 
 export default {
@@ -62,7 +62,9 @@ async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, ty
         house: userTable.house,
         points: sql<number>`cast(count(${pointsColumn}) as int)`,
         voiceTime: sql<number>`cast(sum(${voiceTimeColumn}) as int)`,
-      }).from(userTable).groupBy(userTable.house)
+      }).from(userTable)
+      .where(isNotNull(userTable.house))
+      .groupBy(userTable.house);
 
   if (houseLeaderboard.length === 0) {
     return interaction.editReply({ embeds: [(createErrorTemplate(
@@ -74,7 +76,11 @@ async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, ty
       ))] });
   }
 
-  const embed = createHouseTemplate(houseLeaderboard, type);
+  const embed = createHouseTemplate(houseLeaderboard as {
+    house: "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin";
+    points: number;
+    voiceTime: number;
+}[], type);
 
   await interaction.editReply({ embeds: [embed] });
 }
