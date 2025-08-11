@@ -105,8 +105,6 @@ async function createLeaderboardTemplate(
     const hours = entry.voiceTime ? Math.floor(entry.voiceTime / 3600) : "0";
     const minutes = entry.voiceTime ? Math.floor((entry.voiceTime % 3600) / 60) : "0";
 
-    // Highlight current user
-    const isCurrentUser = entry.discordId === interaction.user.id;
     const username = await interaction.client.users.fetch(entry.discordId).then(user => user.id);
 
     const userDisplay = userMention(username);
