@@ -109,20 +109,20 @@ export async function endVoiceSession(discordId: string, username: string, isTra
     }
 
     // Calculate and award points for this session
-    // TODO Maybe count 55 min as the next hour (ask Sam)
     const oldDailyVoiceTime = user!.dailyVoiceTime - duration;
     const newDailyVoiceTime = user!.dailyVoiceTime;
     const ONE_HOUR = 60 * 60;
+    const FIVE_MINUTES = 5 * 60;
 
     let pointsEarned = 0;
-    if (oldDailyVoiceTime < ONE_HOUR && newDailyVoiceTime >= ONE_HOUR) {
+    if (oldDailyVoiceTime + FIVE_MINUTES < ONE_HOUR && newDailyVoiceTime + FIVE_MINUTES >= ONE_HOUR) {
       // Crossed the 1-hour threshold
       pointsEarned += POINTS_FIRST_HOUR;
     }
 
-    if (oldDailyVoiceTime < ONE_HOUR * 2 && newDailyVoiceTime >= ONE_HOUR * 2) {
+    if (oldDailyVoiceTime + FIVE_MINUTES < ONE_HOUR * 2 && newDailyVoiceTime + FIVE_MINUTES >= ONE_HOUR * 2) {
       // Crossed the 2-hour threshold
-      const hoursCapped = Math.min(Math.floor(newDailyVoiceTime / ONE_HOUR), MAX_HOURS_PER_DAY);
+      const hoursCapped = Math.min(Math.floor((newDailyVoiceTime + FIVE_MINUTES) / ONE_HOUR), MAX_HOURS_PER_DAY);
 
       // -1 because we already awarded points for the first hour
       pointsEarned += POINTS_REST_HOURS * (hoursCapped - 1);
