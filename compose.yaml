@@ -2,15 +2,8 @@ services:
   postgres:
     image: "postgres:latest"
     environment:
-      POSTGRES_USER: "botd_user"
-      POSTGRES_PASSWORD: "your_secure_password"
-      POSTGRES_DB: "botd_production"
+      POSTGRES_USER: ${DB_USER:-db_user}
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-db_password}"
+      POSTGRES_DB: "${DB_NAME:-hogwarts_db}"
     ports:
       - "5432:5432"
-  pgadmin:
-    image: "dpage/pgadmin4:latest"
-    environment:
-      PGADMIN_DEFAULT_EMAIL: "test@test.de"
-      PGADMIN_DEFAULT_PASSWORD: "your_secure_password"
-    ports:
-      - "5050:80"

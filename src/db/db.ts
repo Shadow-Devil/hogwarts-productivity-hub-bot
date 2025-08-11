@@ -4,7 +4,15 @@ import type { GuildMember } from "discord.js";
 import { eq, and } from "drizzle-orm";
 import { getHouseFromMember } from "../utils/houseUtils.ts";
 
-export const db = drizzle({connection: process.env.DATABASE_URL!, schema, casing: 'snake_case'});
+export const db = drizzle({
+  connection: {
+    database: process.env.DB_NAME!,
+    user: process.env.DB_USER!,
+    password: process.env.DB_PASSWORD!,
+    host: process.env.DB_HOST!,
+    ssl: false
+  }, schema, casing: 'snake_case'
+});
 
 export async function ensureUserExists(user: GuildMember) {
   const house = getHouseFromMember(user);
