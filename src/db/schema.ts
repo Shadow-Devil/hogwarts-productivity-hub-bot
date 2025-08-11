@@ -5,7 +5,7 @@ export const userTable = pgTable("user", {
     // Technical fields
     discordId: varchar({length: 255}).primaryKey().notNull(),
     createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
     username: varchar({ length: 255 }).notNull(),
 
     // User customization fields

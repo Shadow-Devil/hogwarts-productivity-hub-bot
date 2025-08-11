@@ -15,16 +15,16 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   // User joined a voice channel
   if (!oldChannel && newChannel) {
     console.log(`${username} joined voice channel: ${newChannel.name}`);
-    await startVoiceSession(userId);
+    await startVoiceSession(userId, username);
 
   } else if (oldChannel && !newChannel) {
     console.log(`${username} left voice channel: ${oldChannel.name}`);
-    await endVoiceSession(userId);
+    await endVoiceSession(userId, username);
 
   } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
     console.log(`${username} switched from ${oldChannel.name} to ${newChannel.name}`);
     // For channel switches, end the old session and start new one immediately
-    await endVoiceSession(userId);
-    await startVoiceSession(userId);
+    await endVoiceSession(userId, username);
+    await startVoiceSession(userId, username);
   }
 }

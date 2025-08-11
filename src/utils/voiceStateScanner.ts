@@ -164,7 +164,7 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
         }
 
         // Start voice session for this user
-        await startVoiceSession(memberId);
+        await startVoiceSession(memberId, member.user.username);
 
         scanResults.trackingStarted++;
         usersStarted.push(member.user.username);

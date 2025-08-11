@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, userMention } from "discord.js";
 import {
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
@@ -107,11 +107,9 @@ async function createLeaderboardTemplate(
 
     // Highlight current user
     const isCurrentUser = entry.discordId === interaction.user.id;
-    const username = await interaction.client.users.fetch(entry.discordId).then(user => user.username);
+    const username = await interaction.client.users.fetch(entry.discordId).then(user => user.id);
 
-    const userDisplay = isCurrentUser
-      ? `**${username}**`
-      : username;
+    const userDisplay = userMention(username);
 
     leaderboardData.push([`${positionDisplay} ${userDisplay}`, `${hours}h ${minutes}min • ${entry.points}pts`]);
   }

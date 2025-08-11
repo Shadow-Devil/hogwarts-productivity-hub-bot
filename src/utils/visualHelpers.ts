@@ -117,7 +117,7 @@ function formatDataTable(data: any, columnWidths: number[] | null = null) {
 
   const tableRows = pairs.map(([key, value]) => {
     const paddedKey = key.padEnd(keyWidth, " ");
-    return `\`${paddedKey}\` **${value}**`;
+    return `${paddedKey} **${value}**`;
   });
 
   return tableRows.join("\n");

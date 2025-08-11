@@ -37,6 +37,7 @@ export async function getUserVoiceChannel(
 // Start a voice session when user joins VC (timezone-aware)
 export async function startVoiceSession(
   discordId: string,
+  username: string,
 ) {
   await db.transaction(async (tx) => {
     const existingVoiceSession = await tx.$count(voiceSessionTable, and(
@@ -45,13 +46,13 @@ export async function startVoiceSession(
     ));
 
     if (existingVoiceSession > 0) {
-      console.error(`Voice session already active for ${discordId}, closing and starting a new one`);
-      await endVoiceSession(discordId, false); // End existing session without tracking
+      console.error(`Voice session already active for ${username}, closing and starting a new one`);
+      await endVoiceSession(discordId, username, false); // End existing session without tracking
     }
 
     await tx.insert(voiceSessionTable).values({ discordId });
 
-    console.log(`Voice session started for ${discordId}`);
+    console.log(`Voice session started for ${username}`);
   })
 }
 
@@ -59,14 +60,14 @@ export async function startVoiceSession(
  *  @param {string} discordId - User's Discord ID
  *  @param {boolean} isTracked - If false, do not update user stats (for deleting old sessions)
  */
-export async function endVoiceSession(discordId: string, isTracked: boolean = true) {
+export async function endVoiceSession(discordId: string, username: string, isTracked: boolean = true) {
   await db.transaction(async (tx) => {
     const existingVoiceSession = await tx.select({ id: voiceSessionTable.id }).from(voiceSessionTable).where(and(
       eq(voiceSessionTable.discordId, discordId),
       isNull(voiceSessionTable.leftAt)
     ))
     if (existingVoiceSession.length !== 1) {
-      console.error(`Could not end voice session, found ${existingVoiceSession.length} active voice session found for ${discordId}`);
+      console.error(`Could not end voice session, found ${existingVoiceSession.length} active voice session found for ${username}`);
       return;
     }
 
@@ -102,7 +103,7 @@ export async function endVoiceSession(discordId: string, isTracked: boolean = tr
       });
 
       if (streakResult.length === 0) {
-        console.error(`Failed to update streak for ${discordId}, no user found`);
+        console.error(`Failed to update streak for ${username}, no user found`);
         return;
       }
     }
@@ -128,7 +129,7 @@ export async function endVoiceSession(discordId: string, isTracked: boolean = tr
     }
 
     console.log(
-      `Voice session ended for ${discordId}: ${duration} seconds, awarded ${pointsEarned} points (oldDailyVoiceTime: ${oldDailyVoiceTime}, newDailyVoiceTime: ${newDailyVoiceTime})`
+      `Voice session ended for ${username}: ${duration} seconds, awarded ${pointsEarned} points (oldDailyVoiceTime: ${oldDailyVoiceTime}, newDailyVoiceTime: ${newDailyVoiceTime})`
     );
 
     if (pointsEarned > 0) {

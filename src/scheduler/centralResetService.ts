@@ -2,7 +2,7 @@ import cron from "node-cron";
 import dayjs from "dayjs";
 import { db } from "../db/db.ts";
 import { userTable, voiceSessionTable } from "../db/schema.ts";
-import { and, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
 
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
@@ -65,12 +65,12 @@ async function processDailyResets() {
       return;
     }
 
-    const usersInVoiceSessions = await tx.select({ discordId: voiceSessionTable.discordId })
+    const usersInVoiceSessions = await tx.select({ discordId: voiceSessionTable.discordId, username: userTable.username })
       .from(voiceSessionTable)
       .where(and(inArray(voiceSessionTable.discordId, usersNeedingReset), isNull(voiceSessionTable.leftAt)))
-      .then(s => s.map(r => r.discordId));
+      .leftJoin(userTable, eq(voiceSessionTable.discordId, userTable.discordId));
 
-    await Promise.all(usersInVoiceSessions.map(discordId => endVoiceSession(discordId)));
+    await Promise.all(usersInVoiceSessions.map(user => endVoiceSession(user.discordId, user.username!)));
 
     const result = await tx.update(userTable).set(
       {
@@ -82,7 +82,7 @@ async function processDailyResets() {
       }
     ).where(inArray(userTable.discordId, usersNeedingReset))
 
-    await Promise.all(usersInVoiceSessions.map(discordId => startVoiceSession(discordId)));
+    await Promise.all(usersInVoiceSessions.map(user => startVoiceSession(user.discordId, user.username!)));
 
     console.log("Daily reset edited this many users:", result.rowCount);
   });
