@@ -7,7 +7,7 @@ import { getHouseFromMember } from "../utils/houseUtils.ts";
 export const db = drizzle({connection: process.env.DATABASE_URL!, schema, casing: 'snake_case'});
 
 export async function ensureUserExists(user: GuildMember) {
-  const house = await getHouseFromMember(user);
+  const house = getHouseFromMember(user);
   const username = user.user.username;
 
   await db.insert(schema.userTable).values({ discordId: user.id, username, house }).onConflictDoUpdate({
