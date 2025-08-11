@@ -1,4 +1,4 @@
-import { GuildMember, MessageFlags, type Interaction } from "discord.js";
+import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, MessageFlags, type CacheType, type Interaction } from "discord.js";
 import { commands } from "../commands.ts";
 import assert from "node:assert/strict";
 import { ensureUserExists } from "../db/db.ts";
@@ -14,22 +14,7 @@ export async function execute(interaction: Interaction): Promise<void> {
         return;
     }
 
-    const channel = interaction.channel;
-    let channelName;
-    if (channel !== null && !channel.isDMBased()) {
-        channelName = `#${channel.name}`;
-    } else {
-        channelName = "DM";
-    }
-
-    let commandString = interaction.commandName + (interaction.options.getSubcommand(false) ? ` ${interaction.options.getSubcommand()}` : "");
-    if (interaction.isAutocomplete()) {
-        commandString += ` ${interaction.options.getFocused()}`;
-        console.log(`🔍 Autocomplete triggered: /${commandString} by ${interaction.user.tag} in ${channelName}`);
-    } else {
-        console.log(`🎯 Command executed: /${commandString} by ${interaction.user.tag} in ${channelName}`);
-    }
-
+    logCommandExecution(interaction);
 
     try {
         await ensureUserExists(interaction.member as GuildMember);
@@ -42,7 +27,6 @@ export async function execute(interaction: Interaction): Promise<void> {
     } catch (error) {
         console.error(`💥 Command execution failed: /${interaction.commandName}`, {
             user: interaction.user.tag,
-            channel: channelName,
             error,
             isTimeout: error instanceof Error && error?.message === "Command execution timeout",
         });
@@ -74,3 +58,21 @@ export async function execute(interaction: Interaction): Promise<void> {
         }
     }
 }
+function logCommandExecution(interaction: ChatInputCommandInteraction<CacheType> | AutocompleteInteraction<CacheType>) {
+    const channel = interaction.channel;
+    let channelName;
+    if (channel !== null && !channel.isDMBased()) {
+        channelName = `#${channel.name}`;
+    } else {
+        channelName = "DM";
+    }
+
+    let commandString = interaction.commandName + (interaction.options.getSubcommand(false) ? ` ${interaction.options.getSubcommand()}` : "");
+    if (interaction.isAutocomplete()) {
+        commandString += ` ${interaction.options.getFocused()}`;
+        console.log(`🔍 Autocomplete triggered: /${commandString} by ${interaction.user.tag} in ${channelName}`);
+    } else {
+        console.log(`🎯 Command executed: /${commandString} by ${interaction.user.tag} in ${channelName}`);
+    }
+}
+
