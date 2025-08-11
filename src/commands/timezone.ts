@@ -3,7 +3,6 @@ import {
   EmbedBuilder,
   ChatInputCommandInteraction,
   AutocompleteInteraction,
-  MessageFlags,
 } from "discord.js";
 import { BotColors } from "../utils/constants.ts";
 import dayjs from "dayjs";
