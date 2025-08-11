@@ -4,13 +4,12 @@
  * for users already in voice channels
  */
 
-// Get grace period sessions if available
-import { isNull } from "drizzle-orm";
 import { client } from "../client.ts";
 import { BaseGuildVoiceChannel, ChannelType, Collection, type Guild } from "discord.js";
-import { voiceSessionTable } from "../db/schema.ts";
-import { db } from "../db/db.ts";
 import { startVoiceSession } from "./voiceUtils.ts";
+import { db } from "../db/db.ts";
+import { voiceSessionTable } from "../db/schema.ts";
+import { isNull } from "drizzle-orm";
 
 export let isScanning = false;
 let scanResults: {
@@ -27,7 +26,6 @@ let scanResults: {
 
 /**
  * Scan all voice channels and start tracking for users already in voice
- * @returns {Object} Scan results
  */
 export async function scanAndStartTracking() {
   if (isScanning) {
@@ -39,6 +37,12 @@ export async function scanAndStartTracking() {
   resetScanResults();
 
   const startTime = Date.now();
+
+  const activeVoiceSessions = await db.select({
+    discordId: voiceSessionTable.discordId,
+  }).from(voiceSessionTable).where(
+    isNull(voiceSessionTable.leftAt),
+  ).then(s => s.map(r => r.discordId));
 
   try {
     // Get all guilds (should be only one for this bot)
@@ -52,7 +56,7 @@ export async function scanAndStartTracking() {
     for (const [, guild] of guilds) {
       console.log(`🏰 Scanning guild: ${guild.name} (${guild.id})`);
       await scanGuildVoiceStates(
-        guild,
+        guild, activeVoiceSessions
       );
     }
 
@@ -104,11 +108,8 @@ export async function scanAndStartTracking() {
 /**
  * Scan voice states for a specific guild
  * @param {Guild} guild - Discord guild
- * @param {Map} activeVoiceSessions - Active voice sessions map
  */
-async function scanGuildVoiceStates(
-  guild: Guild,
-) {
+async function scanGuildVoiceStates(guild: Guild, activeVoiceSessions: string[]) {
   try {
     // Get all voice channels in the guild
     const voiceChannels = guild.channels.cache.filter(
@@ -119,10 +120,8 @@ async function scanGuildVoiceStates(
 
     console.log(`🎤 Found ${voiceChannels.size} voice channels with users`);
 
-    for (const [_channelId, channel] of voiceChannels) {
-      await scanVoiceChannel(
-        channel,
-      );
+    for (const [, channel] of voiceChannels) {
+      await scanVoiceChannel(channel, activeVoiceSessions);
     }
   } catch (error) {
     console.error(`❌ Error scanning guild ${guild.name}:`, error);
@@ -134,15 +133,9 @@ async function scanGuildVoiceStates(
  * Scan a specific voice channel and start tracking for users
  * @param {BaseGuildVoiceChannel} channel - Discord voice channel
  */
-async function scanVoiceChannel(
-  channel: BaseGuildVoiceChannel
-) {
+async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessions: string[]) {
   try {
     const members = channel.members;
-
-    if (members.size === 0) {
-      return;
-    }
 
     console.log(`🔍 Scanning ${channel.name}: ${members.size} users found`);
 
@@ -155,12 +148,6 @@ async function scanVoiceChannel(
 
     const usersStarted = [];
 
-    const activeVoiceSessions = await db.select({
-      discordId: voiceSessionTable.discordId,
-    }).from(voiceSessionTable).where(
-      isNull(voiceSessionTable.leftAt),
-    ).then(s => s.map(r => r.discordId));
-
     for (const [memberId, member] of members) {
       try {
         // Skip bots
@@ -172,28 +159,19 @@ async function scanVoiceChannel(
 
         // Check if user already has an active session or is in grace period
         if (memberId in activeVoiceSessions) {
-          console.log(
-            `⏭️  User ${member.user.username} already being tracked, skipping...`
-          );
+          console.log(`User ${member.user.username} already being tracked, skipping...`);
           continue;
         }
 
         // Start voice session for this user
-        await startVoiceSession(
-          memberId,
-        );
+        await startVoiceSession(memberId);
 
         scanResults.trackingStarted++;
         usersStarted.push(member.user.username);
 
-        console.log(
-          `✅ Started tracking for ${member.user.username} in ${channel.name}`
-        );
+        console.log(`✅ Started tracking for ${member.user.username} in ${channel.name}`);
       } catch (userError) {
-        console.error(
-          `❌ Error starting tracking for user ${member.user.username}:`,
-          userError
-        );
+        console.error(`❌ Error starting tracking for user ${member.user.username}:`, userError);
         scanResults.errors++;
       }
     }

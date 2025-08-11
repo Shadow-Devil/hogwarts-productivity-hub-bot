@@ -28,41 +28,20 @@ export default {
 
     const leaderboardType = interaction.options.getString("type", true);
 
-    let leaderboard: Array<{
-      discordId: string;
-      points: number | null;
-      voiceTime: number | null;
-    }>;
-
+    let pointsColumn;
+    let voiceTimeColumn;
     switch (leaderboardType) {
       case "daily":
-        leaderboard = await db.select({
-          discordId: userTable.discordId,
-          points: userTable.dailyPoints,
-          voiceTime: userTable.dailyVoiceTime,
-        })
-          .from(userTable)
-          .orderBy(desc(userTable.dailyPoints), desc(userTable.dailyVoiceTime))
-          .limit(10);
+        pointsColumn = userTable.dailyPoints;
+        voiceTimeColumn = userTable.dailyVoiceTime;
         break;
       case "monthly":
-        leaderboard = await db.select({
-          discordId: userTable.discordId,
-          points: userTable.monthlyPoints,
-          voiceTime: userTable.monthlyVoiceTime,
-        })
-          .from(userTable)
-          .orderBy(desc(userTable.monthlyPoints), desc(userTable.monthlyVoiceTime))
-          .limit(10);
+        pointsColumn = userTable.monthlyPoints;
+        voiceTimeColumn = userTable.monthlyVoiceTime;
         break;
       case "alltime":
-        leaderboard = await db.select({
-          discordId: userTable.discordId,
-          points: userTable.totalPoints,
-          voiceTime: userTable.totalVoiceTime,
-        })
-          .from(userTable)
-          .orderBy(desc(userTable.totalPoints), desc(userTable.totalVoiceTime))
+        pointsColumn = userTable.totalPoints;
+        voiceTimeColumn = userTable.totalVoiceTime;
         break;
       default:
         await interaction.editReply({
@@ -70,6 +49,15 @@ export default {
         });
         return;
     }
+    const leaderboard = await db.select({
+      discordId: userTable.discordId,
+      points: pointsColumn,
+      voiceTime: voiceTimeColumn,
+    })
+      .from(userTable)
+      .orderBy(desc(pointsColumn), desc(voiceTimeColumn))
+      .limit(10);
+
 
     if (leaderboard.length === 0) {
       await interaction.editReply({
@@ -100,42 +88,42 @@ async function createLeaderboardTemplate(
   }>,
   interaction: ChatInputCommandInteraction
 ) {
-  const title = type === "daily" ? "Daily Leaderboard" : 
+  const title = type === "daily" ? "Daily Leaderboard" :
     type === "monthly" ? "Monthly Leaderboard"
-    : "All-Time Leaderboard";
+      : "All-Time Leaderboard";
 
   const embed = createStyledEmbed("premium").setTitle(title);
 
 
-    const leaderboardData = []
-    for (const [index, entry] of data.entries()) {
-      const position = index + 1;
-      let positionDisplay = "";
+  const leaderboardData = []
+  for (const [index, entry] of data.entries()) {
+    const position = index + 1;
+    let positionDisplay = "";
 
-        positionDisplay = `#${position}`;
+    positionDisplay = `#${position}`;
 
-      const hours = entry.voiceTime ? Math.floor(entry.voiceTime / 3600) : "0";
-      const minutes = entry.voiceTime ? Math.floor((entry.voiceTime % 3600) / 60) : "0";
+    const hours = entry.voiceTime ? Math.floor(entry.voiceTime / 3600) : "0";
+    const minutes = entry.voiceTime ? Math.floor((entry.voiceTime % 3600) / 60) : "0";
 
-      // Highlight current user
-      const isCurrentUser = entry.discordId === interaction.user.id;
-      const username = await interaction.client.users.fetch(entry.discordId).then(user => user.username);
-      
-      const userDisplay = isCurrentUser
-        ? `**${username}**`
-        : username;
+    // Highlight current user
+    const isCurrentUser = entry.discordId === interaction.user.id;
+    const username = await interaction.client.users.fetch(entry.discordId).then(user => user.username);
 
-      leaderboardData.push([`${positionDisplay} ${userDisplay}`, `${hours}h ${minutes}min • ${entry.points}pts`]);
-    }
+    const userDisplay = isCurrentUser
+      ? `**${username}**`
+      : username;
 
-    embed.addFields([
-      {
-        name: "🏆 Top Rankings",
-        value:
-          formatDataTable(leaderboardData, [20, 15]) || "No rankings available",
-        inline: false,
-      },
-    ]);
+    leaderboardData.push([`${positionDisplay} ${userDisplay}`, `${hours}h ${minutes}min • ${entry.points}pts`]);
+  }
+
+  embed.addFields([
+    {
+      name: "🏆 Top Rankings",
+      value:
+        formatDataTable(leaderboardData, [20, 15]) || "No rankings available",
+      inline: false,
+    },
+  ]);
 
   return embed;
 }

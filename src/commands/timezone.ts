@@ -67,22 +67,22 @@ async function viewTimezone(interaction: ChatInputCommandInteraction, discordId:
 
 async function setTimezone(interaction: ChatInputCommandInteraction, discordId: string, newTimezone: string) {
   // Validate timezone
-if (!dayjs().tz(newTimezone).isValid()) {
+  if (!dayjs().tz(newTimezone).isValid()) {
     await interaction.editReply({
-        embeds: [(new EmbedBuilder()
-            .setColor(BotColors.ERROR)
-            .setTitle(`❌ Invalid Timezone`)
-            .setDescription(`The timezone \`${newTimezone}\` is not valid.`)
-            .addFields({
-                name: "💡 Tips",
-                value: [
-                    "• Check [IANA timezone list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)",
-                    "• Format: `Continent/City` (e.g., `America/New_York`)",
-                ].join("\n"),
-            }))]
+      embeds: [(new EmbedBuilder()
+        .setColor(BotColors.ERROR)
+        .setTitle(`❌ Invalid Timezone`)
+        .setDescription(`The timezone \`${newTimezone}\` is not valid.`)
+        .addFields({
+          name: "💡 Tips",
+          value: [
+            "• Check [IANA timezone list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)",
+            "• Format: `Continent/City` (e.g., `America/New_York`)",
+          ].join("\n"),
+        }))]
     });
     return;
-}
+  }
 
 
   // Get current timezone for comparison
@@ -134,11 +134,11 @@ function createTimezoneChangeEmbed(
 ) {
   const embed = new EmbedBuilder()
     .setColor(BotColors.SUCCESS)
-    .setTitle(`✅ Timezone Updated Successfully`)
+    .setTitle(`Timezone Updated Successfully`)
     .addFields(
       {
-        name: "🔄 Change Summary",
-        value: `**From:** \`${oldTimezone}\`\n**To:** \`${newTimezone}\``,
+        name: "Change Summary",
+        value: `From: \`${oldTimezone}\`\nTo: \`${newTimezone}\``,
         inline: false,
       },
       {
@@ -146,19 +146,7 @@ function createTimezoneChangeEmbed(
         value: userLocalTime,
         inline: true,
       }
-    );
-
-  embed.addFields({
-    name: "✅ What This Affects",
-    value: [
-      "• Daily reset times (streaks, voice limits)",
-      "• Task deadline calculations",
-    ].join("\n"),
-    inline: false,
-  }).setFooter({
-    text: "Your stats and streaks have been preserved during this timezone change",
-  });
-
+  );
   return embed;
 }
 

@@ -1,16 +1,13 @@
 import cron from "node-cron";
 import dayjs from "dayjs";
 import { db } from "../db/db.ts";
-import { userTable } from "../db/schema.ts";
-import { inArray, sql } from "drizzle-orm";
+import { userTable, voiceSessionTable } from "../db/schema.ts";
+import { and, inArray, isNull, sql } from "drizzle-orm";
+import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
 
-let isRunning = false;
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
 
 export async function start() {
-  if (isRunning) {
-    return;
-  }
 
   // Schedule daily reset checks - run every hour to catch all timezones
   const dailyResetJob = cron.schedule(
@@ -42,46 +39,53 @@ export async function start() {
   await dailyResetJob.start();
   await monthlyResetJob.start();
   console.log("CentralResetService started successfully");
-
-  isRunning = true;
 }
 
-export async function processDailyResets() {
-  const usersNeedingPotentialReset = await db.select({
-    discordId: userTable.discordId,
-    timezone: userTable.timezone,
-    lastDailyReset: userTable.lastDailyReset,
-  }).from(userTable)
+async function processDailyResets() {
+  await db.transaction(async (tx) => {
+    const usersNeedingPotentialReset = await tx.select({
+      discordId: userTable.discordId,
+      timezone: userTable.timezone,
+      lastDailyReset: userTable.lastDailyReset,
+    }).from(userTable)
 
-  // Filter to only include users who are actually past their local midnight
-  const usersNeedingReset = [];
-  for (const user of usersNeedingPotentialReset) {
-    const userTime = dayjs().tz(user.timezone);
-    const lastReset = dayjs(user.lastDailyReset).tz(user.timezone);
+    // Filter to only include users who are actually past their local midnight
+    const usersNeedingReset = [];
+    for (const user of usersNeedingPotentialReset) {
+      const userTime = dayjs().tz(user.timezone);
+      const lastReset = dayjs(user.lastDailyReset).tz(user.timezone);
 
-    if (!userTime.isSame(lastReset, "day")) {
-      usersNeedingReset.push(user.discordId);
+      if (!userTime.isSame(lastReset, "day")) {
+        usersNeedingReset.push(user.discordId);
+      }
     }
-  }
 
-  if (usersNeedingReset.length === 0) {
-    console.log("No users need daily reset at this time");
-    return;
-  }
-
-  //TODO maybe split voice time and award points directly for the old day and start new vc session
-
-  const result = await db.update(userTable).set(
-    {
-      dailyPoints: 0,
-      dailyVoiceTime: 0,
-      lastDailyReset: dayjs().toDate(),
-      streak: sql`CASE WHEN ${userTable.isStreakUpdatedToday} = false THEN 0 ELSE ${userTable.streak} END`,
-      isStreakUpdatedToday: false,
+    if (usersNeedingReset.length === 0) {
+      console.log("No users need daily reset at this time");
+      return;
     }
-  ).where(inArray(userTable.discordId, usersNeedingReset))
 
-  console.log("Daily reset edited this many users:", result.rowCount);
+    const usersInVoiceSessions = await tx.select({ discordId: voiceSessionTable.discordId })
+      .from(voiceSessionTable)
+      .where(and(inArray(voiceSessionTable.discordId, usersNeedingReset), isNull(voiceSessionTable.leftAt)))
+      .then(s => s.map(r => r.discordId));
+
+    await Promise.all(usersInVoiceSessions.map(discordId => endVoiceSession(discordId)));
+
+    const result = await tx.update(userTable).set(
+      {
+        dailyPoints: 0,
+        dailyVoiceTime: 0,
+        lastDailyReset: new Date(),
+        streak: sql`CASE WHEN ${userTable.isStreakUpdatedToday} = false THEN 0 ELSE ${userTable.streak} END`,
+        isStreakUpdatedToday: false,
+      }
+    ).where(inArray(userTable.discordId, usersNeedingReset))
+
+    await Promise.all(usersInVoiceSessions.map(discordId => startVoiceSession(discordId)));
+
+    console.log("Daily reset edited this many users:", result.rowCount);
+  });
 }
 
 async function processMonthlyResets() {

@@ -10,9 +10,7 @@ export async function execute(interaction: Interaction): Promise<void> {
 
     const command = commands.get(interaction.commandName);
     if (!command) {
-        console.warn(
-            `⚠️ Unknown command attempted: /${interaction.commandName} by ${interaction.user.tag}`
-        );
+        console.warn(`⚠️ Unknown command attempted: /${interaction.commandName} by ${interaction.user.tag}`);
         return;
     }
 
@@ -27,13 +25,9 @@ export async function execute(interaction: Interaction): Promise<void> {
     let commandString = interaction.commandName + (interaction.options.getSubcommand(false) ? ` ${interaction.options.getSubcommand()}` : "");
     if (interaction.isAutocomplete()) {
         commandString += ` ${interaction.options.getFocused()}`;
-        console.log(
-            `🔍 Autocomplete triggered: /${commandString} by ${interaction.user.tag} in ${channelName}`
-        );
+        console.log(`🔍 Autocomplete triggered: /${commandString} by ${interaction.user.tag} in ${channelName}`);
     } else {
-        console.log(
-            `🎯 Command executed: /${commandString} by ${interaction.user.tag} in ${channelName}`
-        );
+        console.log(`🎯 Command executed: /${commandString} by ${interaction.user.tag} in ${channelName}`);
     }
 
 

@@ -36,7 +36,6 @@ async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, ty
 
   let pointsColumn;
   let voiceTimeColumn;
-
   switch (type) {
     case "daily":
       pointsColumn = userTable.dailyPoints;
