@@ -26,7 +26,7 @@ export default {
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await interaction.deferReply();
 
     const newTimezone = interaction.options.getString("timezone");
     const discordId = interaction.user.id;
