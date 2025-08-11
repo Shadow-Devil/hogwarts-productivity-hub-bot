@@ -31,7 +31,7 @@ export default {
     interaction: ChatInputCommandInteraction,
     { activeVoiceTimers }
   ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral, });
+    await interaction.deferReply();
 
     const voiceChannel = await getUserVoiceChannel(interaction);
 
