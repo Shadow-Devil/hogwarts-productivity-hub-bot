@@ -7,21 +7,16 @@
 import { client } from "../client.ts";
 import { BaseGuildVoiceChannel, ChannelType, Collection, type Guild } from "discord.js";
 import { startVoiceSession } from "./voiceUtils.ts";
-import { db } from "../db/db.ts";
+import { db, ensureUserExists } from "../db/db.ts";
 import { voiceSessionTable } from "../db/schema.ts";
 import { isNull } from "drizzle-orm";
 
 export let isScanning = false;
-let scanResults: {
-  totalUsersFound: number;
-  trackingStarted: number;
-  errors: number;
-  channels: Array<{ id: string; name: string; userCount: number }>;
-} = {
+let scanResults = {
   totalUsersFound: 0,
   trackingStarted: 0,
   errors: 0,
-  channels: [],
+  channels: [] as Array<{ id: string; name: string; userCount: number }>,
 };
 
 /**
@@ -157,12 +152,13 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
 
         scanResults.totalUsersFound++;
 
-        // Check if user already has an active session or is in grace period
+        // Check if user already has an active session
         if (memberId in activeVoiceSessions) {
           console.log(`User ${member.user.username} already being tracked, skipping...`);
           continue;
         }
 
+        await ensureUserExists(member);
         // Start voice session for this user
         await startVoiceSession(memberId, member.user.username);
 
