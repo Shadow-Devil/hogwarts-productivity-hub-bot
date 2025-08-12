@@ -1,4 +1,4 @@
-import { GuildMemberRoleManager, SlashCommandBuilder } from "discord.js";
+import { GuildMemberRoleManager, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../../commands.ts";
 import util from "node:util";
 import child_process from "node:child_process";
@@ -15,11 +15,11 @@ export default {
         if (!isAdmin || !isBotOwner) {
             await interaction.reply({
                 content: "You do not have permission to use this command.",
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
             const invocationId = (await exec('systemctl --user show -p InvocationID --value "discord-bot"')).stdout.trim();
