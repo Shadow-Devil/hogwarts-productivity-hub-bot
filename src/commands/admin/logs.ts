@@ -13,7 +13,7 @@ export default {
             });
         }
 
-        interaction.reply({
+        await interaction.reply({
             content: "TODO",
             ephemeral: true,
         })

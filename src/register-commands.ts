@@ -11,15 +11,16 @@ assert(process.env.DISCORD_TOKEN)
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
-console.log(`Registering ${commands.size} slash commands`);
-await rest.put(
-  Routes.applicationGuildCommands(
-    process.env.CLIENT_ID,
-    process.env.GUILD_ID
-  ),
-  { body: commands.map((command) => command.data.toJSON()) }
-);
+for (const guildId of process.env.GUILD_ID.split(",")) {
 
-await db.$client.end();
-
-console.log("Successfully registered all slash commands");
+  console.log(`Registering ${commands.size} slash commands for guild: ${guildId}`);
+  await rest.put(
+    Routes.applicationGuildCommands(
+      process.env.CLIENT_ID,
+      guildId
+    ),
+    { body: commands.map((command) => command.data.toJSON()) }
+  );
+  await db.$client.end();
+  console.log("Successfully registered all slash commands to guild:", guildId);
+}
