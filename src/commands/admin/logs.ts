@@ -1,5 +1,9 @@
 import { GuildMemberRoleManager, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../../commands.ts";
+import util from "node:util";
+import child_process from "node:child_process";
+
+const exec = util.promisify(child_process.exec);
 
 export default {
     data: new SlashCommandBuilder()
@@ -13,11 +17,22 @@ export default {
                 content: "You do not have permission to use this command.",
                 ephemeral: true,
             });
+            return;
         }
+        await interaction.deferReply({ ephemeral: true });
 
-        await interaction.reply({
-            content: "TODO",
-            ephemeral: true,
-        })
+
+        try {
+            const logs = await exec('journalctl --user -u discord-bot --since "yesterday"', { encoding: 'utf-8' });
+            console.log(logs);
+            await interaction.editReply({
+                content: "Stdout:\n" + logs.stdout + "\nStderr:\n" + logs.stderr,
+            })
+        } catch (err) {
+            await interaction.editReply({
+                content: "Error fetching logs: " + (err as Error).message,
+            });
+            console.error("Error fetching logs:", err);
+        }
     }
 } as Command;
