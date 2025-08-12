@@ -16,6 +16,7 @@ import time from "./commands/timer/time.ts";
 import timer from "./commands/timer/timer.ts";
 import timezoneCommand from "./commands/timezone.ts";
 import stats from "./commands/stats/stats.ts";
+import logs from "./commands/admin/logs.ts";
 
 export type Command = {
   data: SharedSlashCommand;
@@ -38,6 +39,7 @@ commands.set(voicescan.data.name, voicescan);
 commands.set(housepoints.data.name, housepoints);
 commands.set(leaderboard.data.name, leaderboard);
 commands.set(stats.data.name, stats);
+commands.set(logs.data.name, logs);
 
 commands.set(stoptimer.data.name, stoptimer);
 commands.set(time.data.name, time);
