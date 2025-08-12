@@ -23,10 +23,10 @@ export default {
 
 
         try {
-            const logs = await exec('journalctl --user -u discord-bot --since "yesterday"', { encoding: 'utf-8' });
+            const logs = await exec('journalctl --user -u discord-bot -n 50', { encoding: 'utf-8' });
             console.log(logs);
             await interaction.editReply({
-                content: "Stdout:\n" + logs.stdout + "\nStderr:\n" + logs.stderr,
+                content: ("Stdout:\n" + logs.stdout + "\nStderr:\n" + logs.stderr).slice(0, 2000)
             })
         } catch (err) {
             await interaction.editReply({
