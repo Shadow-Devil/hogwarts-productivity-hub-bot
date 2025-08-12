@@ -36,7 +36,7 @@ export default {
                     if ((finalOutput + line + '\n').length > max) {
                         break;
                     }
-                    finalOutput += line + '\n';
+                    finalOutput = line + '\n' + finalOutput;
                 }
                 return wrapStart + finalOutput.trim() + wrapEnd;
             }
