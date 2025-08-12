@@ -18,7 +18,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.OCI_PRIVATE_KEY }}
           script: |
-            source /home/ubuntu/.bashrc &&
+            export PATH=/home/ubuntu/n/bin:$PATH
             cd hogwarts-productivity-hub-bot && 
             git pull &&
             pnpm install &&
