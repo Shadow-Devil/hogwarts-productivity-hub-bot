@@ -14,4 +14,7 @@ export async function execute(c: Client<true>): Promise<void> {
         console.error("error:", error);
         process.exit(1);
     }
+    if (process.env.OWNER_ID) {
+        await c.users.fetch(process.env.OWNER_ID!).then(u => u.send("Deployed successfully"));
+    }
 }
