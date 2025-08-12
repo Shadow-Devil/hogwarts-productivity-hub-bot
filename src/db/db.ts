@@ -4,7 +4,6 @@ import type { GuildMember } from "discord.js";
 import { eq, and, type ExtractTablesWithRelations, isNull, inArray } from "drizzle-orm";
 import { getHouseFromMember } from "../utils/houseUtils.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
-import { endVoiceSession } from "../utils/voiceUtils.ts";
 
 type Schema = typeof schema;
 
@@ -15,7 +14,10 @@ export const db = drizzle({
     password: process.env.DB_PASSWORD!,
     host: process.env.DB_HOST!,
     ssl: false
-  }, schema, casing: 'snake_case'
+  },
+  schema,
+  casing: 'snake_case',
+  logger: true
 });
 
 export async function ensureUserExists(user: GuildMember) {
