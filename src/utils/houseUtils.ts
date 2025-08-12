@@ -1,6 +1,6 @@
 import type { GuildMember } from "discord.js";
 import assert from "node:assert/strict";
-import type { House } from "./constants.ts";
+import type { House } from "../types.ts";
 
 export function getHouseFromMember(member: GuildMember): House | null {
     let house: House | null = null;

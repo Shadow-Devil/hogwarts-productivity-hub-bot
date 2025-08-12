@@ -1,11 +1,11 @@
-import { SlashCommandBuilder, MessageFlags, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
 import { getUserVoiceChannel } from "../../utils/voiceUtils.ts";
 import {
   createTimerTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
 import dayjs from "dayjs";
-import type { Command } from "../../commands.ts";
+import type { Command } from "../../types.ts";
 import { fetchUserTimezone } from "../../db/db.ts";
 
 

@@ -6,7 +6,7 @@ import {
 import { db } from "../../db/db.ts";
 import { isNotNull, sql } from "drizzle-orm";
 import { userTable } from "../../db/schema.ts";
-import type { House } from "../../utils/constants.ts";
+import type { House } from "../../types.ts";
 
 export default {
   data: new SlashCommandBuilder()

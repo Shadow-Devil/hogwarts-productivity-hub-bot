@@ -1,8 +1,5 @@
 import {
-  AutocompleteInteraction,
-  ChatInputCommandInteraction,
   Collection,
-  SharedSlashCommand,
 } from "discord.js";
 import tasks from "./commands/tasks.ts";
 
@@ -17,32 +14,25 @@ import timer from "./commands/timer/timer.ts";
 import timezoneCommand from "./commands/timezone.ts";
 import stats from "./commands/stats/stats.ts";
 import logs from "./commands/admin/logs.ts";
-
-export type Command = {
-  data: SharedSlashCommand;
-  execute: (
-    interaction: ChatInputCommandInteraction,
-    options: { activeVoiceTimers: Map<string, { endTime: Date; phase: "work" | "break"; startTime: number; workTimeout?: NodeJS.Timeout; breakTimeout?: NodeJS.Timeout }>; }
-  ) => Promise<void>;
-  autocomplete?: (
-    interaction: AutocompleteInteraction
-  ) => Promise<void>;
-};
+import type { Command } from "./types.ts";
 
 export const commands = new Collection<string, Command>();
 
+commands.set(timezoneCommand.data.name, timezoneCommand);
 commands.set(tasks.data.name, tasks);
 
+// Admin commands
 commands.set(debug.data.name, debug);
 commands.set(voicescan.data.name, voicescan);
+commands.set(logs.data.name, logs);
 
+// Stats commands
 commands.set(housepoints.data.name, housepoints);
 commands.set(leaderboard.data.name, leaderboard);
 commands.set(stats.data.name, stats);
-commands.set(logs.data.name, logs);
 
+// Timer commands
 commands.set(stoptimer.data.name, stoptimer);
 commands.set(time.data.name, time);
 commands.set(timer.data.name, timer);
 
-commands.set(timezoneCommand.data.name, timezoneCommand);

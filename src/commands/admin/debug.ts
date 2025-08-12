@@ -12,7 +12,7 @@ import {
 import { voiceSessionTable } from "../../db/schema.ts";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../../db/db.ts";
-import type { Command } from "../../commands.ts";
+import type { Command } from "../../types.ts";
 
 export default {
   data: new SlashCommandBuilder()

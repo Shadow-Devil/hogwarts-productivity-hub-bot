@@ -1,6 +1,7 @@
 // Enhanced Embed Templates for Consistent Bot Responses
 // Provides pre-built templates for common response types
-import { BotColors, type House } from "./constants.ts";
+import type { House } from "../types.ts";
+import { BotColors } from "./constants.ts";
 import {
     createHeader,
   createProgressBar,

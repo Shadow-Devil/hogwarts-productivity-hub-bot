@@ -1,5 +1,5 @@
-import { Collection, GuildMemberRoleManager, MessageFlags, SlashCommandBuilder } from "discord.js";
-import type { Command } from "../../commands.ts";
+import { GuildMemberRoleManager, SlashCommandBuilder } from "discord.js";
+import type { Command } from "../../types.ts";
 import util from "node:util";
 import child_process from "node:child_process";
 
@@ -40,7 +40,7 @@ export default {
                 return wrapStart + finalOutput.trim() + wrapEnd;
             }
 
-            let output = logs.stdout.replace(/pnpm\[.*\]: /g, '');
+            const output = logs.stdout.replace(/pnpm\[.*\]: /g, '');
             let replyContent = truncateToMaxChars(output, maxChars, "```\n", "\n```");
             await interaction.editReply({
                 content: replyContent,
@@ -48,7 +48,7 @@ export default {
 
             // If there is stderr, show it after stdout, truncated to fit
             if (logs.stderr && logs.stderr.trim()) {
-                let stderrOutput = logs.stderr.replace(/pnpm\[.*\]: /g, '');
+                const stderrOutput = logs.stderr.replace(/pnpm\[.*\]: /g, '');
                 replyContent = truncateToMaxChars(stderrOutput, maxChars,"Stderr:\n```", "\n```");
                     await interaction.followUp({
                         content: replyContent,

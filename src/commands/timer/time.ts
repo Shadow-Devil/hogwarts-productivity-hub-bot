@@ -7,7 +7,7 @@ import {
 import dayjs from "dayjs";
 import assert from "node:assert/strict";
 import { fetchUserTimezone } from "../../db/db.ts";
-import type { Command } from "../../commands.ts";
+import type { Command } from "../../types.ts";
 
 
 export default {
