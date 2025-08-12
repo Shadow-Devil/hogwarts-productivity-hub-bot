@@ -6,7 +6,9 @@ export default {
         .setName("logs")
         .setDescription("View the bot's logs"),
     async execute(interaction) {
-        if (!(interaction.member?.roles as GuildMemberRoleManager).cache.has(process.env.ADMIN_ROLE_ID!)) {
+        const isAdmin = !(interaction.member?.roles as GuildMemberRoleManager).cache.has(process.env.ADMIN_ROLE_ID!);
+        const isBotOwner = interaction.user.id === process.env.OWNER_ID;
+        if (!isAdmin || !isBotOwner) {
             await interaction.reply({
                 content: "You do not have permission to use this command.",
                 ephemeral: true,
