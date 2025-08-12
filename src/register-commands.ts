@@ -9,12 +9,12 @@ import { db } from "./db/db.ts";
 await db.$client.end();
 
 assert(process.env.CLIENT_ID)
-assert(process.env.GUILD_ID)
+assert(process.env.GUILD_IDS)
 assert(process.env.DISCORD_TOKEN)
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
-for (const guildId of process.env.GUILD_ID.split(",")) {
+for (const guildId of process.env.GUILD_IDS.split(",")) {
 
   console.log(`Registering ${commands.size} slash commands for guild: ${guildId}`);
   await rest.put(

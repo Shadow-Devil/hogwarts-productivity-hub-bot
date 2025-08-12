@@ -1,4 +1,4 @@
-import { GuildMemberRoleManager, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { Collection, GuildMemberRoleManager, MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../../commands.ts";
 import util from "node:util";
 import child_process from "node:child_process";
@@ -10,7 +10,7 @@ export default {
         .setName("logs")
         .setDescription("View the bot's logs"),
     async execute(interaction) {
-        const isAdmin = !(interaction.member?.roles as GuildMemberRoleManager).cache.has(process.env.ADMIN_ROLE_ID!);
+        const isAdmin = (interaction.member?.roles as GuildMemberRoleManager).cache.hasAny(...process.env.ADMIN_ROLE_IDS!.split(","));
         const isBotOwner = interaction.user.id === process.env.OWNER_ID;
         if (!isAdmin || !isBotOwner) {
             await interaction.reply({
