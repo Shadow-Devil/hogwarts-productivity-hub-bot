@@ -16,7 +16,7 @@ jobs:
         with:
           host: ${{ secrets.OCI_HOST }}
           username: ubuntu
-          password: ${{ secrets.OCI_PASSWORD }}
+          key: ${{ secrets.OCI_PRIVATE_KEY }}
           script: |
             cd hogwarts-productivity-hub-bot && 
             git pull &&
