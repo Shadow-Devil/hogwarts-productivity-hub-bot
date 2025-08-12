@@ -1,0 +1,25 @@
+on:
+  push:
+    branches:
+      - main
+
+name: Deploy to Oracle Cloud
+
+jobs:
+  build:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    environment: OCI
+    steps:
+      - name: Deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ubuntu
+          password: ${{ secrets.OCI_PASSWORD }}
+          script: |
+            cd hogwarts-productivity-hub-bot && 
+            git pull &&
+            pnpm install &&
+            pnpm register &&
+            systemctl --user restart discord-bot.service
