@@ -10,11 +10,25 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
+import { db, fetchOpenVoiceSessions } from "./db/db.ts";
+import { endVoiceSession } from "./utils/voiceUtils.ts";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(relativeTime);
 dayjs.tz.setDefault("UTC");
+
+// Start the bot
+try {
+  registerEvents(client);
+  registerShutdownHandlers();
+
+  await CentralResetService.start();
+  await client.login(process.env.DISCORD_TOKEN);
+} catch (error) {
+  console.error("Error initializing bot:", error);
+  process.exit(1);
+}
 
 function registerEvents(client: Client) {
   client.on(Events.ClientReady, ClientReady.execute);
@@ -22,13 +36,22 @@ function registerEvents(client: Client) {
   client.on(Events.VoiceStateUpdate, VoiceStateUpdate.execute);
 }
 
-// Start the bot
-try {
-  registerEvents(client);
-  await CentralResetService.start();
-
-  await client.login(process.env.DISCORD_TOKEN);
-} catch (error) {
-  console.error("Error initializing bot:", error);
-  process.exit(1);
+function registerShutdownHandlers() {
+  async function dbShutdown() {
+    setTimeout(() => {
+      console.error('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 5000);
+  
+    console.log("Closing any existing voice sessions...");
+    await db.transaction(async (tx) => {
+      const openVoiceSessions = await fetchOpenVoiceSessions(tx);
+      await Promise.all(openVoiceSessions.map(session => endVoiceSession(session.discordId, session.username!)));
+    });
+    process.exit(0);
+  
+  }
+  
+  process.on("SIGINT", dbShutdown);
+  process.on("SIGTERM", dbShutdown);
 }

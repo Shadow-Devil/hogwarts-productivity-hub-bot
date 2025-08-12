@@ -1,11 +1,14 @@
 import cron from "node-cron";
 import dayjs from "dayjs";
-import { db } from "../db/db.ts";
+import { db, fetchOpenVoiceSessions } from "../db/db.ts";
 import { userTable, voiceSessionTable } from "../db/schema.ts";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql, type ExtractTablesWithRelations } from "drizzle-orm";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
+import type { PgTransaction } from "drizzle-orm/pg-core";
+import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
+type Schema = typeof import("../db/schema.ts");
 
 export async function start() {
 
@@ -65,10 +68,7 @@ async function processDailyResets() {
       return;
     }
 
-    const usersInVoiceSessions = await tx.select({ discordId: voiceSessionTable.discordId, username: userTable.username })
-      .from(voiceSessionTable)
-      .where(and(inArray(voiceSessionTable.discordId, usersNeedingReset), isNull(voiceSessionTable.leftAt)))
-      .leftJoin(userTable, eq(voiceSessionTable.discordId, userTable.discordId));
+    const usersInVoiceSessions = await fetchOpenVoiceSessions(tx, usersNeedingReset);
 
     await Promise.all(usersInVoiceSessions.map(user => endVoiceSession(user.discordId, user.username!)));
 
