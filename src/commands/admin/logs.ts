@@ -15,11 +15,10 @@ export default {
         if (!isAdmin || !isBotOwner) {
             await interaction.reply({
                 content: "You do not have permission to use this command.",
-                flags: MessageFlags.Ephemeral,
             });
             return;
         }
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply();
 
         try {
             const invocationId = (await exec('systemctl --user show -p InvocationID --value "discord-bot"')).stdout.trim();
