@@ -18,8 +18,9 @@ jobs:
           username: ubuntu
           key: ${{ secrets.OCI_PRIVATE_KEY }}
           script: |
+            source /home/ubuntu/.bashrc &&
             cd hogwarts-productivity-hub-bot && 
             git pull &&
-            /home/ubuntu/n/bin/pnpm install &&
-            /home/ubuntu/n/bin/pnpm register &&
+            pnpm install &&
+            pnpm register &&
             systemctl --user restart discord-bot.service
