@@ -38,11 +38,6 @@ function registerEvents(client: Client) {
 
 function registerShutdownHandlers() {
   async function dbShutdown() {
-    setTimeout(() => {
-      console.error('Could not close connections in time, forcefully shutting down');
-      process.exit(1);
-    }, 5000);
-  
     console.log("Closing any existing voice sessions...");
     await db.transaction(async (tx) => {
       const openVoiceSessions = await fetchOpenVoiceSessions(tx);
