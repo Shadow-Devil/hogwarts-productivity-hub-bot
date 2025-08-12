@@ -20,6 +20,6 @@ jobs:
           script: |
             cd hogwarts-productivity-hub-bot && 
             git pull &&
-            pnpm install &&
-            pnpm register &&
+            /home/ubuntu/n/bin/pnpm install &&
+            /home/ubuntu/n/bin/pnpm register &&
             systemctl --user restart discord-bot.service
