@@ -23,16 +23,16 @@ export default {
 
 
         try {
-            const logs = await exec('journalctl --user -u discord-bot -n 50', { encoding: 'utf-8' });
-            console.log(logs);
+            const logs = await exec('journalctl --user -u discord-bot -n 50 -o short --no-hostname', { encoding: 'utf-8' });
             await interaction.editReply({
-                content: ("Stdout:\n" + logs.stdout + "\nStderr:\n" + logs.stderr).slice(0, 2000)
+                content: ("Stdout:\n```\n" + logs.stdout + "\n```\nStderr:\n```\n" + logs.stderr).slice(0, 2000) + "\n```",
             })
         } catch (err) {
+            const errorMessage = (err as Error).message || "Unknown error";
             await interaction.editReply({
-                content: "Error fetching logs: " + (err as Error).message,
+                content: errorMessage,
             });
-            console.error("Error fetching logs:", err);
+            console.error(errorMessage);
         }
     }
 } as Command;
