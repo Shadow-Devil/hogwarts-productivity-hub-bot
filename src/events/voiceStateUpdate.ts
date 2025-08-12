@@ -12,6 +12,7 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   const newChannel = newState.channel;
   await ensureUserExists(user);
 
+  console.log("+".repeat(5))
   // User joined a voice channel
   if (!oldChannel && newChannel) {
     console.log(`${username} joined voice channel: ${newChannel.name}`);
@@ -27,4 +28,5 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     await endVoiceSession(userId, username);
     await startVoiceSession(userId, username);
   }
+  console.log("-".repeat(5))
 }

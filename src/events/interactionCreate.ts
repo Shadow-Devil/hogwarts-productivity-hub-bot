@@ -7,6 +7,7 @@ const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeou
 
 export async function execute(interaction: Interaction): Promise<void> {
     if (!interaction.isChatInputCommand() && !interaction.isAutocomplete()) return;
+    console.log("+".repeat(5))
 
     const command = commands.get(interaction.commandName);
     if (!command) {
@@ -57,6 +58,7 @@ export async function execute(interaction: Interaction): Promise<void> {
             );
         }
     }
+    console.log("-".repeat(5))
 }
 function logCommandExecution(interaction: ChatInputCommandInteraction<CacheType> | AutocompleteInteraction<CacheType>) {
     const channel = interaction.channel;
