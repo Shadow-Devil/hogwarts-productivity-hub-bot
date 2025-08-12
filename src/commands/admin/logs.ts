@@ -23,13 +23,40 @@ export default {
 
         try {
             const invocationId = (await exec('systemctl --user show -p InvocationID --value "discord-bot"')).stdout.trim();
-            const logs = await exec(`journalctl INVOCATION_ID=${invocationId} + _SYSTEMD_INVOCATION_ID=${invocationId} --no-hostname -o short -n 50`, { encoding: 'utf-8' });
-            logs.stdout = logs.stdout.replace(/pnpm\[.*\]: /g, '');
-            logs.stderr = logs.stderr.replace(/pnpm\[.*\]: /g, '');
+            // Get last x lines, where x is enough to fit within 2000 characters
+            const maxChars = 2000;
+            const journalLines = 100; // fetch more lines than needed, trim later
+            const logs = await exec(`journalctl INVOCATION_ID=${invocationId} + _SYSTEMD_INVOCATION_ID=${invocationId} --no-hostname -o short -n ${journalLines} -r`, { encoding: 'utf-8' });
 
+            function truncateToMaxChars(text: string, max: number, wrapStart: string, wrapEnd: string): string {
+                max = max - wrapStart.length - wrapEnd.length;
+                const lines = text.split('\n');
+                let finalOutput = '';
+                for (const line of lines) {
+                    if ((finalOutput + line + '\n').length > max) {
+                        break;
+                    }
+                    finalOutput += line + '\n';
+                }
+                return wrapStart + finalOutput.trim() + wrapEnd;
+            }
+
+            let output = logs.stdout.replace(/pnpm\[.*\]: /g, '');
+            let replyContent = truncateToMaxChars(output, maxChars, "```\n", "\n```");
             await interaction.editReply({
-                content: ("Stdout:\n```\n" + logs.stdout + "\n```\nStderr:\n```\n" + logs.stderr).slice(0, 2000) + "\n```",
-            })
+                content: replyContent,
+            });
+
+            // If there is stderr, show it after stdout, truncated to fit
+            if (logs.stderr && logs.stderr.trim()) {
+                let stderrOutput = logs.stderr.replace(/pnpm\[.*\]: /g, '');
+                replyContent = truncateToMaxChars(stderrOutput, maxChars,"Stderr:\n```", "\n```");
+                    await interaction.followUp({
+                        content: replyContent,
+                    })
+            }
+
+ 
         } catch (err) {
             const errorMessage = (err as Error).message || "Unknown error";
             await interaction.editReply({
