@@ -22,8 +22,8 @@ export default {
         await interaction.deferReply({ ephemeral: true });
 
         try {
-            const invocationId = (await exec('systemctl --user show -p InvocationID --value "discord-bot"')).stdout;
-            const logs = await exec(`journalctl INVOCATION_ID=${invocationId} + _SYSTEMD_INVOCATION_ID=${invocationId} --user --no-hostname -o short -n 50`, { encoding: 'utf-8' });
+            const invocationId = (await exec('systemctl --user show -p InvocationID --value "discord-bot"')).stdout.trim();
+            const logs = await exec(`journalctl INVOCATION_ID=${invocationId} + _SYSTEMD_INVOCATION_ID=${invocationId} --no-hostname -o short -n 50`, { encoding: 'utf-8' });
             logs.stdout = logs.stdout.replace(/pnpm\[.*\]: /g, '');
             logs.stderr = logs.stderr.replace(/pnpm\[.*\]: /g, '');
 
