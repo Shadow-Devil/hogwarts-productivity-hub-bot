@@ -70,6 +70,6 @@ function logCommandExecution(interaction: ChatInputCommandInteraction<CacheType>
     if (interaction.isAutocomplete()) {
         commandString += ` ${interaction.options.getFocused()}`;
     }
-    console.log("+".repeat(5) + `/${commandString} by ${interaction.user.tag} in ${channelName}`);
+    console.log("+".repeat(5) + ` /${commandString} by ${interaction.user.tag} in ${channelName}`);
 }
 
