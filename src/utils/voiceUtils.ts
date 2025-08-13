@@ -3,10 +3,12 @@ import type {
   GuildMember,
   VoiceBasedChannel,
 } from "discord.js";
-import { db, } from "../db/db.ts";
+import { db, type Schema, } from "../db/db.ts";
 import { userTable, voiceSessionTable } from "../db/schema.ts";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql, type ExtractTablesWithRelations } from "drizzle-orm";
 import { FIRST_HOUR_POINTS as POINTS_FIRST_HOUR, MIN_DAILY_MINUTES_FOR_STREAK, REST_HOURS_POINTS as POINTS_REST_HOURS, MAX_HOURS_PER_DAY } from "../utils/constants.ts";
+import type { PgTransaction } from "drizzle-orm/pg-core";
+import type { NodePgDatabase, NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 
 /**
  * get the voice channel for a user from an interaction
@@ -38,6 +40,7 @@ export async function getUserVoiceChannel(
 export async function startVoiceSession(
   discordId: string,
   username: string,
+  db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | NodePgDatabase<Schema>
 ) {
   await db.transaction(async (db) => {
     const existingVoiceSession = await db.$count(voiceSessionTable, and(
@@ -47,7 +50,7 @@ export async function startVoiceSession(
 
     if (existingVoiceSession > 0) {
       console.error(`Voice session already active for ${username}, closing and starting a new one`);
-      await endVoiceSession(discordId, username, false); // End existing session without tracking
+      await endVoiceSession(discordId, username, db, false); // End existing session without tracking
     }
 
     await db.insert(voiceSessionTable).values({ discordId });
@@ -60,7 +63,11 @@ export async function startVoiceSession(
  *  @param {string} discordId - User's Discord ID
  *  @param {boolean} isTracked - If false, do not update user stats (for deleting old sessions)
  */
-export async function endVoiceSession(discordId: string, username: string, isTracked: boolean = true) {
+export async function endVoiceSession(
+  discordId: string, 
+  username: string,
+  db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | NodePgDatabase<Schema>,
+  isTracked: boolean = true) {
   await db.transaction(async (db) => {
     const existingVoiceSession = await db.select({ id: voiceSessionTable.id }).from(voiceSessionTable).where(and(
       eq(voiceSessionTable.discordId, discordId),

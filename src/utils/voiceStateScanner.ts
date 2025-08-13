@@ -160,7 +160,7 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
 
         await ensureUserExists(member);
         // Start voice session for this user
-        await startVoiceSession(memberId, member.user.username);
+        await startVoiceSession(memberId, member.user.username, db);
 
         scanResults.trackingStarted++;
         usersStarted.push(member.user.username);

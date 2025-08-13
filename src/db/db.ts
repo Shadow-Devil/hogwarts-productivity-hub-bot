@@ -5,7 +5,7 @@ import { eq, and, type ExtractTablesWithRelations, isNull, inArray } from "drizz
 import { getHouseFromMember } from "../utils/utils.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 
-type Schema = typeof schema;
+export type Schema = typeof schema;
 
 export const db = drizzle({
   connection: {

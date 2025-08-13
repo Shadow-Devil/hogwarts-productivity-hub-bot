@@ -70,7 +70,7 @@ async function processDailyResets() {
 
       const usersInVoiceSessions = await fetchOpenVoiceSessions(db, usersNeedingReset);
 
-      await Promise.all(usersInVoiceSessions.map(user => endVoiceSession(user.discordId, user.username!)));
+      await Promise.all(usersInVoiceSessions.map(user => endVoiceSession(user.discordId, user.username!, db)));
 
       const result = await db.update(userTable).set(
         {
@@ -82,7 +82,7 @@ async function processDailyResets() {
         }
       ).where(inArray(userTable.discordId, usersNeedingReset))
 
-      await Promise.all(usersInVoiceSessions.map(user => startVoiceSession(user.discordId, user.username!)));
+      await Promise.all(usersInVoiceSessions.map(user => startVoiceSession(user.discordId, user.username!, db)));
 
       console.log("Daily reset edited this many users:", result.rowCount);
     });

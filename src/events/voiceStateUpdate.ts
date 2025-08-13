@@ -1,5 +1,5 @@
 import { type VoiceState } from "discord.js";
-import { ensureUserExists } from "../db/db.ts";
+import { db, ensureUserExists } from "../db/db.ts";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
 import { wrapWithAlerting } from "../utils/alerting.ts";
 
@@ -18,17 +18,17 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     // User joined a voice channel
     if (!oldChannel && newChannel) {
       console.log(`${username} joined voice channel: ${newChannel.name}`);
-      await startVoiceSession(userId, username);
+      await startVoiceSession(userId, username, db);
 
     } else if (oldChannel && !newChannel) {
       console.log(`${username} left voice channel: ${oldChannel.name}`);
-      await endVoiceSession(userId, username);
+      await endVoiceSession(userId, username, db);
 
     } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
       console.log(`${username} switched from ${oldChannel.name} to ${newChannel.name}`);
       // For channel switches, end the old session and start new one immediately
-      await endVoiceSession(userId, username);
-      await startVoiceSession(userId, username);
+      await endVoiceSession(userId, username, db);
+      await startVoiceSession(userId, username, db);
     }
   }, `Voice state update for ${username} (${userId})`);
   console.log("-".repeat(5))
