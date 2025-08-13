@@ -13,6 +13,7 @@ import relativeTime from "dayjs/plugin/relativeTime.js";
 import { db, fetchOpenVoiceSessions } from "./db/db.ts";
 import { endVoiceSession } from "./utils/voiceUtils.ts";
 import { alertOwner } from "./utils/alerting.ts";
+import { updateLogMessages } from "./utils/utils.ts";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -38,18 +39,18 @@ function registerEvents(client: Client) {
 }
 
 function registerShutdownHandlers() {
-  async function dbShutdown() {
+  async function shutdown() {
     console.log("Closing any existing voice sessions...");
     await db.transaction(async (db) => {
       const openVoiceSessions = await fetchOpenVoiceSessions(db);
       await Promise.all(openVoiceSessions.map(session => endVoiceSession(session.discordId, session.username!, db)));
     });
+    await updateLogMessages();
     process.exit(0);
-
   }
 
-  process.on("SIGINT", dbShutdown);
-  process.on("SIGTERM", dbShutdown);
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 
   process.on('uncaughtException', async function (error) {
     await alertOwner(`Uncaught Exception: ${error}`);

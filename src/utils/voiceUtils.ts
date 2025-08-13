@@ -3,7 +3,7 @@ import type {
   GuildMember,
   VoiceBasedChannel,
 } from "discord.js";
-import { db, type Schema, } from "../db/db.ts";
+import { type Schema, } from "../db/db.ts";
 import { userTable, voiceSessionTable } from "../db/schema.ts";
 import { and, eq, isNull, sql, type ExtractTablesWithRelations } from "drizzle-orm";
 import { FIRST_HOUR_POINTS as POINTS_FIRST_HOUR, MIN_DAILY_MINUTES_FOR_STREAK, REST_HOURS_POINTS as POINTS_REST_HOURS, MAX_HOURS_PER_DAY } from "../utils/constants.ts";
