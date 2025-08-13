@@ -1,7 +1,6 @@
 import { type VoiceState } from "discord.js";
 import { ensureUserExists } from "../db/db.ts";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
-import { wrap } from "module";
 import { wrapWithAlerting } from "../utils/alerting.ts";
 
 export async function execute(oldState: VoiceState, newState: VoiceState) {
