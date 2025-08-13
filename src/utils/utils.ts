@@ -48,11 +48,20 @@ export async function sendLogsToLogChannel() {
     await updateLogMessages()
 }
 
+let lastStdout = "";
+let lastStderr = "";
+
 export async function updateLogMessages() {
     const invocationId = (await exec('systemctl --user show -p InvocationID --value "discord-bot"')).stdout.trim();
     // Get last x lines, where x is enough to fit within 2000 characters
     const journalLines = 100; // fetch more lines than needed, trim later
     const logs = await exec(`journalctl INVOCATION_ID=${invocationId} + _SYSTEMD_INVOCATION_ID=${invocationId} --no-hostname -o short -n ${journalLines}`, { encoding: 'utf-8' });
+    if (logs.stdout === lastStdout && logs.stderr === lastStderr) {
+        return;
+    }
+    lastStdout = logs.stdout;
+    lastStderr = logs.stderr;
+
     const stdout = new AttachmentBuilder(Buffer.from(logs.stdout.replace(/pnpm\[.*\]: /g, ''), 'utf-8'), { name: 'logs.txt' });
     const files = [stdout];
 
