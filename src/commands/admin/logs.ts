@@ -1,6 +1,6 @@
 import { GuildMemberRoleManager, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../../types.ts";
-import { registerLogMessage } from "../../utils/utils.ts";
+import { registerLogMessage } from "../../utils/logs.ts";
 
 export default {
     data: new SlashCommandBuilder()

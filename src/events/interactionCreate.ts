@@ -8,7 +8,7 @@ const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeou
 
 export async function execute(interaction: Interaction): Promise<void> {
     if (!interaction.isChatInputCommand() && !interaction.isAutocomplete()) return;
-    console.log("+".repeat(5))
+    
 
     const command = commands.get(interaction.commandName);
     if (!command) {
@@ -69,9 +69,7 @@ function logCommandExecution(interaction: ChatInputCommandInteraction<CacheType>
     let commandString = interaction.commandName + (interaction.options.getSubcommand(false) ? ` ${interaction.options.getSubcommand()}` : "");
     if (interaction.isAutocomplete()) {
         commandString += ` ${interaction.options.getFocused()}`;
-        console.log(`🔍 Autocomplete triggered: /${commandString} by ${interaction.user.tag} in ${channelName}`);
-    } else {
-        console.log(`🎯 Command executed: /${commandString} by ${interaction.user.tag} in ${channelName}`);
     }
+    console.log("+".repeat(5) + `/${commandString} by ${interaction.user.tag} in ${channelName}`);
 }
 

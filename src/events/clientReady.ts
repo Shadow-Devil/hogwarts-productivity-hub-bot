@@ -2,7 +2,7 @@ import type { Client } from "discord.js";
 import { commands } from "../commands.ts";
 import * as VoiceStateScanner from "../utils/voiceStateScanner.ts";
 import { alertOwner } from "../utils/alerting.ts";
-import { sendLogsToLogChannel } from "../utils/utils.ts";
+import { sendLogsToLogChannel } from "../utils/logs.ts";
 
 export async function execute(c: Client<true>): Promise<void> {
     console.log(`Bot User: ${c.user.tag}`);

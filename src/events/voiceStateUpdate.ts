@@ -11,21 +11,16 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   const username = user.user.username;
   const oldChannel = oldState.channel;
   const newChannel = newState.channel;
-  console.log("+".repeat(5))
+  console.log("+".repeat(5) + `Voice state update for ${username} (${oldChannel} -> ${newChannel})`);
   await ensureUserExists(user);
 
   await wrapWithAlerting(async () => {
     // User joined a voice channel
     if (!oldChannel && newChannel) {
-      console.log(`${username} joined voice channel: ${newChannel.name}`);
       await startVoiceSession(userId, username, db);
-
     } else if (oldChannel && !newChannel) {
-      console.log(`${username} left voice channel: ${oldChannel.name}`);
       await endVoiceSession(userId, username, db);
-
     } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
-      console.log(`${username} switched from ${oldChannel.name} to ${newChannel.name}`);
       // For channel switches, end the old session and start new one immediately
       await endVoiceSession(userId, username, db);
       await startVoiceSession(userId, username, db);

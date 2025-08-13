@@ -43,7 +43,7 @@ export async function start() {
 }
 
 async function processDailyResets() {
-  console.log("+".repeat(5));
+  console.log("+".repeat(5) + " Processing daily resets at " + dayjs().format("MMM DD HH:mm:ss"));
   await wrapWithAlerting(async () => {
     await db.transaction(async (db) => {
       const usersNeedingPotentialReset = await db.select({
@@ -91,7 +91,7 @@ async function processDailyResets() {
 }
 
 async function processMonthlyResets() {
-  console.log('+'.repeat(5));
+  console.log('+'.repeat(5) + " Processing monthly resets at " + dayjs().format("MMM DD HH:mm:ss"));
   await wrapWithAlerting(async () => {
     const result = await db.update(userTable).set(
       {

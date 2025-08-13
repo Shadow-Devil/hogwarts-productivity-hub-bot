@@ -13,7 +13,7 @@ import relativeTime from "dayjs/plugin/relativeTime.js";
 import { db, fetchOpenVoiceSessions } from "./db/db.ts";
 import { endVoiceSession } from "./utils/voiceUtils.ts";
 import { alertOwner } from "./utils/alerting.ts";
-import { updateLogMessages } from "./utils/utils.ts";
+import { updateLogMessages } from "./utils/logs.ts";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -40,12 +40,13 @@ function registerEvents(client: Client) {
 
 function registerShutdownHandlers() {
   async function shutdown() {
-    console.log("Closing any existing voice sessions...");
+    console.log("Closing any existing voice sessions");
     await db.transaction(async (db) => {
       const openVoiceSessions = await fetchOpenVoiceSessions(db);
       await Promise.all(openVoiceSessions.map(session => endVoiceSession(session.discordId, session.username!, db)));
     });
-    await updateLogMessages();
+    console.log("Bye");
+    await updateLogMessages(true);
     process.exit(0);
   }
 
