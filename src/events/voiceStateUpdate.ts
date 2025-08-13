@@ -11,9 +11,9 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   const username = user.user.username;
   const oldChannel = oldState.channel;
   const newChannel = newState.channel;
+  console.log("+".repeat(5))
   await ensureUserExists(user);
 
-  console.log("+".repeat(5))
   wrapWithAlerting(async () => {
     // User joined a voice channel
     if (!oldChannel && newChannel) {

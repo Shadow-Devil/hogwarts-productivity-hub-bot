@@ -46,6 +46,7 @@ export async function start() {
 }
 
 async function processDailyResets() {
+  console.log("+".repeat(5));
   wrapWithAlerting(async () => {
     await db.transaction(async (tx) => {
       const usersNeedingPotentialReset = await tx.select({
@@ -89,9 +90,11 @@ async function processDailyResets() {
       console.log("Daily reset edited this many users:", result.rowCount);
     });
   }, "Daily reset processing");
+  console.log("-".repeat(5));
 }
 
 async function processMonthlyResets() {
+  console.log('+'.repeat(5));
   wrapWithAlerting(async () => {
     const result = await db.update(userTable).set(
       {
@@ -101,4 +104,5 @@ async function processMonthlyResets() {
     )
     console.log("Monthly reset edited this many users:", result.rowCount);
   }, "Monthly reset processing");
+  console.log('-'.repeat(5));
 }
