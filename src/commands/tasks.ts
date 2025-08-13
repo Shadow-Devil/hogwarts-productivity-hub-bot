@@ -249,15 +249,15 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
 
 
   // Mark task as complete
-  await db.transaction(async (tx) => {
-    await tx.update(taskTable)
+  await db.transaction(async (db) => {
+    await db.update(taskTable)
       .set({
         isCompleted: true,
         completedAt: new Date(),
       })
       .where(eq(taskTable.id, taskToComplete.id));
     // Update user's total points
-    await tx.update(userTable)
+    await db.update(userTable)
       .set({
         dailyPoints: sql`${userTable.dailyPoints} + ${TASK_POINT_SCORE}`,
         monthlyPoints: sql`${userTable.monthlyPoints} + ${TASK_POINT_SCORE}`,

@@ -39,8 +39,8 @@ export async function startVoiceSession(
   discordId: string,
   username: string,
 ) {
-  await db.transaction(async (tx) => {
-    const existingVoiceSession = await tx.$count(voiceSessionTable, and(
+  await db.transaction(async (db) => {
+    const existingVoiceSession = await db.$count(voiceSessionTable, and(
       eq(voiceSessionTable.discordId, discordId),
       isNull(voiceSessionTable.leftAt)
     ));
@@ -50,7 +50,7 @@ export async function startVoiceSession(
       await endVoiceSession(discordId, username, false); // End existing session without tracking
     }
 
-    await tx.insert(voiceSessionTable).values({ discordId });
+    await db.insert(voiceSessionTable).values({ discordId });
 
     console.log(`Voice session started for ${username}`);
   })
@@ -61,8 +61,8 @@ export async function startVoiceSession(
  *  @param {boolean} isTracked - If false, do not update user stats (for deleting old sessions)
  */
 export async function endVoiceSession(discordId: string, username: string, isTracked: boolean = true) {
-  await db.transaction(async (tx) => {
-    const existingVoiceSession = await tx.select({ id: voiceSessionTable.id }).from(voiceSessionTable).where(and(
+  await db.transaction(async (db) => {
+    const existingVoiceSession = await db.select({ id: voiceSessionTable.id }).from(voiceSessionTable).where(and(
       eq(voiceSessionTable.discordId, discordId),
       isNull(voiceSessionTable.leftAt)
     ))
@@ -71,7 +71,7 @@ export async function endVoiceSession(discordId: string, username: string, isTra
       return;
     }
 
-    const [voiceSessionWithDuration] = await tx.update(voiceSessionTable).set({
+    const [voiceSessionWithDuration] = await db.update(voiceSessionTable).set({
       leftAt: new Date(),
       isTracked, // Only track if not deleting old session
     }).where(eq(voiceSessionTable.id, existingVoiceSession[0]!!.id)).returning({
@@ -84,7 +84,7 @@ export async function endVoiceSession(discordId: string, username: string, isTra
     const duration = voiceSessionWithDuration!.duration || 0;
 
     // Update user's voice time stats
-    const [user] = await tx.update(userTable).set({
+    const [user] = await db.update(userTable).set({
       dailyVoiceTime: sql`${userTable.dailyVoiceTime} + ${duration}`,
       monthlyVoiceTime: sql`${userTable.monthlyVoiceTime} + ${duration}`,
       totalVoiceTime: sql`${userTable.totalVoiceTime} + ${duration}`,
@@ -95,7 +95,7 @@ export async function endVoiceSession(discordId: string, username: string, isTra
 
     // update streak
     if (user!.dailyVoiceTime >= MIN_DAILY_MINUTES_FOR_STREAK && !user!.isStreakUpdatedToday) {
-      const streakResult = await tx.update(userTable).set({
+      const streakResult = await db.update(userTable).set({
         streak: sql`${userTable.streak} + 1`,
         isStreakUpdatedToday: true,
       }).where(eq(userTable.discordId, discordId)).returning({
@@ -134,7 +134,7 @@ export async function endVoiceSession(discordId: string, username: string, isTra
 
     if (pointsEarned > 0) {
       // Award points to user
-      await tx.update(userTable).set({
+      await db.update(userTable).set({
         dailyPoints: sql`${userTable.dailyPoints} + ${pointsEarned}`,
         monthlyPoints: sql`${userTable.monthlyPoints} + ${pointsEarned}`,
         totalPoints: sql`${userTable.totalPoints} + ${pointsEarned}`,

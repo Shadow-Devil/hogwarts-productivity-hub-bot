@@ -49,14 +49,14 @@ export async function fetchTasks(discordId: string) {
   );
 }
 
-export async function fetchOpenVoiceSessions(tx: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>, usersNeedingReset: string[] | null = null) {
+export async function fetchOpenVoiceSessions(db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>, usersNeedingReset: string[] | null = null) {
   if (usersNeedingReset === null) {
-    return await tx.select({ discordId: schema.voiceSessionTable.discordId, username: schema.userTable.username })
+    return await db.select({ discordId: schema.voiceSessionTable.discordId, username: schema.userTable.username })
       .from(schema.voiceSessionTable)
       .where(isNull(schema.voiceSessionTable.leftAt))
       .leftJoin(schema.userTable, eq(schema.voiceSessionTable.discordId, schema.userTable.discordId));
   }
-  return await tx.select({ discordId: schema.voiceSessionTable.discordId, username: schema.userTable.username })
+  return await db.select({ discordId: schema.voiceSessionTable.discordId, username: schema.userTable.username })
       .from(schema.voiceSessionTable)
       .where(and(inArray(schema.voiceSessionTable.discordId, usersNeedingReset), isNull(schema.voiceSessionTable.leftAt)))
       .leftJoin(schema.userTable, eq(schema.voiceSessionTable.discordId, schema.userTable.discordId));

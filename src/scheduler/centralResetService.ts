@@ -48,8 +48,8 @@ export async function start() {
 async function processDailyResets() {
   console.log("+".repeat(5));
   wrapWithAlerting(async () => {
-    await db.transaction(async (tx) => {
-      const usersNeedingPotentialReset = await tx.select({
+    await db.transaction(async (db) => {
+      const usersNeedingPotentialReset = await db.select({
         discordId: userTable.discordId,
         timezone: userTable.timezone,
         lastDailyReset: userTable.lastDailyReset,
@@ -71,11 +71,11 @@ async function processDailyResets() {
         return;
       }
 
-      const usersInVoiceSessions = await fetchOpenVoiceSessions(tx, usersNeedingReset);
+      const usersInVoiceSessions = await fetchOpenVoiceSessions(db, usersNeedingReset);
 
       await Promise.all(usersInVoiceSessions.map(user => endVoiceSession(user.discordId, user.username!)));
 
-      const result = await tx.update(userTable).set(
+      const result = await db.update(userTable).set(
         {
           dailyPoints: 0,
           dailyVoiceTime: 0,

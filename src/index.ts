@@ -40,8 +40,8 @@ function registerEvents(client: Client) {
 function registerShutdownHandlers() {
   async function dbShutdown() {
     console.log("Closing any existing voice sessions...");
-    await db.transaction(async (tx) => {
-      const openVoiceSessions = await fetchOpenVoiceSessions(tx);
+    await db.transaction(async (db) => {
+      const openVoiceSessions = await fetchOpenVoiceSessions(db);
       await Promise.all(openVoiceSessions.map(session => endVoiceSession(session.discordId, session.username!)));
     });
     process.exit(0);
