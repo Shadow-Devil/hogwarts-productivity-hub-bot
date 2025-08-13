@@ -4,15 +4,10 @@ import child_process from "node:child_process";
 import util from "node:util";
 import { client } from "../client.ts";
 import dayjs from "dayjs";
-import { alertOwner } from "./alerting.ts";
 
 const exec = util.promisify(child_process.exec);
 
 const logMessages: Message[] = [];
-
-setInterval(async () => {
-    await updateLogMessages();
-}, 1000 * 60);
 
 export async function registerLogMessage(message: Message): Promise<void> {
     logMessages.push(message);
@@ -30,11 +25,22 @@ export async function sendLogsToLogChannel() {
 let lastStdout = "";
 let lastStderr = "";
 let invocationId: string | null = null;
+let intervalId: NodeJS.Timeout | null = null;
 
 export async function updateLogMessages(shutdown = false) {
     if (!invocationId) {
         invocationId = (await exec('systemctl --user show -p InvocationID --value "discord-bot"')).stdout.trim();
     }
+    if (!invocationId && !shutdown) {
+        intervalId = setInterval(async () => {
+            await updateLogMessages();
+        }, 1000 * 60);
+    }
+    if (shutdown && intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+    }
+
     // Get last x lines, where x is enough to fit within 2000 characters
     const journalLines = 100; // fetch more lines than needed, trim later
     const logs = await exec(`journalctl INVOCATION_ID=${invocationId} + _SYSTEMD_INVOCATION_ID=${invocationId} --no-hostname -o short -n ${journalLines}`, { encoding: 'utf-8' });

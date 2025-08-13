@@ -5,8 +5,6 @@ import { commands } from "./commands.ts";
 import assert from "node:assert/strict";
 import { db } from "./db/db.ts";
 
-// We don't need the db connection so just close it directly
-await db.$client.end();
 
 assert(process.env.CLIENT_ID)
 assert(process.env.GUILD_IDS)
@@ -22,3 +20,6 @@ await rest.put(
   { body: commands.map((command) => command.data.toJSON()) }
 );
 console.log("Successfully registered all slash commands");
+
+// We don't need the db connection so just close it
+await db.$client.end();
