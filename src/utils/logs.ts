@@ -12,7 +12,6 @@ const logMessages: Message[] = [];
 export async function registerLogMessage(message: Message): Promise<void> {
     logMessages.push(message);
     await updateLogMessages()
-
 }
 
 export async function sendLogsToLogChannel() {
@@ -28,15 +27,15 @@ let invocationId: string | null = null;
 let intervalId: NodeJS.Timeout | null = null;
 
 export async function updateLogMessages(shutdown = false) {
-    if (!invocationId) {
+    if (invocationId === null) {
         invocationId = (await exec('systemctl --user show -p InvocationID --value "discord-bot"')).stdout.trim();
     }
-    if (!invocationId && !shutdown) {
+    if (intervalId === null && shutdown === false) {
         intervalId = setInterval(async () => {
             await updateLogMessages();
         }, 1000 * 60);
     }
-    if (shutdown && intervalId) {
+    if (intervalId !== null && shutdown === true) {
         clearInterval(intervalId);
         intervalId = null;
     }
