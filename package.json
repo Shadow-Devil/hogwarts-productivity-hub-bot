@@ -1,5 +1,5 @@
 {
-  "name": "botd",
+  "name": "hogwarts-productivity-hub-bot",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -25,18 +25,12 @@
   "license": "ISC",
   "description": "Discord Productivity Bot with task management, Pomodoro timers, and gamified points system",
   "dependencies": {
-    "@inquirer/prompts": "^7.8.1",
-    "@octokit/rest": "^22.0.0",
-    "chalk": "^5.5.0",
-    "commander": "^14.0.0",
     "dayjs": "^1.11.13",
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1",
     "drizzle-orm": "^0.44.4",
-    "marked": "^16.1.2",
     "node-cron": "^4.2.1",
-    "pg": "^8.16.3",
-    "winston": "^3.17.0"
+    "pg": "^8.16.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
