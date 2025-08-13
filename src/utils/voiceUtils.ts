@@ -95,7 +95,7 @@ export async function endVoiceSession(discordId: string, username: string, isTra
 
     // update streak
     if (user!.dailyVoiceTime >= MIN_DAILY_MINUTES_FOR_STREAK && !user!.isStreakUpdatedToday) {
-      const streakResult = await db.update(userTable).set({
+      const streakResult = await tx.update(userTable).set({
         streak: sql`${userTable.streak} + 1`,
         isStreakUpdatedToday: true,
       }).where(eq(userTable.discordId, discordId)).returning({
