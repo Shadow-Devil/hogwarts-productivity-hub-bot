@@ -4,7 +4,7 @@ import {
 } from "../../utils/embedTemplates.ts";
 import { db } from "../../db/db.ts";
 import { userTable } from "../../db/schema.ts";
-import { desc } from "drizzle-orm";
+import { desc, gte } from "drizzle-orm";
 import { createStyledEmbed, formatDataTable } from "../../utils/visualHelpers.ts";
 
 
@@ -55,6 +55,7 @@ export default {
       voiceTime: voiceTimeColumn,
     })
       .from(userTable)
+      .where(gte(voiceTimeColumn, 60))
       .orderBy(desc(pointsColumn), desc(voiceTimeColumn))
       .limit(10);
 
