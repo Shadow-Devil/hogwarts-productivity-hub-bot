@@ -6,6 +6,7 @@ import { and, eq, inArray, isNull, sql, type ExtractTablesWithRelations } from "
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
+import { wrapWithAlerting } from "../utils/alerting.ts";
 
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
 type Schema = typeof import("../db/schema.ts");
@@ -45,55 +46,59 @@ export async function start() {
 }
 
 async function processDailyResets() {
-  await db.transaction(async (tx) => {
-    const usersNeedingPotentialReset = await tx.select({
-      discordId: userTable.discordId,
-      timezone: userTable.timezone,
-      lastDailyReset: userTable.lastDailyReset,
-    }).from(userTable)
+  wrapWithAlerting(async () => {
+    await db.transaction(async (tx) => {
+      const usersNeedingPotentialReset = await tx.select({
+        discordId: userTable.discordId,
+        timezone: userTable.timezone,
+        lastDailyReset: userTable.lastDailyReset,
+      }).from(userTable)
 
-    // Filter to only include users who are actually past their local midnight
-    const usersNeedingReset = [];
-    for (const user of usersNeedingPotentialReset) {
-      const userTime = dayjs().tz(user.timezone);
-      const lastReset = dayjs(user.lastDailyReset).tz(user.timezone);
+      // Filter to only include users who are actually past their local midnight
+      const usersNeedingReset = [];
+      for (const user of usersNeedingPotentialReset) {
+        const userTime = dayjs().tz(user.timezone);
+        const lastReset = dayjs(user.lastDailyReset).tz(user.timezone);
 
-      if (!userTime.isSame(lastReset, "day")) {
-        usersNeedingReset.push(user.discordId);
+        if (!userTime.isSame(lastReset, "day")) {
+          usersNeedingReset.push(user.discordId);
+        }
       }
-    }
 
-    if (usersNeedingReset.length === 0) {
-      console.log("No users need daily reset at this time");
-      return;
-    }
-
-    const usersInVoiceSessions = await fetchOpenVoiceSessions(tx, usersNeedingReset);
-
-    await Promise.all(usersInVoiceSessions.map(user => endVoiceSession(user.discordId, user.username!)));
-
-    const result = await tx.update(userTable).set(
-      {
-        dailyPoints: 0,
-        dailyVoiceTime: 0,
-        lastDailyReset: new Date(),
-        streak: sql`CASE WHEN ${userTable.isStreakUpdatedToday} = false THEN 0 ELSE ${userTable.streak} END`,
-        isStreakUpdatedToday: false,
+      if (usersNeedingReset.length === 0) {
+        console.log("No users need daily reset at this time");
+        return;
       }
-    ).where(inArray(userTable.discordId, usersNeedingReset))
 
-    await Promise.all(usersInVoiceSessions.map(user => startVoiceSession(user.discordId, user.username!)));
+      const usersInVoiceSessions = await fetchOpenVoiceSessions(tx, usersNeedingReset);
 
-    console.log("Daily reset edited this many users:", result.rowCount);
-  });
+      await Promise.all(usersInVoiceSessions.map(user => endVoiceSession(user.discordId, user.username!)));
+
+      const result = await tx.update(userTable).set(
+        {
+          dailyPoints: 0,
+          dailyVoiceTime: 0,
+          lastDailyReset: new Date(),
+          streak: sql`CASE WHEN ${userTable.isStreakUpdatedToday} = false THEN 0 ELSE ${userTable.streak} END`,
+          isStreakUpdatedToday: false,
+        }
+      ).where(inArray(userTable.discordId, usersNeedingReset))
+
+      await Promise.all(usersInVoiceSessions.map(user => startVoiceSession(user.discordId, user.username!)));
+
+      console.log("Daily reset edited this many users:", result.rowCount);
+    });
+  }, "Daily reset processing");
 }
 
 async function processMonthlyResets() {
-  const result = await db.update(userTable).set(
-    {
-      monthlyPoints: 0,
-      monthlyVoiceTime: 0,
-    }
-  )
-  console.log("Monthly reset edited this many users:", result.rowCount);
+  wrapWithAlerting(async () => {
+    const result = await db.update(userTable).set(
+      {
+        monthlyPoints: 0,
+        monthlyVoiceTime: 0,
+      }
+    )
+    console.log("Monthly reset edited this many users:", result.rowCount);
+  }, "Monthly reset processing");
 }

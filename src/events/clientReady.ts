@@ -1,6 +1,7 @@
 import type { Client } from "discord.js";
 import { commands } from "../commands.ts";
 import * as VoiceStateScanner from "../utils/voiceStateScanner.ts";
+import { alertOwner } from "../utils/alerting.ts";
 
 export async function execute(c: Client<true>): Promise<void> {
     console.log(`Bot User: ${c.user.tag}`);
@@ -14,7 +15,5 @@ export async function execute(c: Client<true>): Promise<void> {
         console.error("error:", error);
         process.exit(1);
     }
-    if (process.env.OWNER_ID) {
-        await c.users.fetch(process.env.OWNER_ID!).then(u => u.send("Deployed successfully"));
-    }
+    alertOwner("Bot deployed successfully.");
 }

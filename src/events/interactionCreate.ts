@@ -2,6 +2,7 @@ import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, Mess
 import { commands } from "../commands.ts";
 import assert from "node:assert/strict";
 import { ensureUserExists } from "../db/db.ts";
+import { alertOwner } from "../utils/alerting.ts";
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
 
@@ -26,11 +27,7 @@ export async function execute(interaction: Interaction): Promise<void> {
             await command.execute(interaction, { activeVoiceTimers });
         }
     } catch (error) {
-        console.error(`💥 Command execution failed: /${interaction.commandName}`, {
-            user: interaction.user.tag,
-            error,
-            isTimeout: error instanceof Error && error?.message === "Command execution timeout",
-        });
+        alertOwner(`💥 Command execution failed: /${interaction.commandName}\n${error}`);
         if (interaction.isAutocomplete()) return;
 
         // Improved error response handling with interaction state checks

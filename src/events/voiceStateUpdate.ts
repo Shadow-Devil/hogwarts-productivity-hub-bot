@@ -1,6 +1,8 @@
 import { type VoiceState } from "discord.js";
 import { ensureUserExists } from "../db/db.ts";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
+import { wrap } from "module";
+import { wrapWithAlerting } from "../utils/alerting.ts";
 
 export async function execute(oldState: VoiceState, newState: VoiceState) {
   const user = newState.member || oldState.member;
@@ -13,20 +15,22 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   await ensureUserExists(user);
 
   console.log("+".repeat(5))
-  // User joined a voice channel
-  if (!oldChannel && newChannel) {
-    console.log(`${username} joined voice channel: ${newChannel.name}`);
-    await startVoiceSession(userId, username);
+  wrapWithAlerting(async () => {
+    // User joined a voice channel
+    if (!oldChannel && newChannel) {
+      console.log(`${username} joined voice channel: ${newChannel.name}`);
+      await startVoiceSession(userId, username);
 
-  } else if (oldChannel && !newChannel) {
-    console.log(`${username} left voice channel: ${oldChannel.name}`);
-    await endVoiceSession(userId, username);
+    } else if (oldChannel && !newChannel) {
+      console.log(`${username} left voice channel: ${oldChannel.name}`);
+      await endVoiceSession(userId, username);
 
-  } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
-    console.log(`${username} switched from ${oldChannel.name} to ${newChannel.name}`);
-    // For channel switches, end the old session and start new one immediately
-    await endVoiceSession(userId, username);
-    await startVoiceSession(userId, username);
-  }
+    } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
+      console.log(`${username} switched from ${oldChannel.name} to ${newChannel.name}`);
+      // For channel switches, end the old session and start new one immediately
+      await endVoiceSession(userId, username);
+      await startVoiceSession(userId, username);
+    }
+  }, `Voice state update for ${username} (${userId})`);
   console.log("-".repeat(5))
 }
