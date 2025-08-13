@@ -1,15 +1,12 @@
 import cron from "node-cron";
 import dayjs from "dayjs";
 import { db, fetchOpenVoiceSessions } from "../db/db.ts";
-import { userTable, voiceSessionTable } from "../db/schema.ts";
-import { and, eq, inArray, isNull, sql, type ExtractTablesWithRelations } from "drizzle-orm";
+import { userTable } from "../db/schema.ts";
+import { inArray, sql } from "drizzle-orm";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
-import type { PgTransaction } from "drizzle-orm/pg-core";
-import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import { wrapWithAlerting } from "../utils/alerting.ts";
 
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
-type Schema = typeof import("../db/schema.ts");
 
 export async function start() {
 
@@ -47,7 +44,7 @@ export async function start() {
 
 async function processDailyResets() {
   console.log("+".repeat(5));
-  wrapWithAlerting(async () => {
+  await wrapWithAlerting(async () => {
     await db.transaction(async (db) => {
       const usersNeedingPotentialReset = await db.select({
         discordId: userTable.discordId,
@@ -95,7 +92,7 @@ async function processDailyResets() {
 
 async function processMonthlyResets() {
   console.log('+'.repeat(5));
-  wrapWithAlerting(async () => {
+  await wrapWithAlerting(async () => {
     const result = await db.update(userTable).set(
       {
         monthlyPoints: 0,

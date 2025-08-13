@@ -1,4 +1,4 @@
-import { AttachmentBuilder, GuildMemberRoleManager, InteractionResponse, SlashCommandBuilder } from "discord.js";
+import { GuildMemberRoleManager, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../../types.ts";
 import { updateLogMessage } from "../../utils/utils.ts";
 

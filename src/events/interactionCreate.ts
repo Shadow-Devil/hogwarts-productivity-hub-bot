@@ -27,7 +27,7 @@ export async function execute(interaction: Interaction): Promise<void> {
             await command.execute(interaction, { activeVoiceTimers });
         }
     } catch (error) {
-        alertOwner(`💥 Command execution failed: /${interaction.commandName}\n${error}`);
+        await alertOwner(`💥 Command execution failed: /${interaction.commandName}\n${error}`);
         if (interaction.isAutocomplete()) return;
 
         // Improved error response handling with interaction state checks

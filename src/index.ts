@@ -51,10 +51,10 @@ function registerShutdownHandlers() {
   process.on("SIGINT", dbShutdown);
   process.on("SIGTERM", dbShutdown);
 
-  process.on('uncaughtException', function (error) {
-    alertOwner(`Uncaught Exception: ${error}`);
+  process.on('uncaughtException', async function (error) {
+    await alertOwner(`Uncaught Exception: ${error}`);
   });
-  process.on('unhandledRejection', function (reason, promise) {
-    alertOwner(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+  process.on('unhandledRejection', async function (reason, promise) {
+    await alertOwner(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
   });
 }

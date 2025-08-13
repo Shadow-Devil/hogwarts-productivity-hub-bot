@@ -1,4 +1,4 @@
-import { AttachmentBuilder, InteractionCallbackResponse, Message, type GuildMember, type InteractionResponse } from "discord.js";
+import { AttachmentBuilder, Message, type GuildMember } from "discord.js";
 import assert from "node:assert/strict";
 import type { House } from "../types.ts";
 import { client } from "../client.ts";
@@ -32,8 +32,7 @@ export async function sendLogsToLogChannel() {
     const channel = await client.channels.fetch(process.env.LOG_CHANNEL_ID!)
     assert(channel?.isSendable(), `Log channel ${process.env.LOG_CHANNEL_ID} is not sendable or does not exist`);
     const message = await channel.send("Start logging...");
-    updateLogMessage(message);
-
+    await updateLogMessage(message);
 }
 
 export async function updateLogMessage(message: Message) {

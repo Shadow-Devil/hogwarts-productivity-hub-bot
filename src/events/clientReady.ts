@@ -17,5 +17,5 @@ export async function execute(c: Client<true>): Promise<void> {
         console.error("error:", error);
         process.exit(1);
     }
-    alertOwner("Bot deployed successfully.");
+    await alertOwner("Bot deployed successfully.");
 }
