@@ -12,6 +12,7 @@ import timezone from "dayjs/plugin/timezone.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import { db, fetchOpenVoiceSessions } from "./db/db.ts";
 import { endVoiceSession } from "./utils/voiceUtils.ts";
+import { alertOwner } from "./utils/alerting.ts";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -44,9 +45,16 @@ function registerShutdownHandlers() {
       await Promise.all(openVoiceSessions.map(session => endVoiceSession(session.discordId, session.username!)));
     });
     process.exit(0);
-  
+
   }
-  
+
   process.on("SIGINT", dbShutdown);
   process.on("SIGTERM", dbShutdown);
+
+  process.on('uncaughtException', function (error) {
+    alertOwner(`Uncaught Exception: ${error}`);
+  });
+  process.on('unhandledRejection', function (reason, promise) {
+    alertOwner(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+  });
 }
