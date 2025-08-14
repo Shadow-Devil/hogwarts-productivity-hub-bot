@@ -26,9 +26,7 @@ export async function getUserVoiceChannel(
   const member = interaction.member as GuildMember;
 
   if (member.voice?.channel) {
-    console.log(
-      `Voice channel found via cached member: ${member.voice.channel.name} (${member.voice.channel.id})`
-    );
+    console.log(`Voice channel found via cached member: ${member.voice.channel.name} (${member.voice.channel.id})`);
     return member.voice.channel;
   }
 
@@ -127,7 +125,7 @@ export async function endVoiceSession(
       pointsEarned += POINTS_FIRST_HOUR;
     }
 
-    if (oldDailyVoiceTime + FIVE_MINUTES < ONE_HOUR * 2 && newDailyVoiceTime + FIVE_MINUTES >= ONE_HOUR * 2) {
+    if (newDailyVoiceTime + FIVE_MINUTES >= ONE_HOUR && newDailyVoiceTime + FIVE_MINUTES >= ONE_HOUR * 2) {
       // Crossed the 2-hour threshold
       const hoursCapped = Math.min(Math.floor((newDailyVoiceTime + FIVE_MINUTES) / ONE_HOUR), MAX_HOURS_PER_DAY);
 
