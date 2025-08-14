@@ -23,4 +23,5 @@ jobs:
             git pull &&
             pnpm install &&
             pnpm register &&
+            npx drizzle-kit migrate &&
             systemctl --user restart discord-bot.service
