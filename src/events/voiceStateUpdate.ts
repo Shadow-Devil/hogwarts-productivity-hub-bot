@@ -11,7 +11,7 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   const username = user.user.username;
   const oldChannel = oldState.channel;
   const newChannel = newState.channel;
-  console.log("+".repeat(5) + ` Voice state update for ${username} (${oldChannel} -> ${newChannel})`);
+  console.log("+".repeat(5) + ` Voice state update for ${username} (${oldChannel?.name} -> ${newChannel?.name})`);
   await ensureUserExists(user);
 
   await wrapWithAlerting(async () => {
