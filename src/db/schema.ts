@@ -33,6 +33,7 @@ export const voiceSessionTable = pgTable("voice_session", {
 
     joinedAt: timestamp().notNull().defaultNow(),
     leftAt: timestamp(),
+    channelId: varchar({ length: 255 }).notNull(),
 
     // if points and voiceTime were awarded for this session
     isTracked: boolean().default(false).notNull(),

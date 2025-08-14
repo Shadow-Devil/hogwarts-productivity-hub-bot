@@ -1,0 +1,1 @@
+ALTER TABLE "voice_session" ADD COLUMN "channel_id" varchar(255) DEFAULT 'unknown' NOT NULL;

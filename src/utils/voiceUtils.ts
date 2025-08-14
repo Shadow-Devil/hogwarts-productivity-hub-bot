@@ -5,10 +5,12 @@ import type {
 } from "discord.js";
 import { type Schema, } from "../db/db.ts";
 import { userTable, voiceSessionTable } from "../db/schema.ts";
-import { and, eq, isNull, sql, type ExtractTablesWithRelations } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql, type ExtractTablesWithRelations } from "drizzle-orm";
 import { FIRST_HOUR_POINTS as POINTS_FIRST_HOUR, MIN_DAILY_MINUTES_FOR_STREAK, REST_HOURS_POINTS as POINTS_REST_HOURS, MAX_HOURS_PER_DAY } from "../utils/constants.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { NodePgDatabase, NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
+import type { VoiceSession } from "../types.ts";
+import assert from "node:assert/strict";
 
 /**
  * get the voice channel for a user from an interaction
@@ -36,24 +38,27 @@ export async function getUserVoiceChannel(
 
 // Start a voice session when user joins VC (timezone-aware)
 export async function startVoiceSession(
-  discordId: string,
-  username: string,
-  db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | NodePgDatabase<Schema>
+  session: VoiceSession,
+  db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | NodePgDatabase<Schema>,
 ) {
+  const channelId = session.channelId;
+  if (channelId === null || process.env.EXCLUDE_VOICE_CHANNEL_IDS?.split(",").includes(channelId)) {
+    return;
+  }
   await db.transaction(async (db) => {
-    const existingVoiceSession = await db.$count(voiceSessionTable, and(
-      eq(voiceSessionTable.discordId, discordId),
+    const existingVoiceSessions = await db.select().from(voiceSessionTable).where(and(
+      eq(voiceSessionTable.discordId, session.discordId),
       isNull(voiceSessionTable.leftAt)
     ));
 
-    if (existingVoiceSession > 0) {
-      console.error(`Voice session already active for ${username}, closing and starting a new one`);
-      await endVoiceSession(discordId, username, db, false); // End existing session without tracking
+    if (existingVoiceSessions.length > 0) {
+      console.error(`Voice session already active for ${session.username}, closing and starting a new one`);
+      await endVoiceSession(session, db, false); // End existing session without tracking
     }
 
-    await db.insert(voiceSessionTable).values({ discordId });
+    await db.insert(voiceSessionTable).values({ discordId: session.discordId, channelId });
 
-    console.log(`Voice session started for ${username}`);
+    console.log(`Voice session started for ${session.username}`);
   })
 }
 
@@ -62,38 +67,45 @@ export async function startVoiceSession(
  *  @param {boolean} isTracked - If false, do not update user stats (for deleting old sessions)
  */
 export async function endVoiceSession(
-  discordId: string, 
-  username: string,
+  session: VoiceSession, 
   db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | NodePgDatabase<Schema>,
   isTracked: boolean = true) {
+  const channelId = session.channelId;
+  if (channelId === null || process.env.EXCLUDE_VOICE_CHANNEL_IDS?.split(",").includes(channelId)) {
+    return;
+  }
   await db.transaction(async (db) => {
     const existingVoiceSession = await db.select({ id: voiceSessionTable.id }).from(voiceSessionTable).where(and(
-      eq(voiceSessionTable.discordId, discordId),
+      eq(voiceSessionTable.discordId, session.discordId),
+      inArray(voiceSessionTable.channelId, [channelId, "unknown"]),
       isNull(voiceSessionTable.leftAt)
     ))
-    if (existingVoiceSession.length !== 1) {
-      console.error(`Could not end voice session, found ${existingVoiceSession.length} active voice session found for ${username}`);
+    if (isTracked && existingVoiceSession.length !== 1) {
+      console.error(`Could not end voice session, found ${existingVoiceSession.length} active voice session found for ${session.username}`);
       return;
     }
 
-    const [voiceSessionWithDuration] = await db.update(voiceSessionTable).set({
+    const voiceSessionWithDurations = await db.update(voiceSessionTable).set({
       leftAt: new Date(),
       isTracked, // Only track if not deleting old session
-    }).where(eq(voiceSessionTable.id, existingVoiceSession[0]!!.id)).returning({
+    }).where(inArray(voiceSessionTable.id, existingVoiceSession.map(s => s.id))).returning({
       duration: voiceSessionTable.duration,
     });
+
     if (!isTracked) {
       return;
     }
 
-    const duration = voiceSessionWithDuration!.duration || 0;
+    assert(voiceSessionWithDurations.length === 1, `Expected exactly one voice session to end, but found ${voiceSessionWithDurations.length}`);
+
+    const duration = voiceSessionWithDurations[0]!.duration || 0;
 
     // Update user's voice time stats
     const [user] = await db.update(userTable).set({
       dailyVoiceTime: sql`${userTable.dailyVoiceTime} + ${duration}`,
       monthlyVoiceTime: sql`${userTable.monthlyVoiceTime} + ${duration}`,
       totalVoiceTime: sql`${userTable.totalVoiceTime} + ${duration}`,
-    }).where(eq(userTable.discordId, discordId)).returning({
+    }).where(eq(userTable.discordId, session.discordId)).returning({
       dailyVoiceTime: userTable.dailyVoiceTime,
       isStreakUpdatedToday: userTable.isStreakUpdatedToday,
     });
@@ -103,12 +115,12 @@ export async function endVoiceSession(
       const streakResult = await db.update(userTable).set({
         streak: sql`${userTable.streak} + 1`,
         isStreakUpdatedToday: true,
-      }).where(eq(userTable.discordId, discordId)).returning({
+      }).where(eq(userTable.discordId, session.discordId)).returning({
         streak: userTable.streak,
       });
 
       if (streakResult.length === 0) {
-        console.error(`Failed to update streak for ${username}, no user found`);
+        console.error(`Failed to update streak for ${session.username}, no user found`);
         return;
       }
     }
@@ -134,7 +146,7 @@ export async function endVoiceSession(
     }
 
     console.log(
-      `Voice session ended for ${username}: ${duration} seconds, awarded ${pointsEarned} points (oldDailyVoiceTime: ${oldDailyVoiceTime}, newDailyVoiceTime: ${newDailyVoiceTime})`
+      `Voice session ended for ${session.username}: ${duration} seconds, awarded ${pointsEarned} points (oldDailyVoiceTime: ${oldDailyVoiceTime}, newDailyVoiceTime: ${newDailyVoiceTime})`
     );
 
     if (pointsEarned > 0) {
@@ -143,7 +155,7 @@ export async function endVoiceSession(
         dailyPoints: sql`${userTable.dailyPoints} + ${pointsEarned}`,
         monthlyPoints: sql`${userTable.monthlyPoints} + ${pointsEarned}`,
         totalPoints: sql`${userTable.totalPoints} + ${pointsEarned}`,
-      }).where(eq(userTable.discordId, discordId));
+      }).where(eq(userTable.discordId, session.discordId));
     }
   })
 }

@@ -12,3 +12,9 @@ export type Command = {
 };
 
 export type House = "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin";
+
+export type VoiceSession = {
+  username: string;
+  discordId: string;
+  channelId: string | null;
+}

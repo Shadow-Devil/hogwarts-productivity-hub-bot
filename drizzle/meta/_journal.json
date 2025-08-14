@@ -8,6 +8,20 @@
       "when": 1755015163125,
       "tag": "0000_brainy_speed_demon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1755213434341,
+      "tag": "0001_slow_franklin_richards",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1755215290445,
+      "tag": "0002_same_white_queen",
+      "breakpoints": true
     }
   ]
 }

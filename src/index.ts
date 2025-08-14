@@ -43,7 +43,7 @@ function registerShutdownHandlers() {
     console.log("Closing any existing voice sessions");
     await db.transaction(async (db) => {
       const openVoiceSessions = await fetchOpenVoiceSessions(db);
-      await Promise.all(openVoiceSessions.map(session => endVoiceSession(session.discordId, session.username!, db)));
+      await Promise.all(openVoiceSessions.map(session => endVoiceSession(session, db)));
     });
     console.log("Bye");
     await updateLogMessages(true);

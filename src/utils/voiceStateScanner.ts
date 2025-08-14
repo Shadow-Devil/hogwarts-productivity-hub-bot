@@ -143,7 +143,7 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
 
     const usersStarted = [];
 
-    for (const [memberId, member] of members) {
+    for (const [discordId, member] of members) {
       try {
         // Skip bots
         if (member.user.bot) {
@@ -153,14 +153,18 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
         scanResults.totalUsersFound++;
 
         // Check if user already has an active session
-        if (memberId in activeVoiceSessions) {
+        if (discordId in activeVoiceSessions) {
           console.log(`User ${member.user.username} already being tracked, skipping...`);
           continue;
         }
 
         await ensureUserExists(member);
         // Start voice session for this user
-        await startVoiceSession(memberId, member.user.username, db);
+        await startVoiceSession({
+          discordId,
+          username: member.user.username,
+          channelId: channel.id
+        }, db);
 
         scanResults.trackingStarted++;
         usersStarted.push(member.user.username);
