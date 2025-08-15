@@ -57,7 +57,7 @@ export async function execute(interaction: Interaction): Promise<void> {
         }
     }
     console.log("-".repeat(5))
-    end({ command: interaction.commandName, subcommand: interaction.options.getSubcommand(false) || '', is_autocomplete: interaction.isAutocomplete().toString() });
+    end({ command: interaction.commandName, subcommand: interaction.options.getSubcommand(false) || '', is_autocomplete: interaction.isAutocomplete() ? "autocomplete" : "" });
 }
 function logCommandExecution(interaction: ChatInputCommandInteraction<CacheType> | AutocompleteInteraction<CacheType>) {
     const channel = interaction.channel;

@@ -5,7 +5,6 @@ import { commands } from "./commands.ts";
 import assert from "node:assert/strict";
 import { db } from "./db/db.ts";
 
-
 assert(process.env.CLIENT_ID)
 assert(process.env.GUILD_IDS)
 assert(process.env.DISCORD_TOKEN)

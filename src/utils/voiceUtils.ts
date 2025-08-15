@@ -103,7 +103,7 @@ export async function endVoiceSession(
     assert(voiceSessionWithDurations.length === 1, `Expected exactly one voice session to end, but found ${voiceSessionWithDurations.length}`);
 
     const duration = voiceSessionWithDurations[0]!.duration || 0;
-    voiceSessionTimer.observe({ discord_id: session.discordId }, duration);
+    voiceSessionTimer.observe({ discord_id: session.discordId, username: session.username }, duration);
 
     // Update user's voice time stats
     const [user] = await db.update(userTable).set({

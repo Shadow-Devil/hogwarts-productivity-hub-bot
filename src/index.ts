@@ -3,7 +3,7 @@ import "./monitoring.ts";
 
 import * as CentralResetService from "./scheduler/centralResetService.ts";
 import { client } from "./client.ts";
-import { Events, type Client } from "discord.js";
+import { Events, SlashCommandSubcommandBuilder, type Client } from "discord.js";
 import * as VoiceStateUpdate from "./events/voiceStateUpdate.ts";
 import * as ClientReady from "./events/clientReady.ts";
 import * as InteractionCreate from "./events/interactionCreate.ts";
@@ -15,6 +15,9 @@ import { db, fetchOpenVoiceSessions } from "./db/db.ts";
 import { endVoiceSession } from "./utils/voiceUtils.ts";
 import { alertOwner } from "./utils/alerting.ts";
 import { updateLogMessages } from "./utils/logs.ts";
+import { interactionExecutionTimer, resetExecutionTimer, voiceSessionExecutionTimer, voiceSessionTimer } from "./monitoring.ts";
+import { commands } from "./commands.ts";
+import { userTable } from "./db/schema.ts";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -25,6 +28,7 @@ dayjs.tz.setDefault("UTC");
 try {
   registerEvents(client);
   registerShutdownHandlers();
+  await registerMonitoringEvents();
 
   await CentralResetService.start();
   await client.login(process.env.DISCORD_TOKEN);
@@ -59,5 +63,34 @@ function registerShutdownHandlers() {
   });
   process.on('unhandledRejection', async function (reason, promise) {
     await alertOwner(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+  });
+}
+
+async function registerMonitoringEvents() {
+  commands.forEach((command) => {
+    const subcommands = command.data.options.filter((option) => option instanceof SlashCommandSubcommandBuilder);
+    if (subcommands.length > 0) {
+      subcommands.forEach((subcommand) => {
+        interactionExecutionTimer.zero({command: command.data.name, subcommand: subcommand.name, is_autocomplete: ""});
+      });
+    } else {
+      interactionExecutionTimer.zero({command: command.data.name, subcommand: "", is_autocomplete: ""});
+    }
+  });
+
+  voiceSessionExecutionTimer.zero({ event: "join" });
+  voiceSessionExecutionTimer.zero({ event: "leave" });
+  voiceSessionExecutionTimer.zero({ event: "switch" });
+
+  resetExecutionTimer.zero({ action: "daily" });
+  resetExecutionTimer.zero({ action: "monthly" });
+
+  await db.select({
+    discordId: userTable.discordId,
+    username: userTable.username,
+  }).from(userTable).then(users => {
+    users.forEach(user => {
+      voiceSessionTimer.zero({ discord_id: user.discordId, username: user.username });
+    });
   });
 }
