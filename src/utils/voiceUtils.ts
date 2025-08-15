@@ -11,6 +11,7 @@ import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { NodePgDatabase, NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import type { VoiceSession } from "../types.ts";
 import assert from "node:assert/strict";
+import { voiceSessionTimer } from "../monitoring.ts";
 
 /**
  * get the voice channel for a user from an interaction
@@ -102,6 +103,7 @@ export async function endVoiceSession(
     assert(voiceSessionWithDurations.length === 1, `Expected exactly one voice session to end, but found ${voiceSessionWithDurations.length}`);
 
     const duration = voiceSessionWithDurations[0]!.duration || 0;
+    voiceSessionTimer.observe({ discord_id: session.discordId }, duration);
 
     // Update user's voice time stats
     const [user] = await db.update(userTable).set({

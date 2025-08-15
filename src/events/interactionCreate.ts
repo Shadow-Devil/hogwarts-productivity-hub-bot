@@ -3,12 +3,13 @@ import { commands } from "../commands.ts";
 import assert from "node:assert/strict";
 import { ensureUserExists } from "../db/db.ts";
 import { alertOwner } from "../utils/alerting.ts";
+import { interactionExecutionTimer } from "../monitoring.ts";
 
 const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
 
 export async function execute(interaction: Interaction): Promise<void> {
     if (!interaction.isChatInputCommand() && !interaction.isAutocomplete()) return;
-    
+    const end = interactionExecutionTimer.startTimer()
 
     const command = commands.get(interaction.commandName);
     if (!command) {
@@ -56,6 +57,7 @@ export async function execute(interaction: Interaction): Promise<void> {
         }
     }
     console.log("-".repeat(5))
+    end({ command: interaction.commandName, subcommand: interaction.options.getSubcommand(false) || '', is_autocomplete: interaction.isAutocomplete().toString() });
 }
 function logCommandExecution(interaction: ChatInputCommandInteraction<CacheType> | AutocompleteInteraction<CacheType>) {
     const channel = interaction.channel;

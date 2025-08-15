@@ -5,6 +5,7 @@ import { userTable } from "../db/schema.ts";
 import { inArray, sql } from "drizzle-orm";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
 import { wrapWithAlerting } from "../utils/alerting.ts";
+import { resetExecutionTimer } from "../monitoring.ts";
 
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
 
@@ -43,7 +44,9 @@ export async function start() {
 }
 
 async function processDailyResets() {
+  const end = resetExecutionTimer.startTimer();
   console.log("+".repeat(5) + " Processing daily resets at " + dayjs().format("MMM DD HH:mm:ss"));
+
   await wrapWithAlerting(async () => {
     await db.transaction(async (db) => {
       const usersNeedingPotentialReset = await db.select({
@@ -88,9 +91,11 @@ async function processDailyResets() {
     });
   }, "Daily reset processing");
   console.log("-".repeat(5));
+  end({ action: "daily" });
 }
 
 async function processMonthlyResets() {
+  const end = resetExecutionTimer.startTimer();
   console.log('+'.repeat(5) + " Processing monthly resets at " + dayjs().format("MMM DD HH:mm:ss"));
   await wrapWithAlerting(async () => {
     const result = await db.update(userTable).set(
@@ -102,4 +107,5 @@ async function processMonthlyResets() {
     console.log("Monthly reset edited this many users:", result.rowCount);
   }, "Monthly reset processing");
   console.log('-'.repeat(5));
+  end({ action: "monthly" });
 }

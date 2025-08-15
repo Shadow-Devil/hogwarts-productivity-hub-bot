@@ -2,10 +2,13 @@ import { type VoiceState } from "discord.js";
 import { db, ensureUserExists } from "../db/db.ts";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
 import { wrapWithAlerting } from "../utils/alerting.ts";
+import { voiceSessionExecutionTimer } from "../monitoring.ts";
 
 export async function execute(oldState: VoiceState, newState: VoiceState) {
   const user = newState.member || oldState.member;
   if (!user || user.user.bot) return; // Ignore bots
+
+  const end = voiceSessionExecutionTimer.startTimer();
 
   const discordId = user.id;
   const username = user.user.username;
@@ -26,18 +29,23 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   }
   console.log("+".repeat(5) + ` Voice state update for ${username} (${oldChannel?.name} -> ${newChannel?.name})`);
   await ensureUserExists(user);
+  let event = 'unknown';
 
   await wrapWithAlerting(async () => {
     // User joined a voice channel
     if (!oldChannel && newChannel) {
       await startVoiceSession(newVoiceSession, db);
+      event = 'join';
     } else if (oldChannel && !newChannel) {
       await endVoiceSession(oldVoiceSession, db);
+      event = 'leave';
     } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
       // For channel switches, end the old session and start new one immediately
       await endVoiceSession(oldVoiceSession, db);
       await startVoiceSession(newVoiceSession, db);
+      event = 'switch';
     }
   }, `Voice state update for ${username} (${discordId})`);
   console.log("-".repeat(5))
+  end({ event, discord_id: discordId });
 }
