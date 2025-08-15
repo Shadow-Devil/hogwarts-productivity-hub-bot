@@ -10,12 +10,6 @@ export const interactionExecutionTimer = new client.Histogram({
   labelNames: ['command', 'subcommand', 'is_autocomplete'],
   buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 7, 10] // 0.1 to 10 seconds
 });
-export const voiceSessionTimer = new client.Histogram({
-    name: 'discord_voice_session_duration_seconds',
-    help: 'Duration of Discord voice sessions in seconds',
-    labelNames: ['discord_id', 'username'],
-    buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 7, 10] // 0.1 to 10 seconds
-});
 
 export const voiceSessionExecutionTimer = new client.Histogram({
     name: 'discord_voice_session_execution_duration_seconds',
@@ -31,7 +25,6 @@ export const resetExecutionTimer = new client.Histogram({
 });
 
 register.registerMetric(interactionExecutionTimer);
-register.registerMetric(voiceSessionTimer);
 register.registerMetric(voiceSessionExecutionTimer);
 
 client.collectDefaultMetrics({register});

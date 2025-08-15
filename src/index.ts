@@ -15,7 +15,7 @@ import { db, fetchOpenVoiceSessions } from "./db/db.ts";
 import { endVoiceSession } from "./utils/voiceUtils.ts";
 import { alertOwner } from "./utils/alerting.ts";
 import { updateLogMessages } from "./utils/logs.ts";
-import { interactionExecutionTimer, resetExecutionTimer, voiceSessionExecutionTimer, voiceSessionTimer } from "./monitoring.ts";
+import { interactionExecutionTimer, resetExecutionTimer, voiceSessionExecutionTimer } from "./monitoring.ts";
 import { commands } from "./commands.ts";
 import { userTable } from "./db/schema.ts";
 
@@ -84,13 +84,4 @@ async function registerMonitoringEvents() {
 
   resetExecutionTimer.zero({ action: "daily" });
   resetExecutionTimer.zero({ action: "monthly" });
-
-  await db.select({
-    discordId: userTable.discordId,
-    username: userTable.username,
-  }).from(userTable).then(users => {
-    users.forEach(user => {
-      voiceSessionTimer.zero({ discord_id: user.discordId, username: user.username });
-    });
-  });
 }
