@@ -42,9 +42,12 @@ export async function startVoiceSession(
   db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | NodePgDatabase<Schema>,
 ) {
   const channelId = session.channelId;
+  const channelName = session.channelName;
   if (channelId === null || process.env.EXCLUDE_VOICE_CHANNEL_IDS?.split(",").includes(channelId)) {
     return;
   }
+  assert(channelName !== null, "Channel name must be provided for voice session");
+
   await db.transaction(async (db) => {
     const existingVoiceSessions = await db.select().from(voiceSessionTable).where(and(
       eq(voiceSessionTable.discordId, session.discordId),
@@ -56,7 +59,7 @@ export async function startVoiceSession(
       await endVoiceSession(session, db, false); // End existing session without tracking
     }
 
-    await db.insert(voiceSessionTable).values({ discordId: session.discordId, channelId });
+    await db.insert(voiceSessionTable).values({ discordId: session.discordId, channelId, channelName });
 
     console.log(`Voice session started for ${session.username}`);
   })

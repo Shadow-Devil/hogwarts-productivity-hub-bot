@@ -50,7 +50,7 @@ export async function fetchTasks(discordId: string) {
 }
 
 export async function fetchOpenVoiceSessions(db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>, usersNeedingReset: string[] | null = null) {
-  return await db.select({ discordId: schema.voiceSessionTable.discordId, username: schema.userTable.username, channelId: schema.voiceSessionTable.channelId })
+  return await db.select({ discordId: schema.voiceSessionTable.discordId, username: schema.userTable.username, channelId: schema.voiceSessionTable.channelId, channelName: schema.voiceSessionTable.channelName })
     .from(schema.voiceSessionTable)
     .where(and(
       usersNeedingReset !== null ? inArray(schema.voiceSessionTable.discordId, usersNeedingReset) : undefined,

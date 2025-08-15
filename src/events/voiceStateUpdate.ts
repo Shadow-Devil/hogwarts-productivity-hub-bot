@@ -15,12 +15,14 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   const oldVoiceSession = {
     discordId,
     username,
-    channelId: oldState.channel?.id || null,
+    channelId: oldChannel?.id || null,
+    channelName: oldChannel?.name || null,
   }
   const newVoiceSession = {
     discordId,
     username,
-    channelId: newState.channel?.id || null,
+    channelId: newChannel?.id || null,
+    channelName: newChannel?.name || null,
   }
   console.log("+".repeat(5) + ` Voice state update for ${username} (${oldChannel?.name} -> ${newChannel?.name})`);
   await ensureUserExists(user);

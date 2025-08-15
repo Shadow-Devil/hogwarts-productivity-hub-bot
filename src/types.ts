@@ -17,4 +17,5 @@ export type VoiceSession = {
   username: string;
   discordId: string;
   channelId: string | null;
+  channelName: string | null;
 }

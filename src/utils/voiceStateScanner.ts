@@ -163,7 +163,8 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
         await startVoiceSession({
           discordId,
           username: member.user.username,
-          channelId: channel.id
+          channelId: channel.id,
+          channelName: channel.name,
         }, db);
 
         scanResults.trackingStarted++;

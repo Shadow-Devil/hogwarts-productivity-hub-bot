@@ -1,0 +1,1 @@
+ALTER TABLE "voice_session" ALTER COLUMN "channel_name" DROP DEFAULT;

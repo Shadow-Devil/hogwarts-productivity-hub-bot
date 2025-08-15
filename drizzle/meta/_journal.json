@@ -22,6 +22,20 @@
       "when": 1755215290445,
       "tag": "0002_same_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1755216266132,
+      "tag": "0003_long_cable",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1755216278076,
+      "tag": "0004_powerful_ultragirl",
+      "breakpoints": true
     }
   ]
 }
