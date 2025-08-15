@@ -20,7 +20,7 @@ export const voiceSessionTimer = new client.Histogram({
 export const voiceSessionExecutionTimer = new client.Histogram({
     name: 'discord_voice_session_execution_duration_seconds',
     help: 'Duration of Discord voice session execution in seconds',
-    labelNames: ['discord_id', 'event'],
+    labelNames: ['event'],
     buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 7, 10] // 0.1 to 10 seconds
 });
 export const resetExecutionTimer = new client.Histogram({

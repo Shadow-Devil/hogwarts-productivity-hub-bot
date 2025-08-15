@@ -47,5 +47,5 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     }
   }, `Voice state update for ${username} (${discordId})`);
   console.log("-".repeat(5))
-  end({ event, discord_id: discordId });
+  end({ event });
 }
