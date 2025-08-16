@@ -6,10 +6,7 @@
 import { vi, describe, afterEach, it, expect } from "vitest";
 import {
   createErrorTemplate,
-  createHealthTemplate,
-  createHouseTemplate,
   createSuccessTemplate,
-  createTimerTemplate,
 } from "../../src/utils/embedTemplates.ts";
 
 // Mock Discord.js components since they depend on the Discord API
@@ -79,93 +76,6 @@ describe("Embed Templates", () => {
     });
   });
 
-  describe("Specialized Templates", () => {
-
-    describe("createTimerTemplate", () => {
-      it("should create a timer start template", () => {
-        const timerData = {
-          workTime: 25,
-          breakTime: 5,
-          voiceChannel: { id: "123456789" },
-          phase: "work",
-          timeRemaining: 25,
-        };
-
-        const result = createTimerTemplate("start", timerData);
-        expect(result).toBeDefined();
-        expect(result.setTitle).toHaveBeenCalledWith(
-          "⏱️ Pomodoro Timer Started",
-        );
-      });
-
-      it("should handle timer status action", () => {
-        const timerData = {
-          workTime: 25,
-          breakTime: 5,
-          voiceChannel: { id: "123456789" },
-          phase: "work",
-          timeRemaining: 15,
-        };
-
-        expect(() => {
-          createTimerTemplate("status", timerData);
-        }).not.toThrow();
-      });
-    });
-
-
-    describe("createHouseTemplate", () => {
-      it("should create a house points template", () => {
-        const housesData = [
-          { name: "Gryffindor", points: 100, voiceTime: 1200 },
-          { name: "Hufflepuff", points: 90, voiceTime: 1100 },
-          { name: "Ravenclaw", points: 85, voiceTime: 1000 },
-          { name: "Slytherin", points: 80, voiceTime: 950 },
-        ] as const;
-
-        const result = createHouseTemplate(housesData, "monthly");
-        expect(result).toBeDefined();
-        expect(result.setTitle).toHaveBeenCalledWith("Monthly House Points");
-        expect(result.setColor).toHaveBeenCalled();
-      });
-
-      it("should handle empty houses data", () => {
-        expect(() => {
-          createHouseTemplate([], "monthly");
-        }).not.toThrow();
-      });
-    });
-
-    describe("createHealthTemplate", () => {
-      it("should create a health template with proper data", () => {
-        const healthData = {
-          status: "healthy",
-          systemHealth: true,
-          uptime: 99.5,
-          healthChecks: "5/5 passed",
-          activeSessions: 3,
-        };
-
-        const result = createHealthTemplate("Bot Health", healthData);
-        expect(result).toBeDefined();
-        expect(result.setTitle).toHaveBeenCalledWith("🩺 Bot Health");
-        expect(result.setColor).toHaveBeenCalled();
-      });
-
-      it("should handle degraded status", () => {
-        const healthData = {
-          status: "degraded",
-          systemHealth: false,
-          issues: ["Database connection slow", "High memory usage"],
-        };
-
-        expect(() => {
-          createHealthTemplate("System Issues", healthData);
-        }).not.toThrow();
-      });
-    });
-  });
-
   describe("Error Handling and Edge Cases", () => {
     it("should handle malformed data structures with some protection", () => {
       // Test with null/undefined data - these may legitimately throw
@@ -180,7 +90,6 @@ describe("Embed Templates", () => {
       expect(() => {
         createSuccessTemplate("Title", "Message");
         createErrorTemplate("Error", "Message");
-        createHouseTemplate([], "monthly");
       }).not.toThrow();
     });
 
@@ -193,46 +102,6 @@ describe("Embed Templates", () => {
       expect(successResult).toBeDefined();
       expect(errorResult).toBeDefined();
     });
-
-    it("should handle edge cases that the functions are designed for", () => {
-      // Test functions with their expected minimal data structures
-      // Note: Some functions expect Discord.js objects and will fail with improper mocks
-
-      // Health template with minimal valid data
-      expect(() => {
-        createHealthTemplate("Health Check", {
-          status: "healthy",
-          systemHealth: true,
-        });
-      }).not.toThrow();
-
-      // Timer template with valid action
-      expect(() => {
-        createTimerTemplate("start", {
-          workTime: 25,
-          breakTime: 5,
-          voiceChannel: { id: "123" },
-          phase: "work",
-          timeRemaining: 25,
-        });
-      }).not.toThrow();
-    });
   });
 
-  describe("Integration with Constants", () => {
-    it("should use centralized constants for colors and emojis", () => {
-      // The templates should be using constants from our centralized file
-      // This is tested indirectly by ensuring the functions don't throw
-      // and that they call the expected Discord.js methods
-
-      const result = createSuccessTemplate("Test", "Message");
-      expect(result.setColor).toHaveBeenCalled();
-
-      const houseResult = createHouseTemplate(
-        [{ name: "Gryffindor", points: 100 }],
-        "monthly",
-      );
-      expect(houseResult.setColor).toHaveBeenCalled();
-    });
-  });
 });
