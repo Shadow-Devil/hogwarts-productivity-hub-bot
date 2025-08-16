@@ -1,0 +1,476 @@
+import { SlashCommandBuilder, ChatInputCommandInteraction, type CacheType } from "discord.js";
+import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
+import {
+  createErrorTemplate,
+  createSuccessTemplate,
+} from "../utils/embedTemplates.ts";
+import dayjs from "dayjs";
+import type { Command, VoiceTimer } from "../types.ts";
+import assert from "node:assert";
+import { createHeader, createProgressBar, createStyledEmbed } from "../utils/visualHelpers.ts";
+
+
+export default {
+  data: new SlashCommandBuilder()
+    .setName("timer")
+    .setDescription("Manage Pomodoro timers for productivity tracking")
+    .addSubcommand((sub) =>
+      sub
+        .setName("start")
+        .setDescription("Start a Pomodoro timer")
+        .addIntegerOption((opt) =>
+          opt
+            .setName("work")
+            .setDescription("Work time in minutes (min 20)")
+            .setRequired(true)
+            .setMinValue(20)
+        )
+        .addIntegerOption((opt) =>
+          opt
+            .setName("break")
+            .setDescription("Break time in minutes (optional, min 5)")
+            .setRequired(false)
+            .setMinValue(5)
+        ))
+    .addSubcommand((sub) =>
+      sub
+        .setName("stop")
+        .setDescription("Stop the current Pomodoro timer")
+    ).addSubcommand((sub) =>
+      sub
+        .setName("status")
+        .setDescription("Check the status of the current Pomodoro timer")
+    ),
+  async execute(
+    interaction: ChatInputCommandInteraction,
+    { activeVoiceTimers }
+  ): Promise<void> {
+    await interaction.deferReply();
+
+    const subcommand = interaction.options.getSubcommand(true);
+
+    switch (subcommand) {
+      case "start":
+        await startTimer(interaction, activeVoiceTimers);
+        break;
+      case "stop":
+        await stopTimer(interaction, activeVoiceTimers);
+        break;
+      case "status":
+        await checkTimerStatus(interaction, activeVoiceTimers);
+        break;
+    }
+  },
+} as Command;
+
+
+async function startTimer(interaction: ChatInputCommandInteraction, activeVoiceTimers: Map<string, VoiceTimer>): Promise<void> {
+  const voiceChannel = await getUserVoiceChannel(interaction);
+
+  if (voiceChannel === null) {
+    await interaction.editReply({
+      embeds: [createErrorTemplate(
+        `Voice Channel Required`,
+        "You must be in a voice channel to start a Pomodoro timer and track your productivity.\nJoin any voice channel first, then try again.\nTimers help you maintain focus during productive voice sessions."
+      )],
+    });
+    return;
+  }
+
+  const voiceChannelId = voiceChannel.id;
+
+  if (!cleanExistingTimer(interaction, voiceChannelId, activeVoiceTimers)) { return; }
+  
+  const work = interaction.options.getInteger("work", true);
+  const breakTime = interaction.options.getInteger("break") || 0;
+
+  const now = dayjs();
+  const startTime = now;
+  const endTime = now.add(work, "minutes");
+  const breakEndTime = breakTime > 0
+      ? now.add(work + breakTime, "minutes")
+      : null;
+
+  await interaction.editReply({ embeds: [createTimerTemplate(
+      "start",
+      {
+        workTime: work,
+        breakTime: breakTime,
+        voiceChannel: voiceChannel,
+        phase: "work",
+        startTime: startTime.format("HH:mm"),
+        endTime: endTime.format("HH:mm"),
+        breakEndTime: breakEndTime?.format("HH:mm"),
+      },
+      {
+        showProgress: true,
+        includeMotivation: true,
+      }
+    )] });
+
+
+  const workTimeout = setTimeout(
+    async () => {
+      await interaction.followUp({
+        content: `<@${interaction.user.id}>`,
+        embeds: [createTimerTemplate("work_complete", {
+            workTime: work,
+            breakTime: breakTime,
+            voiceChannel: voiceChannel,
+            phase: "work_complete",
+          })],
+      });
+
+      if (breakTime === 0) {
+        activeVoiceTimers.delete(voiceChannelId);
+        return;
+      }
+
+      const breakTimeout = setTimeout(
+        async () => {
+          try {
+            await interaction.followUp({
+              content: `<@${interaction.user.id}>`,
+              embeds: [createTimerTemplate(
+                  "break_complete",
+                  {
+                    workTime: work,
+                    breakTime: breakTime,
+                    voiceChannel: voiceChannel,
+                    phase: "break_complete",
+                  }
+                )],
+            });
+          } catch (err) {
+            console.error("Error sending break over message:", err);
+          }
+          activeVoiceTimers.delete(voiceChannelId);
+        },
+        breakTime * 60 * 1000
+      );
+      activeVoiceTimers.set(voiceChannelId, {
+        startTime: startTime.valueOf(),
+        breakTimeout,
+        phase: "break",
+        endTime: dayjs().add(breakTime, 'minutes').toDate(),
+      });
+      
+    },
+    work * 60 * 1000
+  );
+  activeVoiceTimers.set(voiceChannelId, {
+    startTime: startTime.valueOf(),
+    workTimeout,
+    phase: "work",
+    endTime: dayjs().add(work, 'minutes').toDate(),
+  });
+}
+
+async function cleanExistingTimer(interaction: ChatInputCommandInteraction<CacheType>, voiceChannelId: string, activeVoiceTimers: Map<string, VoiceTimer>): Promise<boolean> {
+  const existingTimer = activeVoiceTimers.get(voiceChannelId);
+
+  // Enforce: only one timer per voice channel
+  if (existingTimer === undefined) return true;
+
+  assert(existingTimer.endTime && existingTimer.phase, "Timer data is corrupted");
+  const timeRemaining = Math.ceil(
+    (existingTimer.endTime.getTime() - Date.now()) / 60000
+  );
+
+  // If timer has already expired, clean it up
+  if (timeRemaining <= 0) {
+    console.log(`Expired timer found for channel ${voiceChannelId}, cleaning up...`);
+    if (existingTimer.workTimeout) clearTimeout(existingTimer.workTimeout);
+    if (existingTimer.breakTimeout) clearTimeout(existingTimer.breakTimeout);
+    activeVoiceTimers.delete(voiceChannelId);
+    return true;
+  }
+
+  // Timer is valid and active, reject the new timer request
+  await interaction.editReply({
+    embeds: [(createErrorTemplate(
+      `Timer Already Running`,
+      `A Pomodoro timer is already active in <#${voiceChannelId}>! Only one timer per voice channel is allowed.\nUse \`/stoptimer\` to stop the current timer first\n**Current Phase:** ${existingTimer.phase.toUpperCase()}\n**Time Remaining:** ${timeRemaining} minutes`
+    ))],
+  });
+  return false;
+}
+
+
+async function stopTimer(interaction: ChatInputCommandInteraction, activeVoiceTimers: Map<string, VoiceTimer>) {
+  // Use the reliable voice channel detection utility
+  const voiceChannel = await getUserVoiceChannel(interaction);
+
+  if (!voiceChannel) {
+    await interaction.editReply({ embeds: [(createErrorTemplate(
+        `Voice Channel Required`,
+        "You must be in a voice channel to stop a timer and manage your productivity sessions.\nJoin the voice channel with an active timer\nTimer controls are tied to your current voice channel location."
+      ))] });
+    return;
+  }
+
+  const voiceChannelId = voiceChannel.id;
+  const timer = activeVoiceTimers.get(voiceChannelId);
+  if (timer === undefined) {
+    await interaction.reply({ embeds: [createErrorTemplate(
+        `No Active Timer Found`,
+        `No Pomodoro timer is currently running in <#${voiceChannelId}>. There's nothing to stop!\nUse \`/timer <work_minutes>\` to start a new Pomodoro session\nCheck \`/time\` to see if there are any active timers in your current voice channel.`
+      )] });
+    return;
+  }
+  if (timer && timer.workTimeout) clearTimeout(timer.workTimeout);
+  if (timer && timer.breakTimeout) clearTimeout(timer.breakTimeout);
+  activeVoiceTimers.delete(voiceChannelId);
+
+  await interaction.editReply({ embeds: [(createSuccessTemplate(
+      `✅ Timer Stopped Successfully`,
+      `Your Pomodoro timer in <#${voiceChannelId}> has been stopped. 🚀 No worries - every session counts towards building your productivity habits!`,
+      {}
+    ).setFooter({ text: `🌍 Timer stopped | Use /timer start to start a new session` }))] });
+}
+
+
+async function checkTimerStatus(interaction: ChatInputCommandInteraction, activeVoiceTimers: Map<string, VoiceTimer>) {
+  // Get user's voice channel
+  const voiceChannel = await getUserVoiceChannel(interaction);
+
+  if (!voiceChannel) {
+    await interaction.editReply({ embeds: [(createErrorTemplate(
+        `Voice Channel Required`,
+        `You must be in a voice channel to check timer status and track your productivity sessions.\nJoin a voice channel first, then try again`
+      ))] });
+    return;
+  }
+
+  const voiceChannelId = voiceChannel.id;
+
+
+  const timer = activeVoiceTimers.get(voiceChannelId);
+  // Check if there's an active timer in this voice channel
+  if (timer === undefined) {
+
+    await interaction.editReply({ embeds: [(createTimerTemplate(
+        "no_timer",
+        {
+          voiceChannel: voiceChannel,
+        },
+        { includeMotivation: true }
+      ))] });
+    return;
+  }
+
+  const now = Date.now();
+  const timeRemaining = Math.max(
+    0,
+    Math.ceil((timer.endTime.getTime() - now) / 1000 / 60)
+  );
+
+
+  await interaction.editReply({ embeds: [(createTimerTemplate(
+      "status",
+      {
+        voiceChannel: voiceChannel,
+        phase: timer.phase,
+        timeRemaining: timeRemaining,
+        workTime: timer.phase === "work"
+          ? timeRemaining + Math.ceil((now - timer.startTime) / 1000 / 60)
+          : null,
+        breakTime: timer.phase === "break"
+          ? timeRemaining + Math.ceil((now - timer.startTime) / 1000 / 60)
+          : null,
+      },
+      { showProgress: true }
+    ))] });
+}
+
+
+// ⏱️ Timer Template
+function createTimerTemplate(
+  action: "start" | "work_complete" | "break_complete" | "status" | "no_timer",
+  data: any,
+  { showProgress = true, includeMotivation = true } = {}
+) {
+
+  let embed;
+
+  switch (action) {
+    case "start": {
+
+      embed = createStyledEmbed("primary")
+        .setTitle("⏱️ Pomodoro Timer Started")
+        .setDescription(
+          createHeader(
+            "Focus Session Active",
+            "Time to boost your productivity!",
+            "🎯"
+          )
+        );
+
+      // Add timer configuration
+      const configFields = [
+        `🕒 **Work Time:** ${data.workTime} minutes`,
+        data.breakTime > 0 ? `☕ **Break Time:** ${data.breakTime} minutes` : null,
+        `📍 **Location:** <#${data.voiceChannel.id}>`,
+      ].filter(Boolean);
+
+      embed.addFields([
+        {
+          name: "📋 Session Configuration",
+          value: configFields.join("\n"),
+          inline: false,
+        },
+      ]);
+
+      if (showProgress) {
+        const progressBar = createProgressBar(0, data.workTime, 15, "▓", "░");
+        embed.addFields([
+          {
+            name: "📊 Progress Tracker",
+            value: `${progressBar.bar}\n**Phase:** Work Session • **Status:** 🔄 Active`,
+            inline: false,
+          },
+        ]);
+      }
+
+      if (includeMotivation) {
+        embed.addFields([
+          {
+            name: "💪 Stay Focused!",
+            value:
+              "Focus time! Good luck with your session!\nRemember: great achievements require focused effort.",
+            inline: false,
+          },
+        ]);
+      }
+
+      embed.setFooter({
+        text: "Use /stoptimer if you need to stop early • /time to check remaining time",
+      });
+      break;
+    }
+
+    case "work_complete":
+      embed = createStyledEmbed("success")
+        .setTitle("🔔 Work Session Complete!")
+        .setDescription(
+          createHeader(
+            "Great Work!",
+            "You've successfully completed your focus session",
+            "🎉"
+          )
+        );
+
+      if (data.breakTime > 0) {
+        embed.addFields([
+          {
+            name: "☕ Break Time!",
+            value: `Take a well-deserved **${data.breakTime}-minute break**.\n🔔 I'll notify you when it's time to get back to work.`,
+            inline: false,
+          },
+        ]);
+      } else {
+        embed.addFields([
+          {
+            name: "🎯 Session Finished!",
+            value:
+              "Great job staying focused! You've completed your productivity session.",
+            inline: false,
+          },
+        ]);
+      }
+      break;
+
+    case "break_complete":
+      embed = createStyledEmbed("info")
+        .setTitle("🕒 Break Time Is Over!")
+        .setDescription(
+          createHeader(
+            "Back to Work!",
+            "Time to get back to your productive flow",
+            "💪"
+          )
+        );
+
+      embed.addFields([
+        {
+          name: "🎯 Ready to Focus",
+          value:
+            "Break's over! Time to get back to work.\nYou've got this! Stay focused and productive!",
+          inline: false,
+        },
+      ]);
+      break;
+
+    case "status": {
+      const isBreak = data.phase === "break";
+      embed = createStyledEmbed(isBreak ? "warning" : "primary")
+        .setTitle(
+          `⏰ Timer Status - ${data.phase.charAt(0).toUpperCase() + data.phase.slice(1)} Phase`
+        )
+        .setDescription(
+          createHeader(
+            "Active Session",
+            `Currently in ${data.phase} phase`,
+            isBreak ? "☕" : "🎯"
+          )
+        );
+
+      if (showProgress && data.timeRemaining !== undefined) {
+        const totalTime = isBreak ? data.breakTime : data.workTime;
+        const elapsed = totalTime - data.timeRemaining;
+        const progressBar = createProgressBar(elapsed, totalTime, 15);
+
+        embed.addFields([
+          {
+            name: "📊 Progress",
+            value: `${progressBar.bar}\n**Time Remaining:** ${data.timeRemaining} minutes • **Status:** 🔄 Active`,
+            inline: false,
+          },
+        ]);
+      }
+
+      embed.addFields([
+        {
+          name: "📍 Session Info",
+          value: `**Location:** <#${data.voiceChannel.id}>\n**Phase:** ${data.phase.charAt(0).toUpperCase() + data.phase.slice(1)}`,
+          inline: false,
+        },
+      ]);
+      break;
+    }
+
+    case "no_timer":
+      embed = createStyledEmbed("secondary")
+        .setTitle("⏰ Timer Status")
+        .setDescription(
+          createHeader(
+            "No Active Timer",
+            `No Pomodoro timer is currently running in <#${data.voiceChannel.id}>`,
+            "💤"
+          )
+        );
+
+      embed.addFields([
+        {
+          name: "💡 Get Started",
+          value:
+            "Use `/timer <work_minutes>` to start a new Pomodoro session!\nRecommended: `/timer 25 5` for a classic 25-minute work session with 5-minute break.",
+          inline: false,
+        },
+      ]);
+
+      if (includeMotivation) {
+        embed.addFields([
+          {
+            name: "🎯 Productivity Tips",
+            value:
+              "• Choose focused work periods (20-50 minutes)\n• Take regular breaks to maintain concentration\n• Stay in your voice channel during sessions",
+            inline: false,
+          },
+        ]);
+      }
+      break;
+  }
+
+  return embed;
+}

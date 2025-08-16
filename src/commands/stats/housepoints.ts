@@ -1,12 +1,13 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import {
-  createHouseTemplate,
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
 import { db } from "../../db/db.ts";
 import { isNotNull, sql } from "drizzle-orm";
 import { userTable } from "../../db/schema.ts";
 import type { House } from "../../types.ts";
+import { createStyledEmbed, formatDataTable } from "../../utils/visualHelpers.ts";
+import { BotColors } from "../../utils/constants.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -74,4 +75,52 @@ async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, ty
   }[], type);
 
   await interaction.editReply({ embeds: [embed] });
+}
+
+
+function createHouseTemplate(
+  houses: Array<{ house: House; points: number, voiceTime: number }>,
+  type: string,
+) {
+  const houseEmojis = {
+    Gryffindor: "🦁",
+    Hufflepuff: "🦡",
+    Ravenclaw: "🦅",
+    Slytherin: "🐍",
+  };
+
+  const title = type === "daily" ? "Daily House Points" :
+    type === "monthly" ? "Monthly House Points"
+    : "All-Time House Points";
+
+
+  const embed = createStyledEmbed().setColor(BotColors.PRIMARY).setTitle(title);
+
+  // Add house rankings with enhanced table format
+  if (houses && houses.length > 0) {
+      const houseData = houses.map((house, index) => {
+        const position = index + 1;
+        const emoji = houseEmojis[house.house];
+        const medal =
+          position === 1
+            ? "🥇"
+            : position === 2
+              ? "🥈"
+              : position === 3
+                ? "🥉"
+                : `#${position}`;
+
+        return [`${medal} ${emoji} ${house.house}`, `${house.points} points`];
+      });
+
+      embed.addFields([
+        {
+          name: "House Rankings",
+          value: formatDataTable(houseData, [18, 12]),
+          inline: false,
+        },
+      ]);
+  }
+
+  return embed;
 }

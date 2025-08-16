@@ -17,7 +17,6 @@ import { alertOwner } from "./utils/alerting.ts";
 import { updateLogMessages } from "./utils/logs.ts";
 import { interactionExecutionTimer, resetExecutionTimer, voiceSessionExecutionTimer } from "./monitoring.ts";
 import { commands } from "./commands.ts";
-import { userTable } from "./db/schema.ts";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);

@@ -4,7 +4,7 @@ export type Command = {
   data: SharedSlashCommand;
   execute: (
     interaction: ChatInputCommandInteraction,
-    options: { activeVoiceTimers: Map<string, { endTime: Date; phase: "work" | "break"; startTime: number; workTimeout?: NodeJS.Timeout; breakTimeout?: NodeJS.Timeout }>; }
+    options: { activeVoiceTimers: Map<string, VoiceTimer>; }
   ) => Promise<void>;
   autocomplete?: (
     interaction: AutocompleteInteraction
@@ -18,4 +18,12 @@ export type VoiceSession = {
   discordId: string;
   channelId: string | null;
   channelName: string | null;
+}
+
+export type VoiceTimer = {
+  endTime: Date;
+  phase: "work" | "break";
+  startTime: number;
+  workTimeout?: NodeJS.Timeout;
+  breakTimeout?: NodeJS.Timeout;
 }

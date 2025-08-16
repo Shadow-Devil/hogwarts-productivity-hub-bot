@@ -46,7 +46,7 @@ export default {
       if (activeVoiceTimers.has(voiceChannel.id)) {
         const timer = activeVoiceTimers.get(voiceChannel.id)!;
         timeRemaining = Math.ceil(
-          (timer.endTime.getTime() - new Date().getTime()) / 60000
+          (timer.endTime.getTime() - Date.now()) / 60000
         );
         timerStatus = "Active timer detected";
         timerPhase = timer.phase.toUpperCase();

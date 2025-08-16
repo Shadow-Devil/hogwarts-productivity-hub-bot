@@ -4,8 +4,9 @@ import assert from "node:assert/strict";
 import { ensureUserExists } from "../db/db.ts";
 import { alertOwner } from "../utils/alerting.ts";
 import { interactionExecutionTimer } from "../monitoring.ts";
+import type { VoiceTimer } from "../types.ts";
 
-const activeVoiceTimers = new Map(); // key: voiceChannelId, value: { workTimeout, breakTimeout, phase, endTime }
+const activeVoiceTimers = new Map<string, VoiceTimer>();
 
 export async function execute(interaction: Interaction): Promise<void> {
     if (!interaction.isChatInputCommand() && !interaction.isAutocomplete()) return;

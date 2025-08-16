@@ -8,9 +8,7 @@ import voicescan from "./commands/admin/voicescan.ts";
 
 import housepoints from "./commands/stats/housepoints.ts";
 import leaderboard from "./commands/stats/leaderboard.ts";
-import stoptimer from "./commands/timer/stoptimer.ts";
-import time from "./commands/timer/time.ts";
-import timer from "./commands/timer/timer.ts";
+import timer from "./commands/timer.ts";
 import timezoneCommand from "./commands/timezone.ts";
 import stats from "./commands/stats/stats.ts";
 import logs from "./commands/admin/logs.ts";
@@ -20,6 +18,7 @@ export const commands = new Collection<string, Command>();
 
 commands.set(timezoneCommand.data.name, timezoneCommand);
 commands.set(tasks.data.name, tasks);
+commands.set(timer.data.name, timer);
 
 // Admin commands
 commands.set(debug.data.name, debug);
@@ -30,9 +29,3 @@ commands.set(logs.data.name, logs);
 commands.set(housepoints.data.name, housepoints);
 commands.set(leaderboard.data.name, leaderboard);
 commands.set(stats.data.name, stats);
-
-// Timer commands
-commands.set(stoptimer.data.name, stoptimer);
-commands.set(time.data.name, time);
-commands.set(timer.data.name, timer);
-
