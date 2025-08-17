@@ -153,19 +153,21 @@ export function calculatePointsHelper(voiceTime: number): number {
 
   // 5 min grace period
   voiceTime += FIVE_MINUTES;
-  
-  if (voiceTime < ONE_HOUR) {
+  // Convert seconds to hours
+  voiceTime = Math.floor(voiceTime / ONE_HOUR);
+
+  if (voiceTime < 1) {
     return 0; // No points for less than an hour
   }
 
   let points = 0;
-  if (voiceTime >= ONE_HOUR) {
+  if (voiceTime >= 1) {
     points += FIRST_HOUR_POINTS;
-    voiceTime -= ONE_HOUR;
+    voiceTime -= 1;
   }
 
-  if (voiceTime >= ONE_HOUR) {
-    const hoursCapped = Math.min(Math.floor(voiceTime / ONE_HOUR), MAX_HOURS_PER_DAY - 1);
+  if (voiceTime >= 1) {
+    const hoursCapped = Math.min(voiceTime, MAX_HOURS_PER_DAY - 1);
 
     points += REST_HOURS_POINTS * hoursCapped;
   }
