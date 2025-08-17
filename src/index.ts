@@ -14,7 +14,6 @@ import relativeTime from "dayjs/plugin/relativeTime.js";
 import { db, fetchOpenVoiceSessions } from "./db/db.ts";
 import { endVoiceSession } from "./utils/voiceUtils.ts";
 import { alertOwner } from "./utils/alerting.ts";
-import { updateLogMessages } from "./utils/logs.ts";
 import { interactionExecutionTimer, resetExecutionTimer, voiceSessionExecutionTimer } from "./monitoring.ts";
 import { commands } from "./commands.ts";
 
@@ -50,7 +49,6 @@ function registerShutdownHandlers() {
       await Promise.all(openVoiceSessions.map(session => endVoiceSession(session, db)));
     });
     console.log("Bye");
-    await updateLogMessages(true);
     process.exit(0);
   }
 
