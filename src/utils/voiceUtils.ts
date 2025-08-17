@@ -6,7 +6,7 @@ import type {
 import { type Schema, } from "../db/db.ts";
 import { userTable, voiceSessionTable } from "../db/schema.ts";
 import { and, eq, inArray, isNull, sql, type ExtractTablesWithRelations } from "drizzle-orm";
-import { FIRST_HOUR_POINTS as POINTS_FIRST_HOUR, MIN_DAILY_MINUTES_FOR_STREAK, REST_HOURS_POINTS as POINTS_REST_HOURS, MAX_HOURS_PER_DAY } from "../utils/constants.ts";
+import { FIRST_HOUR_POINTS, MIN_DAILY_MINUTES_FOR_STREAK, REST_HOURS_POINTS, MAX_HOURS_PER_DAY } from "../utils/constants.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { NodePgDatabase, NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import type { VoiceSession } from "../types.ts";
@@ -131,23 +131,7 @@ export async function endVoiceSession(
     // Calculate and award points for this session
     const oldDailyVoiceTime = user!.dailyVoiceTime - duration;
     const newDailyVoiceTime = user!.dailyVoiceTime;
-    const ONE_HOUR = 60 * 60;
-    const FIVE_MINUTES = 5 * 60;
-
-    let pointsEarned = 0;
-    if (oldDailyVoiceTime + FIVE_MINUTES < ONE_HOUR && newDailyVoiceTime + FIVE_MINUTES >= ONE_HOUR) {
-      // Crossed the 1-hour threshold
-      pointsEarned += POINTS_FIRST_HOUR;
-    }
-
-    if (newDailyVoiceTime + FIVE_MINUTES >= ONE_HOUR && newDailyVoiceTime + FIVE_MINUTES >= ONE_HOUR * 2) {
-      // Crossed the 2-hour threshold
-      const hoursCapped = Math.min(Math.floor((newDailyVoiceTime + FIVE_MINUTES) / ONE_HOUR), MAX_HOURS_PER_DAY);
-
-      // -1 because we already awarded points for the first hour
-      pointsEarned += POINTS_REST_HOURS * (hoursCapped - 1);
-    }
-
+    const pointsEarned = calculatePoints(oldDailyVoiceTime, newDailyVoiceTime);
     console.log(
       `Voice session ended for ${session.username}: ${duration} seconds, awarded ${pointsEarned} points (oldDailyVoiceTime: ${oldDailyVoiceTime}, newDailyVoiceTime: ${newDailyVoiceTime})`
     );
@@ -163,3 +147,32 @@ export async function endVoiceSession(
   })
 }
 
+export function calculatePointsHelper(voiceTime: number): number {
+  const ONE_HOUR = 60 * 60;
+  const FIVE_MINUTES = 5 * 60;
+
+  // 5 min grace period
+  voiceTime += FIVE_MINUTES;
+  
+  if (voiceTime < ONE_HOUR) {
+    return 0; // No points for less than an hour
+  }
+
+  let points = 0;
+  if (voiceTime >= ONE_HOUR) {
+    points += FIRST_HOUR_POINTS;
+    voiceTime -= ONE_HOUR;
+  }
+
+  if (voiceTime >= ONE_HOUR) {
+    const hoursCapped = Math.min(Math.floor(voiceTime / ONE_HOUR), MAX_HOURS_PER_DAY - 1);
+
+    points += REST_HOURS_POINTS * hoursCapped;
+  }
+
+  return points;
+}
+
+export function calculatePoints(oldDailyVoiceTime: number, newDailyVoiceTime: number): number {
+  return calculatePointsHelper(newDailyVoiceTime) - calculatePointsHelper(oldDailyVoiceTime);
+}
