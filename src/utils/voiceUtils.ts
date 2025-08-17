@@ -160,14 +160,10 @@ export function calculatePointsHelper(voiceTime: number): number {
     return 0; // No points for less than an hour
   }
 
-  let points = 0;
-  if (voiceTime >= 1) {
-    points += FIRST_HOUR_POINTS;
-    voiceTime -= 1;
-  }
+  let points = FIRST_HOUR_POINTS;
 
-  if (voiceTime >= 1) {
-    const hoursCapped = Math.min(voiceTime, MAX_HOURS_PER_DAY - 1);
+  if (voiceTime >= 2) {
+    const hoursCapped = Math.min(voiceTime, MAX_HOURS_PER_DAY) - 1;
 
     points += REST_HOURS_POINTS * hoursCapped;
   }
