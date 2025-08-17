@@ -1,5 +1,6 @@
 import "dotenv/config";
 import "./monitoring.ts";
+import "./console.ts";
 
 import * as CentralResetService from "./scheduler/centralResetService.ts";
 import { client } from "./client.ts";

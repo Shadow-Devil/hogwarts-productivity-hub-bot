@@ -1,11 +1,17 @@
 import { drizzle, type NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import * as schema from "./schema.ts";
 import type { GuildMember, User } from "discord.js";
-import { eq, and, type ExtractTablesWithRelations, isNull, inArray } from "drizzle-orm";
+import { eq, and, type ExtractTablesWithRelations, isNull, inArray, type Logger, DefaultLogger, type LogWriter } from "drizzle-orm";
 import { getHouseFromMember } from "../utils/utils.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 
 export type Schema = typeof schema;
+
+class MyLogWriter implements LogWriter {
+  write(message: string): void {
+    console.debug(message);
+  }
+}
 
 export const db = drizzle({
   connection: {
@@ -17,7 +23,7 @@ export const db = drizzle({
   },
   schema,
   casing: 'snake_case',
-  logger: true
+  logger: new DefaultLogger({writer: new MyLogWriter()})
 });
 
 export async function ensureUserExists(member: GuildMember | null, discordId: string, username: string) {

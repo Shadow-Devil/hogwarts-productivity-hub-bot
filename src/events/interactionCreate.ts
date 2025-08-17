@@ -57,7 +57,7 @@ export async function execute(interaction: Interaction): Promise<void> {
             );
         }
     }
-    console.log("-".repeat(5))
+    console.debug("-".repeat(5))
     end({ command: interaction.commandName, subcommand: interaction.options.getSubcommand(false) || '', is_autocomplete: interaction.isAutocomplete() ? "autocomplete" : "" });
 }
 function logCommandExecution(interaction: ChatInputCommandInteraction<CacheType> | AutocompleteInteraction<CacheType>) {
@@ -73,6 +73,6 @@ function logCommandExecution(interaction: ChatInputCommandInteraction<CacheType>
     if (interaction.isAutocomplete()) {
         commandString += ` ${interaction.options.getFocused()}`;
     }
-    console.log("+".repeat(5) + ` /${commandString} by ${interaction.user.tag} in ${channelName}`);
+    console.debug("+".repeat(5) + ` /${commandString} by ${interaction.user.tag} in ${channelName}`);
 }
 

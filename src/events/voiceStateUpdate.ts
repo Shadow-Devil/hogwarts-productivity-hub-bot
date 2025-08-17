@@ -27,7 +27,7 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     channelId: newChannel?.id || null,
     channelName: newChannel?.name || null,
   }
-  console.log("+".repeat(5) + ` Voice state update for ${username} (${oldChannel?.name} -> ${newChannel?.name})`);
+  console.debug("+".repeat(5) + ` Voice state update for ${username} (${oldChannel?.name} -> ${newChannel?.name})`);
   await ensureUserExists(member, discordId, username);
   let event = 'unknown';
 
@@ -46,6 +46,6 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
       event = 'switch';
     }
   }, `Voice state update for ${username} (${discordId})`);
-  console.log("-".repeat(5))
+  console.debug("-".repeat(5))
   end({ event });
 }
