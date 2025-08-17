@@ -57,7 +57,7 @@ export async function updateLogMessages(shutdown = false) {
         files.push(stderr);
     }
 
-    await Promise.all(logMessages.map(msg => msg.edit({
+    await Promise.all(logMessages.map(async msg => await msg.edit({
         // Aug 13 09:46:31 
         content: shutdown ? "Logs closed at " + dayjs().format("MMM DD HH:mm:ss")
          : "Live logs (updated every minute):",

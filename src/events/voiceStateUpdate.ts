@@ -5,13 +5,13 @@ import { wrapWithAlerting } from "../utils/alerting.ts";
 import { voiceSessionExecutionTimer } from "../monitoring.ts";
 
 export async function execute(oldState: VoiceState, newState: VoiceState) {
-  const user = newState.member || oldState.member;
-  if (!user || user.user.bot) return; // Ignore bots
+  const member = newState.member || oldState.member;
+  if (!member || member.user.bot) return; // Ignore bots
 
   const end = voiceSessionExecutionTimer.startTimer();
 
-  const discordId = user.id;
-  const username = user.user.username;
+  const discordId = member.id;
+  const username = member.user.username;
   const oldChannel = oldState.channel;
   const newChannel = newState.channel;
 
@@ -28,7 +28,7 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     channelName: newChannel?.name || null,
   }
   console.log("+".repeat(5) + ` Voice state update for ${username} (${oldChannel?.name} -> ${newChannel?.name})`);
-  await ensureUserExists(user);
+  await ensureUserExists(member, discordId, username);
   let event = 'unknown';
 
   await wrapWithAlerting(async () => {

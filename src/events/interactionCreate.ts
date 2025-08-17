@@ -21,7 +21,7 @@ export async function execute(interaction: Interaction): Promise<void> {
     logCommandExecution(interaction);
 
     try {
-        await ensureUserExists(interaction.member as GuildMember);
+        await ensureUserExists(interaction.member as GuildMember, interaction.user.id, interaction.user.username);
         if (interaction.isAutocomplete()) {
             assert(command.autocomplete, `Command /${interaction.commandName} does not support autocomplete`);
             await command.autocomplete(interaction);

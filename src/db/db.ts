@@ -1,6 +1,6 @@
 import { drizzle, type NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import * as schema from "./schema.ts";
-import type { GuildMember } from "discord.js";
+import type { GuildMember, User } from "discord.js";
 import { eq, and, type ExtractTablesWithRelations, isNull, inArray } from "drizzle-orm";
 import { getHouseFromMember } from "../utils/utils.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
@@ -20,11 +20,10 @@ export const db = drizzle({
   logger: true
 });
 
-export async function ensureUserExists(user: GuildMember) {
-  const house = getHouseFromMember(user);
-  const username = user.user.username;
+export async function ensureUserExists(member: GuildMember | null, discordId: string, username: string) {
+  const house = getHouseFromMember(member);
 
-  await db.insert(schema.userTable).values({ discordId: user.id, username, house }).onConflictDoUpdate({
+  await db.insert(schema.userTable).values({ discordId, username, house }).onConflictDoUpdate({
     target: schema.userTable.discordId,
     set: {
       username,

@@ -144,6 +144,7 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
     const usersStarted = [];
 
     for (const [discordId, member] of members) {
+      const username = member.user.username;
       try {
         // Skip bots
         if (member.user.bot) {
@@ -154,25 +155,25 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
 
         // Check if user already has an active session
         if (discordId in activeVoiceSessions) {
-          console.log(`User ${member.user.username} already being tracked, skipping...`);
+          console.log(`User ${username} already being tracked, skipping...`);
           continue;
         }
 
-        await ensureUserExists(member);
+        await ensureUserExists(member, discordId, username);
         // Start voice session for this user
         await startVoiceSession({
           discordId,
-          username: member.user.username,
+          username,
           channelId: channel.id,
           channelName: channel.name,
         }, db);
 
         scanResults.trackingStarted++;
-        usersStarted.push(member.user.username);
+        usersStarted.push(username);
 
-        console.log(`✅ Started tracking for ${member.user.username} in ${channel.name}`);
+        console.log(`✅ Started tracking for ${username} in ${channel.name}`);
       } catch (userError) {
-        console.error(`❌ Error starting tracking for user ${member.user.username}:`, userError);
+        console.error(`❌ Error starting tracking for user ${username}:`, userError);
         scanResults.errors++;
       }
     }

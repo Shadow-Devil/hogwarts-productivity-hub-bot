@@ -2,8 +2,10 @@ import { type GuildMember } from "discord.js";
 import assert from "node:assert/strict";
 import type { House } from "../types.ts";
 
-export function getHouseFromMember(member: GuildMember): House | undefined {
+export function getHouseFromMember(member: GuildMember | null): House | undefined {
     let house: House | undefined = undefined;
+    if (member === null) return house;
+
     if (member.roles.cache.has(process.env.GRYFFINDOR_ROLE_ID!)) {
         assert(house === undefined, `member ${member.user.tag} has multiple house roles: ${member.roles.cache.map(r => r.name).join(", ")}`);
         house = "Gryffindor";
