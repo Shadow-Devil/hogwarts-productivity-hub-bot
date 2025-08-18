@@ -27,29 +27,22 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
-    const leaderboardType = interaction.options.getString("type", true) as "daily" | "monthly" | "alltime";
+    const type = interaction.options.getString("type", true) as "daily" | "monthly" | "alltime";
 
-    await showHouseLeaderboard(interaction, leaderboardType);
+    const houseLeaderboard = await fetchHouseLeaderboard(type);
+
+    if (houseLeaderboard.length === 0) {
+      return interaction.editReply({
+        embeds: [(createErrorTemplate(
+          `No House Data`,
+          "No house data is available yet. Houses need to earn points first!\nJoin a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.",
+        ))]
+      });
+    }
+
+    await interaction.editReply({ embeds: [createHouseTemplate(houseLeaderboard, type)] });
   },
 };
-
-async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, type: "daily" | "monthly" | "alltime") {
-
-  const houseLeaderboard = await fetchHouseLeaderboard(type);
-
-  if (houseLeaderboard.length === 0) {
-    return interaction.editReply({
-      embeds: [(createErrorTemplate(
-        `No House Data`,
-        "No house data is available yet. Houses need to earn points first!\nJoin a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.",
-      ))]
-    });
-  }
-
-  const embed = createHouseTemplate(houseLeaderboard, type);
-
-  await interaction.editReply({ embeds: [embed] });
-}
 
 async function fetchHouseLeaderboard(type: "daily" | "monthly" | "alltime") {
   let pointsColumn;
@@ -65,7 +58,7 @@ async function fetchHouseLeaderboard(type: "daily" | "monthly" | "alltime") {
   }
   const houseLeaderboard = await db.select({
     house: sql<House>`${userTable.house}`,
-    points: sql<number>`cast(count(${pointsColumn}) as int) as points`,
+    points: sql<number>`cast(sum(${pointsColumn}) as int) as points`,
   }).from(userTable)
     .where(isNotNull(userTable.house))
     .groupBy(userTable.house)
