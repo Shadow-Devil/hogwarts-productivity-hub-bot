@@ -13,6 +13,13 @@ export const BotColors = {
   HOUSE_SLYTHERIN: 0x1a472a,
 };
 
+export const houseEmojis = {
+  Gryffindor: "🦁",
+  Hufflepuff: "🦡",
+  Ravenclaw: "🦅",
+  Slytherin: "🐍",
+};
+
 
 export const TASK_POINT_SCORE = 2;
 export const DAILY_TASK_LIMIT = 10;

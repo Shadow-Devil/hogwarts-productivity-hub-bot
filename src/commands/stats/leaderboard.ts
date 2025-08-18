@@ -6,6 +6,7 @@ import { db } from "../../db/db.ts";
 import { userTable } from "../../db/schema.ts";
 import { desc, gte } from "drizzle-orm";
 import { createStyledEmbed, formatDataTable } from "../../utils/visualHelpers.ts";
+import type { House } from "../../types.ts";
 
 
 export default {
@@ -51,6 +52,7 @@ export default {
     }
     const leaderboard = await db.select({
       discordId: userTable.discordId,
+      house: userTable.house,
       points: pointsColumn,
       voiceTime: voiceTimeColumn,
     })
@@ -74,7 +76,6 @@ export default {
       embeds: [await createLeaderboardTemplate(
         leaderboardType,
         leaderboard,
-        interaction
       )]
     });
   },
@@ -84,10 +85,10 @@ async function createLeaderboardTemplate(
   type: string,
   data: Array<{
     discordId: string;
+    house: House | null;
     points: number | null;
     voiceTime: number | null;
   }>,
-  interaction: ChatInputCommandInteraction
 ) {
   const title = type === "daily" ? "Daily Leaderboard" :
     type === "monthly" ? "Monthly Leaderboard"
@@ -98,19 +99,10 @@ async function createLeaderboardTemplate(
 
   const leaderboardData = []
   for (const [index, entry] of data.entries()) {
-    const position = index + 1;
-    let positionDisplay = "";
-
-    positionDisplay = `#${position}`;
-
     const hours = entry.voiceTime ? Math.floor(entry.voiceTime / 3600) : "0";
     const minutes = entry.voiceTime ? Math.floor((entry.voiceTime % 3600) / 60) : "0";
 
-    const username = await interaction.client.users.fetch(entry.discordId).then(user => user.id);
-
-    const userDisplay = userMention(username);
-
-    leaderboardData.push([`${positionDisplay} ${userDisplay}`, `${hours}h ${minutes}min • ${entry.points}pts`]);
+    leaderboardData.push([`#${index + 1} ${userMention(entry.discordId)}`, `${hours}h ${minutes}min • ${entry.points}pts • ${entry.house ? entry.house : ""}`]);
   }
 
   embed.addFields([

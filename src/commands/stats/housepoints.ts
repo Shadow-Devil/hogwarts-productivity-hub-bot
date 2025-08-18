@@ -4,10 +4,10 @@ import {
 } from "../../utils/embedTemplates.ts";
 import { db } from "../../db/db.ts";
 import { isNotNull, sql } from "drizzle-orm";
-import { userTable } from "../../db/schema.ts";
+import { housePointsTable, userTable } from "../../db/schema.ts";
 import type { House } from "../../types.ts";
 import { createStyledEmbed, formatDataTable } from "../../utils/visualHelpers.ts";
-import { BotColors } from "../../utils/constants.ts";
+import { BotColors, houseEmojis } from "../../utils/constants.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -35,29 +35,7 @@ export default {
 
 async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, type: "daily" | "monthly" | "alltime") {
 
-  let pointsColumn;
-  let voiceTimeColumn;
-  switch (type) {
-    case "daily":
-      pointsColumn = userTable.dailyPoints;
-      voiceTimeColumn = userTable.dailyVoiceTime;
-      break;
-    case "monthly":
-      pointsColumn = userTable.monthlyPoints;
-      voiceTimeColumn = userTable.monthlyVoiceTime;
-      break;
-    case "alltime":
-      pointsColumn = userTable.totalPoints;
-      voiceTimeColumn = userTable.totalVoiceTime;
-      break;
-  }
-  const houseLeaderboard = await db.select({
-    house: userTable.house,
-    points: sql<number>`cast(count(${pointsColumn}) as int)`,
-    voiceTime: sql<number>`cast(sum(${voiceTimeColumn}) as int)`,
-  }).from(userTable)
-    .where(isNotNull(userTable.house))
-    .groupBy(userTable.house);
+  const houseLeaderboard = await fetchHouseLeaderboard(type);
 
   if (houseLeaderboard.length === 0) {
     return interaction.editReply({
@@ -68,26 +46,37 @@ async function showHouseLeaderboard(interaction: ChatInputCommandInteraction, ty
     });
   }
 
-  const embed = createHouseTemplate(houseLeaderboard as {
-    house: House;
-    points: number;
-    voiceTime: number;
-  }[], type);
+  const embed = createHouseTemplate(houseLeaderboard, type);
 
   await interaction.editReply({ embeds: [embed] });
 }
 
+async function fetchHouseLeaderboard(type: "daily" | "monthly" | "alltime") {
+  let pointsColumn;
+  switch (type) {
+    case "daily":
+      pointsColumn = userTable.dailyPoints;
+      break;
+    case "monthly":
+      pointsColumn = userTable.monthlyPoints;
+      break;
+    case "alltime":
+      return await db.select().from(housePointsTable);
+  }
+  const houseLeaderboard = await db.select({
+    house: sql<House>`${userTable.house}`,
+    points: sql<number>`cast(count(${pointsColumn}) as int)`,
+  }).from(userTable)
+    .where(isNotNull(userTable.house))
+    .groupBy(userTable.house);
+  return houseLeaderboard;
+}
 
 function createHouseTemplate(
-  houses: Array<{ house: House; points: number, voiceTime: number }>,
+  houses: Array<{ house: House; points: number }>,
   type: string,
 ) {
-  const houseEmojis = {
-    Gryffindor: "🦁",
-    Hufflepuff: "🦡",
-    Ravenclaw: "🦅",
-    Slytherin: "🐍",
-  };
+
 
   const title = type === "daily" ? "Daily House Points" :
     type === "monthly" ? "Monthly House Points"
@@ -97,7 +86,7 @@ function createHouseTemplate(
   const embed = createStyledEmbed().setColor(BotColors.PRIMARY).setTitle(title);
 
   // Add house rankings with enhanced table format
-  if (houses && houses.length > 0) {
+  if (houses.length > 0) {
       const houseData = houses.map((house, index) => {
         const position = index + 1;
         const emoji = houseEmojis[house.house];
