@@ -5,7 +5,7 @@ import {
 import { db } from "../../db/db.ts";
 import { desc, isNotNull, sql } from "drizzle-orm";
 import { housePointsTable, userTable } from "../../db/schema.ts";
-import type { House } from "../../types.ts";
+import type { Command, House } from "../../types.ts";
 import { createStyledEmbed, formatDataTable } from "../../utils/visualHelpers.ts";
 import { BotColors, houseEmojis } from "../../utils/constants.ts";
 
@@ -32,7 +32,7 @@ export default {
     const houseLeaderboard = await fetchHouseLeaderboard(type);
 
     if (houseLeaderboard.length === 0) {
-      return interaction.editReply({
+      await interaction.editReply({
         embeds: [(createErrorTemplate(
           `No House Data`,
           "No house data is available yet. Houses need to earn points first!\nJoin a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.",
@@ -42,7 +42,7 @@ export default {
 
     await interaction.editReply({ embeds: [createHouseTemplate(houseLeaderboard, type)] });
   },
-};
+} as Command;
 
 async function fetchHouseLeaderboard(type: "daily" | "monthly" | "alltime") {
   let pointsColumn;
