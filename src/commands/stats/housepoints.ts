@@ -3,7 +3,7 @@ import {
   createErrorTemplate,
 } from "../../utils/embedTemplates.ts";
 import { db } from "../../db/db.ts";
-import { isNotNull, sql } from "drizzle-orm";
+import { desc, isNotNull, sql } from "drizzle-orm";
 import { housePointsTable, userTable } from "../../db/schema.ts";
 import type { House } from "../../types.ts";
 import { createStyledEmbed, formatDataTable } from "../../utils/visualHelpers.ts";
@@ -61,14 +61,15 @@ async function fetchHouseLeaderboard(type: "daily" | "monthly" | "alltime") {
       pointsColumn = userTable.monthlyPoints;
       break;
     case "alltime":
-      return await db.select().from(housePointsTable);
+      return await db.select().from(housePointsTable).orderBy(desc(housePointsTable.points));
   }
   const houseLeaderboard = await db.select({
     house: sql<House>`${userTable.house}`,
-    points: sql<number>`cast(count(${pointsColumn}) as int)`,
+    points: sql<number>`cast(count(${pointsColumn}) as int) as points`,
   }).from(userTable)
     .where(isNotNull(userTable.house))
-    .groupBy(userTable.house);
+    .groupBy(userTable.house)
+    .orderBy(desc(sql<number>`points`));
   return houseLeaderboard;
 }
 

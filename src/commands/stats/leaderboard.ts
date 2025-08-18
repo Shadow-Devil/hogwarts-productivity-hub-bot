@@ -7,6 +7,7 @@ import { userTable } from "../../db/schema.ts";
 import { desc, gte } from "drizzle-orm";
 import { createStyledEmbed, formatDataTable } from "../../utils/visualHelpers.ts";
 import type { House } from "../../types.ts";
+import { houseEmojis } from "../../utils/constants.ts";
 
 
 export default {
@@ -102,7 +103,7 @@ async function createLeaderboardTemplate(
     const hours = entry.voiceTime ? Math.floor(entry.voiceTime / 3600) : "0";
     const minutes = entry.voiceTime ? Math.floor((entry.voiceTime % 3600) / 60) : "0";
 
-    leaderboardData.push([`#${index + 1} ${userMention(entry.discordId)}`, `${hours}h ${minutes}min • ${entry.points}pts • ${entry.house ? entry.house : ""}`]);
+    leaderboardData.push([`#${index + 1} ${userMention(entry.discordId)}`, `${hours}h ${minutes}min • ${entry.points}pts • ${entry.house ? houseEmojis[entry.house] : ""}`]);
   }
 
   embed.addFields([
