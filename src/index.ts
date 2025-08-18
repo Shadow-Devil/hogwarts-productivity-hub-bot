@@ -17,6 +17,8 @@ import { endVoiceSession } from "./utils/voiceUtils.ts";
 import { alertOwner } from "./utils/alerting.ts";
 import { interactionExecutionTimer, resetExecutionTimer, voiceSessionExecutionTimer } from "./monitoring.ts";
 import { commands } from "./commands.ts";
+import { housePointsTable, userTable } from "./db/schema.ts";
+import { eq } from "drizzle-orm";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -28,6 +30,7 @@ try {
   registerEvents(client);
   registerShutdownHandlers();
   await registerMonitoringEvents();
+  await initializeHousePoints();
 
   await CentralResetService.start();
   await client.login(process.env.DISCORD_TOKEN);
@@ -40,6 +43,21 @@ function registerEvents(client: Client) {
   client.on(Events.ClientReady, ClientReady.execute);
   client.on(Events.InteractionCreate, InteractionCreate.execute);
   client.on(Events.VoiceStateUpdate, VoiceStateUpdate.execute);
+}
+
+async function initializeHousePoints() {
+  // Initialize house points if not already set
+  const houses = ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"] as const;
+  const existingHouses = await db.select().from(housePointsTable);
+  for (const house of houses) {
+    if (!existingHouses.some(h => h.house === house)) {
+      const points = await db.select({ totalPoints: userTable.totalPoints }).from(userTable).where(eq(userTable.house, house))
+        .then(rows => rows.reduce((sum, row) => sum + row.totalPoints, 0));
+
+      await db.insert(housePointsTable).values({ house, points });
+      console.log(`Initialized house points for ${house}`);
+    }
+  }
 }
 
 function registerShutdownHandlers() {

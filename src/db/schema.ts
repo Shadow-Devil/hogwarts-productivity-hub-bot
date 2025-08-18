@@ -54,3 +54,9 @@ export const taskTable = pgTable("task", {
     isCompleted: boolean().default(false),
     completedAt: timestamp(),
 });
+
+export const housePointsTable = pgTable("house_points", {
+    id: serial().primaryKey(),
+    house: varchar({ length: 50, enum: ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"] }).notNull(),
+    points: integer().default(0).notNull(),
+});

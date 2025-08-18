@@ -11,6 +11,7 @@ import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { NodePgDatabase, NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import type { VoiceSession } from "../types.ts";
 import assert from "node:assert/strict";
+import { awardPoints } from "./utils.ts";
 
 /**
  * get the voice channel for a user from an interaction
@@ -138,11 +139,7 @@ export async function endVoiceSession(
 
     if (pointsEarned > 0) {
       // Award points to user
-      await db.update(userTable).set({
-        dailyPoints: sql`${userTable.dailyPoints} + ${pointsEarned}`,
-        monthlyPoints: sql`${userTable.monthlyPoints} + ${pointsEarned}`,
-        totalPoints: sql`${userTable.totalPoints} + ${pointsEarned}`,
-      }).where(eq(userTable.discordId, session.discordId));
+      await awardPoints(db, session.discordId, pointsEarned);
     }
   })
 }

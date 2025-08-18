@@ -1,6 +1,11 @@
 import { type GuildMember } from "discord.js";
 import assert from "node:assert/strict";
 import type { House } from "../types.ts";
+import { eq, sql, type ExtractTablesWithRelations } from "drizzle-orm";
+import { housePointsTable, userTable } from "../db/schema.ts";
+import type { Schema } from "../db/db.ts";
+import type { PgTransaction } from "drizzle-orm/pg-core";
+import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 
 export function getHouseFromMember(member: GuildMember | null): House | undefined {
     let house: House | undefined = undefined;
@@ -25,3 +30,21 @@ export function getHouseFromMember(member: GuildMember | null): House | undefine
     return house;
 }
 
+export async function awardPoints(db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>, discordId: string, points: number) {
+    // Update user's total points
+    const house = await db.update(userTable)
+        .set({
+            dailyPoints: sql`${userTable.dailyPoints} + ${points}`,
+            monthlyPoints: sql`${userTable.monthlyPoints} + ${points}`,
+            totalPoints: sql`${userTable.totalPoints} + ${points}`,
+        })
+        .where(eq(userTable.discordId, discordId)).returning({ house: userTable.house }).then(rows => rows[0]!.house);
+
+    if (house !== null) {
+        await db.update(housePointsTable)
+            .set({
+                points: sql`${housePointsTable.points} + ${points}`,
+            })
+            .where(eq(housePointsTable.house, house));
+    }
+}

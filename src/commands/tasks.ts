@@ -5,11 +5,12 @@ import {
 } from "../utils/embedTemplates.ts";
 import dayjs from "dayjs";
 import { db, fetchTasks, fetchUserTimezone } from "../db/db.ts";
-import { taskTable, userTable } from "../db/schema.ts";
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { taskTable } from "../db/schema.ts";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { BotColors, DAILY_TASK_LIMIT, TASK_MIN_TIME, TASK_POINT_SCORE } from "../utils/constants.ts";
 import assert from "node:assert/strict";
 import { createHeader, createProgressSection, createStyledEmbed, formatDataGrid, formatDataTable } from "../utils/visualHelpers.ts";
+import { awardPoints } from "../utils/utils.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -256,14 +257,8 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
         completedAt: new Date(),
       })
       .where(eq(taskTable.id, taskToComplete.id));
-    // Update user's total points
-    await db.update(userTable)
-      .set({
-        dailyPoints: sql`${userTable.dailyPoints} + ${TASK_POINT_SCORE}`,
-        monthlyPoints: sql`${userTable.monthlyPoints} + ${TASK_POINT_SCORE}`,
-        totalPoints: sql`${userTable.totalPoints} + ${TASK_POINT_SCORE}`,
-      })
-      .where(eq(userTable.discordId, discordId));
+    await awardPoints(db, discordId, TASK_POINT_SCORE);
+
   });
 
   await interaction.editReply({

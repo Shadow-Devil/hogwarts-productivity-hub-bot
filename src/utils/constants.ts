@@ -1,10 +1,3 @@
-/**
- * Centralized Constants for Bot Visual Elements
- * Consolidates commonly used visual elements to reduce import fragmentation
- */
-
-
-// Bot Color Scheme - Consistent across all embeds
 export const BotColors = {
   PRIMARY: 0x4b82f3,
   SUCCESS: 0x00c853,
