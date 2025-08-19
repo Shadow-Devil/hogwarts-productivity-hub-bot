@@ -93,7 +93,7 @@ function createHouseTemplate(
       embed.addFields([
         {
           name: "House Rankings",
-          value: formatDataTable(houseData, [18, 12]),
+          value: formatDataTable(houseData),
           inline: false,
         },
       ]);

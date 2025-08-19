@@ -1,4 +1,4 @@
-import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, MessageFlags, type CacheType, type Interaction } from "discord.js";
+import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, MessageFlags, type Interaction } from "discord.js";
 import { commands } from "../commands.ts";
 import assert from "node:assert/strict";
 import { ensureUserExists } from "../db/db.ts";
@@ -60,7 +60,7 @@ export async function execute(interaction: Interaction): Promise<void> {
     console.debug("-".repeat(5))
     end({ command: interaction.commandName, subcommand: interaction.options.getSubcommand(false) || '', is_autocomplete: interaction.isAutocomplete() ? "autocomplete" : "" });
 }
-function logCommandExecution(interaction: ChatInputCommandInteraction<CacheType> | AutocompleteInteraction<CacheType>) {
+function logCommandExecution(interaction: ChatInputCommandInteraction | AutocompleteInteraction) {
     const channel = interaction.channel;
     let channelName;
     if (channel !== null && !channel.isDMBased()) {

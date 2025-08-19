@@ -1,7 +1,7 @@
-import type {
-  ChatInputCommandInteraction,
+import {
   GuildMember,
-  VoiceBasedChannel,
+  type ChatInputCommandInteraction,
+  type VoiceBasedChannel,
 } from "discord.js";
 import { type Schema, } from "../db/db.ts";
 import { userTable, voiceSessionTable } from "../db/schema.ts";
@@ -26,9 +26,9 @@ export function getUserVoiceChannel(
     console.warn("No guild found in interaction");
     return null;
   }
-  const member = interaction.member as GuildMember;
+  const member = interaction.member;
 
-  if (member.voice?.channel) {
+  if (member instanceof GuildMember && member.voice.channel) {
     console.log(`Voice channel found via cached member: ${member.voice.channel.name} (${member.voice.channel.id})`);
     return member.voice.channel;
   }
@@ -89,7 +89,7 @@ export async function endVoiceSession(
       return;
     }
 
-    const voiceSessionWithDurations = await db.update(voiceSessionTable).set({
+    const [voiceSessionWithDuration, ...extra] = await db.update(voiceSessionTable).set({
       leftAt: new Date(),
       isTracked, // Only track if not deleting old session
     }).where(inArray(voiceSessionTable.id, existingVoiceSession.map(s => s.id))).returning({
@@ -100,9 +100,10 @@ export async function endVoiceSession(
       return;
     }
 
-    assert(voiceSessionWithDurations.length === 1, `Expected exactly one voice session to end, but found ${voiceSessionWithDurations.length}`);
+    assert(voiceSessionWithDuration !== undefined, `Expected exactly one voice session to end, but found none`);
+    assert(extra.length === 0, `Expected exactly one voice session to end, but found ${extra.length} extra rows`);
 
-    const duration = voiceSessionWithDurations[0]!.duration || 0;
+    const duration = voiceSessionWithDuration.duration || 0;
 
     // Update user's voice time stats
     const [user] = await db.update(userTable).set({
@@ -113,9 +114,10 @@ export async function endVoiceSession(
       dailyVoiceTime: userTable.dailyVoiceTime,
       isStreakUpdatedToday: userTable.isStreakUpdatedToday,
     });
+    assert(user !== undefined, `User not found for Discord ID ${session.discordId}`);
 
     // update streak
-    if (user!.dailyVoiceTime >= MIN_DAILY_MINUTES_FOR_STREAK && !user!.isStreakUpdatedToday) {
+    if (user.dailyVoiceTime >= MIN_DAILY_MINUTES_FOR_STREAK && !user.isStreakUpdatedToday) {
       const streakResult = await db.update(userTable).set({
         streak: sql`${userTable.streak} + 1`,
         isStreakUpdatedToday: true,
@@ -130,8 +132,8 @@ export async function endVoiceSession(
     }
 
     // Calculate and award points for this session
-    const oldDailyVoiceTime = user!.dailyVoiceTime - duration;
-    const newDailyVoiceTime = user!.dailyVoiceTime;
+    const oldDailyVoiceTime = user.dailyVoiceTime - duration;
+    const newDailyVoiceTime = user.dailyVoiceTime;
     const pointsEarned = calculatePoints(oldDailyVoiceTime, newDailyVoiceTime);
     console.log(
       `Voice session ended for ${session.username}: ${duration} seconds, awarded ${pointsEarned} points (oldDailyVoiceTime: ${oldDailyVoiceTime}, newDailyVoiceTime: ${newDailyVoiceTime})`

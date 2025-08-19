@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config([
   eslint.configs.recommended,
-  tseslint.configs.recommendedTypeChecked,
+  tseslint.configs.strictTypeChecked,
   {
     languageOptions: {
       parserOptions: {
@@ -12,6 +12,18 @@ export default tseslint.config([
       },
     },
     rules: {
+      "@typescript-eslint/no-non-null-assertion": "error",
+      "@typescript-eslint/restrict-template-expressions": [
+        "error",
+        {
+          allowAny: false,
+          allowBoolean: false,
+          allowNever: false,
+          allowNullish: false,
+          allowNumber: true,
+          allowRegExp: false,
+        }
+      ]
     }
-  },
+  }
 ]);

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, type CacheType, type VoiceBasedChannel } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, type VoiceBasedChannel } from "discord.js";
 import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
 import {
   createErrorTemplate,
@@ -165,13 +165,12 @@ async function startTimer(interaction: ChatInputCommandInteraction, activeVoiceT
   });
 }
 
-async function cleanExistingTimer(interaction: ChatInputCommandInteraction<CacheType>, voiceChannelId: string, activeVoiceTimers: Map<string, VoiceTimer>): Promise<boolean> {
+async function cleanExistingTimer(interaction: ChatInputCommandInteraction, voiceChannelId: string, activeVoiceTimers: Map<string, VoiceTimer>): Promise<boolean> {
   const existingTimer = activeVoiceTimers.get(voiceChannelId);
 
   // Enforce: only one timer per voice channel
   if (existingTimer === undefined) return true;
 
-  assert(existingTimer.endTime && existingTimer.phase, "Timer data is corrupted");
   const timeRemaining = Math.ceil(
     (existingTimer.endTime.getTime() - Date.now()) / 60000
   );
@@ -217,8 +216,8 @@ async function stopTimer(interaction: ChatInputCommandInteraction, activeVoiceTi
       )] });
     return;
   }
-  if (timer && timer.workTimeout) clearTimeout(timer.workTimeout);
-  if (timer && timer.breakTimeout) clearTimeout(timer.breakTimeout);
+  if (timer.workTimeout) clearTimeout(timer.workTimeout);
+  if (timer.breakTimeout) clearTimeout(timer.breakTimeout);
   activeVoiceTimers.delete(voiceChannelId);
 
   await interaction.editReply({ embeds: [(createSuccessTemplate(

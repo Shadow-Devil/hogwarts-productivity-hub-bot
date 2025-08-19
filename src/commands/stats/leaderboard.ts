@@ -81,7 +81,7 @@ function createLeaderboardTemplate(
   data: Array<{
     discordId: string;
     house: House | null;
-    points: number | null;
+    points: number;
     voiceTime: number | null;
   }>,
 ) {
@@ -100,7 +100,7 @@ function createLeaderboardTemplate(
   return createStyledEmbed("premium").setTitle(title).addFields([
     {
       name: "🏆 Top Rankings",
-      value: formatDataTable(leaderboardData, [20, 15]) || "No rankings available",
+      value: formatDataTable(leaderboardData) || "No rankings available",
       inline: false,
     },
   ]);

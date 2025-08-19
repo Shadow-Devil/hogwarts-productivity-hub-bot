@@ -13,6 +13,7 @@ import { voiceSessionTable } from "../../db/schema.ts";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../../db/db.ts";
 import type { Command } from "../../types.ts";
+import assert from "node:assert";
 
 export default {
   data: new SlashCommandBuilder()
@@ -27,7 +28,7 @@ export default {
     console.log(`Debug command triggered by ${interaction.user.tag}`);
 
     // Get session tracking information
-    const voiceSession = await db.select({
+    const [voiceSession] = await db.select({
       joinTime: voiceSessionTable.joinedAt,
     }).from(voiceSessionTable)
     .where(and(eq(voiceSessionTable.discordId, interaction.user.id), isNull(voiceSessionTable.leftAt)));
@@ -44,7 +45,8 @@ export default {
       let timeRemaining = 0;
 
       if (activeVoiceTimers.has(voiceChannel.id)) {
-        const timer = activeVoiceTimers.get(voiceChannel.id)!;
+        const timer = activeVoiceTimers.get(voiceChannel.id);
+        assert(timer !== undefined, "Active timer should exist for this channel");
         timeRemaining = Math.ceil(
           (timer.endTime.getTime() - Date.now()) / 60000
         );
@@ -68,10 +70,10 @@ export default {
       let sessionTracked = "❌ Not Tracked";
       let sessionAge = 0;
 
-      if (voiceSession.length > 0) {
+      if (voiceSession !== undefined) {
         sessionTracked = "✅ Tracked";
         sessionAge = Math.floor(
-          (Date.now() - voiceSession[0]!.joinTime.getTime()) / (1000 * 60)
+          (Date.now() - voiceSession.joinTime.getTime()) / (1000 * 60)
         );
       }
 
@@ -82,7 +84,7 @@ export default {
           Detection: "✅ Working",
           "Channel Members": `${voiceChannel.members.size}`,
           "Session Tracking": sessionTracked,
-          "Session Age": voiceSession.length > 0 ? `${sessionAge} min` : "N/A",
+          "Session Age": voiceSession !== undefined ? `${sessionAge} min` : "N/A",
           "Timer Status": timerStatus,
           Phase: timerPhase,
         },
@@ -108,7 +110,7 @@ export default {
         ],
       ];
 
-      const channelTable = formatDataTable(channelData, [18, 25]);
+      const channelTable = formatDataTable(channelData);
 
       embed.addFields([
         {
@@ -183,7 +185,6 @@ export default {
 
       const troubleshootingTable = formatDataTable(
         troubleshootingData,
-        [10, 30]
       );
 
       embed.addFields([

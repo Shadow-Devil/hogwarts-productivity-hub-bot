@@ -120,15 +120,16 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
     return;
   }
 
-  const tasks = await db.insert(taskTable).values({
+  const [task] = await db.insert(taskTable).values({
     discordId,
     title,
   }).returning({ title: taskTable.title });
+  assert(task !== undefined, "Task should be created successfully");
 
   await interaction.editReply({
     embeds: [createSuccessTemplate(
       `Task Added Successfully!`,
-      `**${tasks[0]?.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
+      `**${task.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
       {
         celebration: true,
       }
@@ -226,14 +227,14 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
   const taskId = interaction.options.getInteger("task", true);
 
   // Get all incomplete tasks for the user, ordered by creation date
-  const tasksResult = await db.select().from(taskTable).where(and(
+  const [tasksResult] = await db.select().from(taskTable).where(and(
     eq(taskTable.discordId, discordId),
     eq(taskTable.isCompleted, false),
     eq(taskTable.id, taskId),
     gte(taskTable.createdAt, startOfDay))
   ).orderBy(taskTable.createdAt);
 
-  if (tasksResult.length === 0) {
+  if (tasksResult === undefined) {
     await interaction.editReply({
       embeds: [createErrorTemplate(
         `Task Completion Failed`,
@@ -243,7 +244,7 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
     return;
   }
 
-  const taskToComplete = tasksResult[0]!;
+  const taskToComplete = tasksResult;
   const diffInMinutes = dayjs().diff(dayjs(taskToComplete.createdAt), 'minute')
   if (diffInMinutes < TASK_MIN_TIME) {
     await interaction.editReply({
@@ -287,7 +288,7 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
 async function removeTask(interaction: ChatInputCommandInteraction, discordId: string, startOfDay: Date): Promise<void> {
   const taskId = interaction.options.getInteger("task", true);
 
-  const tasksResult = await db.delete(taskTable).where(
+  const [task] = await db.delete(taskTable).where(
     and(
       eq(taskTable.discordId, discordId),
       eq(taskTable.isCompleted, false),
@@ -296,7 +297,7 @@ async function removeTask(interaction: ChatInputCommandInteraction, discordId: s
     )
   ).returning({ id: taskTable.id, title: taskTable.title });
 
-  if (tasksResult.length === 0) {
+  if (task === undefined) {
     const embed = createErrorTemplate(
       `Task Removal Failed`,
       "Task not found. Use `/tasks view` to check your tasks.",
@@ -305,12 +306,10 @@ async function removeTask(interaction: ChatInputCommandInteraction, discordId: s
     return;
   }
 
-  assert(tasksResult.length === 1, "Expected exactly one task to be removed but found: " + tasksResult.length);
-
   await interaction.editReply({
     embeds: [(createSuccessTemplate(
       `Task Removed Successfully`,
-      `**Removed task: "${tasksResult[0]!.title}"**\n\nℹ️ The task has been permanently removed from your to-do list.`
+      `**Removed task: "${task.title}"**\n\nℹ️ The task has been permanently removed from your to-do list.`
     ))]
   });
   return;
@@ -364,7 +363,7 @@ function createTaskTemplate(
   // Handle enhanced task data structure
   const incompleteTasks = tasks.incompleteTasks;
   const completedTasks = tasks.completedTasks;
-  const stats = tasks.stats || {};
+  const stats = tasks.stats;
 
   embed.setDescription(
     createHeader(
@@ -376,7 +375,7 @@ function createTaskTemplate(
   );
 
   // Add completion progress bar with enhanced layout
-  if (showProgress && stats.completionRate !== undefined) {
+  if (showProgress) {
     const progressSection = createProgressSection(
       "Overall Progress",
       stats.totalCompleted,
@@ -416,7 +415,7 @@ function createTaskTemplate(
 
     let fieldValue;
     if (useTableFormat) {
-      fieldValue = formatDataTable(taskList, [25, 15]);
+      fieldValue = formatDataTable(taskList);
     } else {
       const taskListString = taskList.join("\n\n");
       fieldValue =
@@ -455,7 +454,7 @@ function createTaskTemplate(
       embed.addFields([
         {
           name: `✅ Recently Completed (${completedTasks.length} total)`,
-          value: formatDataTable(completedList, [20, 15]),
+          value: formatDataTable(completedList),
           inline: false,
         },
       ]);
@@ -481,26 +480,24 @@ function createTaskTemplate(
   }
 
   // Add task statistics with enhanced table format
-  if (stats.totalTasks !== undefined) {
-    const statsData: [string, number][] = [
-      ["Total Tasks", stats.totalTasks],
-      ["Completed", stats.totalCompleted],
-      ["Pending", stats.totalPending],
-      ["Points Earned", stats.totalTaskPoints],
-    ];
+  const statsData: [string, number][] = [
+    ["Total Tasks", stats.totalTasks],
+    ["Completed", stats.totalCompleted],
+    ["Pending", stats.totalPending],
+    ["Points Earned", stats.totalTaskPoints],
+  ];
 
-    const statsDisplay = useTableFormat
-      ? formatDataTable(statsData, [15, 10])
-      : formatDataGrid(statsData, { useTable: true });
+  const statsDisplay = useTableFormat
+    ? formatDataTable(statsData)
+    : formatDataGrid(statsData, { useTable: true });
 
-    embed.addFields([
-      {
-        name: "📊 Task Statistics",
-        value: statsDisplay,
-        inline: false,
-      },
-    ]);
-  }
+  embed.addFields([
+    {
+      name: "📊 Task Statistics",
+      value: statsDisplay,
+      inline: false,
+    },
+  ]);
 
   // Add helpful footer
   embed.setFooter({

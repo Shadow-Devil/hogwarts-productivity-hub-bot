@@ -110,7 +110,7 @@ export default {
         `${channel.userCount} users`,
       ] as const);
 
-      const channelTable = formatDataTable(channelData, [20, 15]);
+      const channelTable = formatDataTable(channelData);
 
       resultsEmbed.addFields([
         {

@@ -3,6 +3,7 @@
 
 import { EmbedBuilder } from "discord.js";
 import { BotColors } from "./constants.ts";
+import assert from "node:assert/strict";
 
 // 📊 Progress Bar Generator
 function createProgressBar(
@@ -43,7 +44,7 @@ function createHeader(title: string, subtitle: string | null = null, emoji = "�
     },
   };
 
-  const currentStyle = styles[style] || styles.default;
+  const currentStyle = styles[style];
   let header = currentStyle.titleFormat;
 
   if (subtitle) {
@@ -64,7 +65,6 @@ function formatDataGrid(
     spacing = true,
     style = "compact",
     useTable = false,
-    columnWidths = null,
   } = {},
 ) {
   const items = Array.isArray(data)
@@ -72,7 +72,7 @@ function formatDataGrid(
     : Object.entries(data).map(([k, v]) => `${k}: ${v}`);
 
   if (useTable && columns === 2) {
-    return formatDataTable(items, columnWidths);
+    return formatDataTable(items);
   }
 
   const result = [];
@@ -95,7 +95,7 @@ function formatDataGrid(
 }
 
 // 📊 Create Table-Like Structure for Better Space Utilization
-function formatDataTable(data: (string | [string, string | number])[], columnWidths: number[] | null = null) {
+function formatDataTable(data: (string | [string, string | number])[]) {
   if (!Array.isArray(data) || data.length === 0) return "";
 
   // Convert array items to key-value pairs if needed
@@ -104,16 +104,15 @@ function formatDataTable(data: (string | [string, string | number])[], columnWid
       return [item[0], item[1]];
     } else if (typeof item === "string" && item.includes(":")) {
       const [key, ...valueParts] = item.split(":");
-      return [key!.trim(), valueParts.join(":").trim()];
+      assert(key, `Invalid item format: ${item}`);
+      return [key.trim(), valueParts.join(":").trim()];
     }
     return [item, ""];
   });
 
   // Calculate column widths for alignment
   const maxKeyLength = Math.max(...pairs.map(([key]) => key.length));
-  const keyWidth = columnWidths
-    ? columnWidths[0]!
-    : Math.min(maxKeyLength + 2, 20);
+  const keyWidth = Math.min(maxKeyLength + 2, 20);
 
   const tableRows = pairs.map(([key, value]) => {
     const paddedKey = key.padEnd(keyWidth, " ");
@@ -127,7 +126,6 @@ function formatDataTable(data: (string | [string, string | number])[], columnWid
 function formatCenteredDataTable(
   data: [string, string][] | Array<string>,
   {
-    columnWidths = null,
     addPadding = true,
     useBoxFormat = false,
     centerAlign = true,
@@ -142,7 +140,8 @@ function formatCenteredDataTable(
       return [item[0], item[1]];
     } else if (typeof item === "string" && item.includes(":")) {
       const [key, ...valueParts] = item.split(":");
-      return [key!.trim(), valueParts.join(":").trim()];
+      assert(key, `Invalid item format: ${item}`);
+      return [key.trim(), valueParts.join(":").trim()];
     }
     return [item, ""];
   });
@@ -150,15 +149,11 @@ function formatCenteredDataTable(
   // Calculate column widths for alignment
   const maxKeyLength = Math.max(...pairs.map(([key]) => key.length));
   const maxValueLength = Math.max(
-    ...pairs.map(([, value]) => value.toString().length),
+    ...pairs.map(([, value]) => value.length),
   );
 
-  const keyWidth = columnWidths
-    ? columnWidths[0]
-    : Math.min(maxKeyLength + 2, 16);
-  const valueWidth = columnWidths
-    ? columnWidths[1]
-    : Math.min(maxValueLength + 2, 12);
+  const keyWidth = Math.min(maxKeyLength + 2, 16);
+  const valueWidth = Math.min(maxValueLength + 2, 12);
 
   let tableRows: string[];
 
@@ -176,10 +171,9 @@ function formatCenteredDataTable(
         : key.padEnd(keyWidth);
       const paddedValue = centerAlign
         ? value
-            .toString()
-            .padStart((valueWidth + value.toString().length) / 2)
+          .padStart((valueWidth + value.length) / 2)
             .padEnd(valueWidth)
-        : value.toString().padEnd(valueWidth);
+        : value.padEnd(valueWidth);
       tableRows.push(`│ ${paddedKey} │ **${paddedValue}** │`);
       if (index < pairs.length - 1 && spacing === "spacious") {
         tableRows.push(separator);
@@ -325,7 +319,7 @@ function createProgressSection(
       section += ` (${progress.percentage}%)`;
     }
   } else {
-    section += `${progress.bar}`;
+    section += progress.bar;
     if (showNumbers) {
       section += `\n**${current}** / **${max}**`;
     }

@@ -38,7 +38,7 @@ export default {
   },
   async autocomplete(interaction: AutocompleteInteraction) {
     const results = []
-    const query = interaction.options.getFocused()?.toLowerCase();
+    const query = interaction.options.getFocused().toLowerCase();
     for (const timeZone of Intl.supportedValuesOf('timeZone')) {
       if (timeZone.toLowerCase().includes(query)) {
         results.push({

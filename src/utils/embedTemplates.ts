@@ -53,7 +53,7 @@ function createSuccessTemplate(
       embed.addFields([
         {
           name: celebration ? "🎁 Rewards Earned" : "📊 Progress Update",
-          value: formatDataTable(rewardData, [15, 10]),
+          value: formatDataTable(rewardData),
           inline: false,
         },
       ]);

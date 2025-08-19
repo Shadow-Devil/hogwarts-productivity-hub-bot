@@ -1,7 +1,7 @@
 import { client } from "../client.ts";
 
 export async function alertOwner(message: string): Promise<void> {
-    const user = await client.users.fetch(process.env.OWNER_ID!)
+    const user = await client.users.fetch(process.env.OWNER_ID)
     await user.send(message);
     console.log(`Alerted owner: ${message}`);
 }
