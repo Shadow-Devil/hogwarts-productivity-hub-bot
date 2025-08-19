@@ -25,23 +25,22 @@ export default {
 
     // Check if scan is already running
     if (voiceStateScanner.isScanning) {
-      const embed = new EmbedBuilder()
-        .setTitle("🔄 Voice Scan Already Running")
-        .setDescription(
-          "A voice state scan is already in progress. Please wait for it to complete."
-        )
-        .setColor(0xfee75c)
-        .addFields([
-          {
-            name: "💡 Get Started",
-            value:
-              "The scan will begin immediately and show results when complete.",
-            inline: false,
-          },
-        ])
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setTitle("🔄 Voice Scan Already Running")
+          .setDescription(
+            "A voice state scan is already in progress. Please wait for it to complete."
+          )
+          .setColor(0xfee75c)
+          .addFields([
+            {
+              name: "💡 Get Started",
+              value: "The scan will begin immediately and show results when complete.",
+              inline: false,
+            },
+          ])
+        .setTimestamp()]
+      });
       return;
     }
 

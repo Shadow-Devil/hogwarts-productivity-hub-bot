@@ -31,16 +31,12 @@ export default {
 
     const houseLeaderboard = await fetchHouseLeaderboard(type);
 
-    if (houseLeaderboard.length === 0) {
-      await interaction.editReply({
-        embeds: [(createErrorTemplate(
-          `No House Data`,
-          "No house data is available yet. Houses need to earn points first!\nJoin a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.",
-        ))]
-      });
-    }
-
-    await interaction.editReply({ embeds: [createHouseTemplate(houseLeaderboard, type)] });
+    await interaction.editReply({
+      embeds: [
+        houseLeaderboard.length === 0
+          ? createErrorTemplate("No House Data", "No house data is available yet. Houses need to earn points first!\nJoin a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.")
+          : createHouseTemplate(houseLeaderboard, type)]
+    });
   },
 } as Command;
 
@@ -70,8 +66,6 @@ function createHouseTemplate(
   houses: Array<{ house: House; points: number }>,
   type: string,
 ) {
-
-
   const title = type === "daily" ? "Daily House Points" :
     type === "monthly" ? "Monthly House Points"
     : "All-Time House Points";

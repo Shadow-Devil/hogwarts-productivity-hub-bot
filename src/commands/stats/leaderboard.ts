@@ -62,27 +62,21 @@ export default {
       .orderBy(desc(pointsColumn), desc(voiceTimeColumn))
       .limit(10);
 
-
-    if (leaderboard.length === 0) {
-      await interaction.editReply({
-        embeds: [(createErrorTemplate(
+    await interaction.editReply({
+      embeds: [leaderboard.length === 0 ?
+        createErrorTemplate(
           `No Leaderboard Data`,
           "No data is available for the leaderboard yet. Be the first to start tracking your voice time!"
-        ))]
-      });
-      return;
-    }
-
-    await interaction.editReply({
-      embeds: [await createLeaderboardTemplate(
-        leaderboardType,
-        leaderboard,
-      )]
+        ) :
+        createLeaderboardTemplate(
+          leaderboardType,
+          leaderboard,
+        )]
     });
   },
 };
 
-async function createLeaderboardTemplate(
+function createLeaderboardTemplate(
   type: string,
   data: Array<{
     discordId: string;
@@ -95,9 +89,6 @@ async function createLeaderboardTemplate(
     type === "monthly" ? "Monthly Leaderboard"
       : "All-Time Leaderboard";
 
-  const embed = createStyledEmbed("premium").setTitle(title);
-
-
   const leaderboardData = []
   for (const [index, entry] of data.entries()) {
     const hours = entry.voiceTime ? Math.floor(entry.voiceTime / 3600) : "0";
@@ -106,14 +97,11 @@ async function createLeaderboardTemplate(
     leaderboardData.push([`#${index + 1} ${userMention(entry.discordId)}`, `${hours}h ${minutes}min • ${entry.points}pts • ${entry.house ? houseEmojis[entry.house] : ""}`]);
   }
 
-  embed.addFields([
+  return createStyledEmbed("premium").setTitle(title).addFields([
     {
       name: "🏆 Top Rankings",
-      value:
-        formatDataTable(leaderboardData, [20, 15]) || "No rankings available",
+      value: formatDataTable(leaderboardData, [20, 15]) || "No rankings available",
       inline: false,
     },
   ]);
-
-  return embed;
 }
