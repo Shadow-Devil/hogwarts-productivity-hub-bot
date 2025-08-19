@@ -68,7 +68,7 @@ export default {
 
     const userTimezone = await fetchUserTimezone(discordId);
     const startOfDay = dayjs().tz(userTimezone).startOf("day").toDate();
-    console.info(`User timezone: ${userTimezone}, start of day: ${startOfDay}`);
+    console.info(`User timezone: ${userTimezone}, start of day: ${startOfDay.toString()}`);
 
     switch (interaction.options.getSubcommand()) {
       case "add":
@@ -236,7 +236,7 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
     return;
   }
 
-  const taskToComplete = tasksResult[0]!!;
+  const taskToComplete = tasksResult[0]!;
   const diffInMinutes = dayjs().diff(dayjs(taskToComplete.createdAt), 'minute')
   if (diffInMinutes < TASK_MIN_TIME) {
     await interaction.editReply({
@@ -303,7 +303,7 @@ async function removeTask(interaction: ChatInputCommandInteraction, discordId: s
   await interaction.editReply({
     embeds: [(createSuccessTemplate(
       `Task Removed Successfully`,
-      `**Removed task: "${tasksResult[0]!!.title}"**\n\nℹ️ The task has been permanently removed from your to-do list.`
+      `**Removed task: "${tasksResult[0]!.title}"**\n\nℹ️ The task has been permanently removed from your to-do list.`
     ))]
   });
   return;

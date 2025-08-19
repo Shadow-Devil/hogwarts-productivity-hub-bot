@@ -29,7 +29,7 @@ dayjs.tz.setDefault("UTC");
 try {
   registerEvents(client);
   registerShutdownHandlers();
-  await registerMonitoringEvents();
+  registerMonitoringEvents();
   await initializeHousePoints();
 
   await CentralResetService.start();
@@ -40,9 +40,9 @@ try {
 }
 
 function registerEvents(client: Client) {
-  client.on(Events.ClientReady, ClientReady.execute);
-  client.on(Events.InteractionCreate, InteractionCreate.execute);
-  client.on(Events.VoiceStateUpdate, VoiceStateUpdate.execute);
+  client.on(Events.ClientReady, (i) => void ClientReady.execute(i));
+  client.on(Events.InteractionCreate, (i) => void InteractionCreate.execute(i));
+  client.on(Events.VoiceStateUpdate, (a, b) => void VoiceStateUpdate.execute(a, b));
 }
 
 async function initializeHousePoints() {
@@ -71,18 +71,18 @@ function registerShutdownHandlers() {
     process.exit(0);
   }
 
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", () => void shutdown());
+  process.on("SIGTERM", () => void shutdown());
 
-  process.on('uncaughtException', async function (error) {
-    await alertOwner(`Uncaught Exception: ${error}`);
+  process.on('uncaughtException', (error) => {
+    void alertOwner(`Uncaught Exception: ${error}`);
   });
-  process.on('unhandledRejection', async function (reason, promise) {
-    await alertOwner(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+  process.on('unhandledRejection', (reason) => {
+    void alertOwner(`Unhandled Rejection, reason: ${reason instanceof Error ? reason : "Unknown Error"}`);
   });
 }
 
-async function registerMonitoringEvents() {
+function registerMonitoringEvents() {
   commands.forEach((command) => {
     const subcommands = command.data.options.filter((option) => option instanceof SlashCommandSubcommandBuilder);
     if (subcommands.length > 0) {

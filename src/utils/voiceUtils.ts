@@ -19,9 +19,9 @@ import { awardPoints } from "./utils.ts";
  * @param {ChatInputCommandInteraction} interaction - The Discord interaction
  * @param options - Options for voice channel detection
  */
-export async function getUserVoiceChannel(
+export function getUserVoiceChannel(
   interaction: ChatInputCommandInteraction
-): Promise<VoiceBasedChannel | null> {
+): VoiceBasedChannel | null {
   if (!interaction.guild) {
     console.warn("No guild found in interaction");
     return null;

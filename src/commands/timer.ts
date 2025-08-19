@@ -65,7 +65,7 @@ export default {
 
 
 async function startTimer(interaction: ChatInputCommandInteraction, activeVoiceTimers: Map<string, VoiceTimer>): Promise<void> {
-  const voiceChannel = await getUserVoiceChannel(interaction);
+  const voiceChannel = getUserVoiceChannel(interaction);
 
   if (voiceChannel === null) {
     await interaction.editReply({
@@ -79,8 +79,8 @@ async function startTimer(interaction: ChatInputCommandInteraction, activeVoiceT
 
   const voiceChannelId = voiceChannel.id;
 
-  if (!cleanExistingTimer(interaction, voiceChannelId, activeVoiceTimers)) { return; }
-  
+  if (!(await cleanExistingTimer(interaction, voiceChannelId, activeVoiceTimers))) { return; }
+
   const work = interaction.options.getInteger("work", true);
   const breakTime = interaction.options.getInteger("break") || 0;
 
@@ -109,8 +109,8 @@ async function startTimer(interaction: ChatInputCommandInteraction, activeVoiceT
     )] });
 
 
-  const workTimeout = setTimeout(
-    async () => {
+  const workTimeout = setTimeout(() =>
+    void (async () => {
       await interaction.followUp({
         content: `<@${interaction.user.id}>`,
         embeds: [createTimerTemplate("work_complete", {
@@ -126,8 +126,8 @@ async function startTimer(interaction: ChatInputCommandInteraction, activeVoiceT
         return;
       }
 
-      const breakTimeout = setTimeout(
-        async () => {
+      const breakTimeout = setTimeout(() =>
+        void (async () => {
           try {
             await interaction.followUp({
               content: `<@${interaction.user.id}>`,
@@ -145,7 +145,7 @@ async function startTimer(interaction: ChatInputCommandInteraction, activeVoiceT
             console.error("Error sending break over message:", err);
           }
           activeVoiceTimers.delete(voiceChannelId);
-        },
+        })(),
         breakTime * 60 * 1000
       );
       activeVoiceTimers.set(voiceChannelId, {
@@ -154,8 +154,7 @@ async function startTimer(interaction: ChatInputCommandInteraction, activeVoiceT
         phase: "break",
         endTime: dayjs().add(breakTime, 'minutes').toDate(),
       });
-      
-    },
+    })(),
     work * 60 * 1000
   );
   activeVoiceTimers.set(voiceChannelId, {
@@ -199,7 +198,7 @@ async function cleanExistingTimer(interaction: ChatInputCommandInteraction<Cache
 
 async function stopTimer(interaction: ChatInputCommandInteraction, activeVoiceTimers: Map<string, VoiceTimer>) {
   // Use the reliable voice channel detection utility
-  const voiceChannel = await getUserVoiceChannel(interaction);
+  const voiceChannel = getUserVoiceChannel(interaction);
 
   if (!voiceChannel) {
     await interaction.editReply({ embeds: [(createErrorTemplate(
@@ -232,7 +231,7 @@ async function stopTimer(interaction: ChatInputCommandInteraction, activeVoiceTi
 
 async function checkTimerStatus(interaction: ChatInputCommandInteraction, activeVoiceTimers: Map<string, VoiceTimer>) {
   // Get user's voice channel
-  const voiceChannel = await getUserVoiceChannel(interaction);
+  const voiceChannel = getUserVoiceChannel(interaction);
 
   if (!voiceChannel) {
     await interaction.editReply({ embeds: [(createErrorTemplate(

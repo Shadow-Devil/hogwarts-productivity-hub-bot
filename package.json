@@ -9,8 +9,8 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
-    "lint": "eslint src/ --max-warnings=0",
-    "lint:fix": "eslint src/ --fix",
+    "lint": "eslint --flag unstable_native_nodejs_ts_config src/",
+    "lint:fix": "eslint --flag unstable_native_nodejs_ts_config src/ --fix",
     "typecheck": "tsc",
     "validate": "npm run lint && npm run typecheck"
   },
@@ -37,18 +37,18 @@
   "devDependencies": {
     "@eslint/js": "^9.33.0",
     "@types/express": "^5.0.3",
-    "@types/node": "^24.2.1",
+    "@types/node": "^24.3.0",
     "@types/pg": "^8.15.5",
-    "@typescript-eslint/eslint-plugin": "^8.39.0",
-    "@typescript-eslint/parser": "^8.39.0",
+    "@typescript-eslint/eslint-plugin": "^8.40.0",
+    "@typescript-eslint/parser": "^8.40.0",
     "drizzle-kit": "^0.31.4",
     "eslint": "^9.33.0",
     "nodemon": "^3.1.10",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
-    "tsx": "^4.20.3",
+    "tsx": "^4.20.4",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.39.0",
+    "typescript-eslint": "^8.40.0",
     "vitest": "^3.2.4"
   }
 }

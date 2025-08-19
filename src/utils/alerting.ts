@@ -10,7 +10,7 @@ export async function wrapWithAlerting<T>(fn: () => Promise<T>, alertMessage: st
     try {
         return await fn();
     } catch (error) {
-        await alertOwner(`An error occurred: ${error}\n\nDetails: ${alertMessage}`);
+        await alertOwner(`An error occurred: ${error instanceof Error ? error : "Unknown Error"}\n\nDetails: ${alertMessage}`);
 
         console.error("Error in wrapped function:", error);
         throw error;

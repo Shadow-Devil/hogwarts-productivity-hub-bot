@@ -33,7 +33,7 @@ export default {
     .where(and(eq(voiceSessionTable.discordId, interaction.user.id), isNull(voiceSessionTable.leftAt)));
 
     // Test voice channel detection
-    const voiceChannel = await getUserVoiceChannel(interaction);
+    const voiceChannel = getUserVoiceChannel(interaction);
 
     if (voiceChannel) {
       console.log(`Voice channel found via cached member: ${voiceChannel.name} (${voiceChannel.id})`);

@@ -104,7 +104,7 @@ function formatDataTable(data: any, columnWidths: number[] | null = null) {
       return [item[0], item[1]];
     } else if (typeof item === "string" && item.includes(":")) {
       const [key, ...valueParts] = item.split(":");
-      return [key!!.trim(), valueParts.join(":").trim()];
+      return [key!.trim(), valueParts.join(":").trim()];
     }
     return [item, ""];
   });
@@ -142,7 +142,7 @@ function formatCenteredDataTable(
       return [item[0], item[1]];
     } else if (typeof item === "string" && item.includes(":")) {
       const [key, ...valueParts] = item.split(":");
-      return [key!!.trim(), valueParts.join(":").trim()];
+      return [key!.trim(), valueParts.join(":").trim()];
     }
     return [item, ""];
   });
@@ -302,7 +302,7 @@ function createStatsCard(
 // 📊 Create Progress Section with Visual Enhancement
 function createProgressSection(
   title: string,
-  current: any,
+  current: number,
   max: number,
   {
     emoji = "📊",
