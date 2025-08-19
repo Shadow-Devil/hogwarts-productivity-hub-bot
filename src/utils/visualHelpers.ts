@@ -160,7 +160,7 @@ function formatCenteredDataTable(
     ? columnWidths[1]
     : Math.min(maxValueLength + 2, 12);
 
-  let tableRows;
+  let tableRows: string[];
 
   if (useBoxFormat) {
     // Create box-style format with borders

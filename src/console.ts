@@ -18,32 +18,30 @@ const SystemDLogPriority = {
     Debug: 7
 } as const;
 
-// eslint-disable-next-line
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 console.log = (...args: any[]) => {
     oldConsole.log(`<${SystemDLogPriority.Info}>`, ...args);
 }
 
-// eslint-disable-next-line
 console.error = (...args: any[]) => {
     oldConsole.error(`<${SystemDLogPriority.Error}>`, ...args);
 }
 
-// eslint-disable-next-line
 console.warn = (...args: any[]) => {
     oldConsole.warn(`<${SystemDLogPriority.Warning}>`, ...args);
 }
 
-// eslint-disable-next-line
 console.info = (...args: any[]) => {
     oldConsole.info(`<${SystemDLogPriority.Info}>`, ...args);
 }
 
-// eslint-disable-next-line
 console.debug = (...args: any[]) => {
     oldConsole.debug(`<${SystemDLogPriority.Debug}>`, ...args);
 }
 
-// eslint-disable-next-line
 console.trace = (...args: any[]) => {
     oldConsole.trace(`<${SystemDLogPriority.Debug}>`, ...args);
 }
+/* eslint-enable @typescript-eslint/no-unsafe-argument */
+/* eslint-enable @typescript-eslint/no-explicit-any */
