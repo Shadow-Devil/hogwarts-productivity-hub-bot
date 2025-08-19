@@ -56,7 +56,7 @@ function createHeader(title: string, subtitle: string | null = null, emoji = "�
 
 // 📊 Enhanced Data Grid with Table-Like Structure
 function formatDataGrid(
-  data: Record<string, any> | Array<any>,
+  data: Record<string, string | number> | (string | [string, string | number])[],
   {
     columns = 2,
     separator = " • ",
@@ -95,11 +95,11 @@ function formatDataGrid(
 }
 
 // 📊 Create Table-Like Structure for Better Space Utilization
-function formatDataTable(data: any, columnWidths: number[] | null = null) {
+function formatDataTable(data: (string | [string, string | number])[], columnWidths: number[] | null = null) {
   if (!Array.isArray(data) || data.length === 0) return "";
 
   // Convert array items to key-value pairs if needed
-  const pairs = data.map((item) => {
+  const pairs: [string, string | number][] = data.map((item) => {
     if (Array.isArray(item)) {
       return [item[0], item[1]];
     } else if (typeof item === "string" && item.includes(":")) {
@@ -112,7 +112,7 @@ function formatDataTable(data: any, columnWidths: number[] | null = null) {
   // Calculate column widths for alignment
   const maxKeyLength = Math.max(...pairs.map(([key]) => key.length));
   const keyWidth = columnWidths
-    ? columnWidths[0]
+    ? columnWidths[0]!
     : Math.min(maxKeyLength + 2, 20);
 
   const tableRows = pairs.map(([key, value]) => {
@@ -125,7 +125,7 @@ function formatDataTable(data: any, columnWidths: number[] | null = null) {
 
 // 📊 Enhanced Centered Data Table with Better Spacing
 function formatCenteredDataTable(
-  data: any,
+  data: [string, string][] | Array<string>,
   {
     columnWidths = null,
     addPadding = true,
@@ -137,7 +137,7 @@ function formatCenteredDataTable(
   if (!Array.isArray(data) || data.length === 0) return "";
 
   // Convert array items to key-value pairs if needed
-  const pairs = data.map((item) => {
+  const pairs: [string, string][] = data.map((item) => {
     if (Array.isArray(item)) {
       return [item[0], item[1]];
     } else if (typeof item === "string" && item.includes(":")) {
@@ -239,7 +239,7 @@ function createStyledEmbed(type = "default") {
 // 📊 Create Stats Card with Enhanced Typography
 function createStatsCard(
   title: string,
-  stats: Record<string, any> | Array<any>,
+  stats: Record<string, string> | [string, string][],
   {
     emoji = "📊",
     style = "card",

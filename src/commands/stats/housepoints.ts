@@ -75,7 +75,7 @@ function createHouseTemplate(
 
   // Add house rankings with enhanced table format
   if (houses.length > 0) {
-      const houseData = houses.map((house, index) => {
+    const houseData: [string, string][] = houses.map((house, index) => {
         const position = index + 1;
         const emoji = houseEmojis[house.house];
         const medal =

@@ -96,7 +96,7 @@ export default {
       );
 
       // Channel info in table format
-      const channelData = [
+      const channelData: [string, string][] = [
         ["Channel Name", voiceChannel.name],
         ["Channel ID", voiceChannel.id],
         ["Channel Type", `${voiceChannel.type}`],
@@ -174,7 +174,7 @@ export default {
       );
 
       // Troubleshooting steps in table format
-      const troubleshootingData = [
+      const troubleshootingData: [string, string][] = [
         ["Step 1", "Join a voice channel"],
         ["Step 2", "Check Discord permissions"],
         ["Step 3", "Try leaving and rejoining"],

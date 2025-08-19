@@ -89,7 +89,7 @@ function createLeaderboardTemplate(
     type === "monthly" ? "Monthly Leaderboard"
       : "All-Time Leaderboard";
 
-  const leaderboardData = []
+  const leaderboardData: [string, string][] = []
   for (const [index, entry] of data.entries()) {
     const hours = entry.voiceTime ? Math.floor(entry.voiceTime / 3600) : "0";
     const minutes = entry.voiceTime ? Math.floor((entry.voiceTime % 3600) / 60) : "0";

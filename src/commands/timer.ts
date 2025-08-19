@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, type CacheType } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, type CacheType, type VoiceBasedChannel } from "discord.js";
 import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
 import {
   createErrorTemplate,
@@ -286,7 +286,17 @@ async function checkTimerStatus(interaction: ChatInputCommandInteraction, active
 // ⏱️ Timer Template
 function createTimerTemplate(
   action: "start" | "work_complete" | "break_complete" | "status" | "no_timer",
-  data: any,
+  data:
+    {
+      workTime?: number | null;
+      breakTime?: number | null;
+      voiceChannel: VoiceBasedChannel;
+      phase?: "work" | "break" | "work_complete" | "break_complete";
+      startTime?: string;
+      endTime?: string;
+      breakEndTime?: string;
+      timeRemaining?: number;
+    },
   { showProgress = true, includeMotivation = true } = {}
 ) {
 
@@ -294,6 +304,8 @@ function createTimerTemplate(
 
   switch (action) {
     case "start": {
+      assert(data.workTime, "Work time must be provided for starting a timer");
+      assert(data.breakTime, "Break time must be provided for starting a timer");
 
       embed = createStyledEmbed("primary")
         .setTitle("⏱️ Pomodoro Timer Started")
@@ -349,6 +361,7 @@ function createTimerTemplate(
     }
 
     case "work_complete":
+      assert(data.breakTime, "Break time must be provided for work completion");
       embed = createStyledEmbed("success")
         .setTitle("🔔 Work Session Complete!")
         .setDescription(
@@ -401,6 +414,9 @@ function createTimerTemplate(
       break;
 
     case "status": {
+      assert(data.phase, "Timer phase must be provided for status");
+      assert(data.breakTime, "Break time must be provided for status");
+      assert(data.workTime, "Work time must be provided for status");
       const isBreak = data.phase === "break";
       embed = createStyledEmbed(isBreak ? "warning" : "primary")
         .setTitle(

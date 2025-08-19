@@ -136,6 +136,13 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
   });
 }
 
+type Task = {
+  title: string;
+  isCompleted: boolean | null;
+  completedAt: Date | null;
+  createdAt: Date;
+}
+
 async function viewTasks(interaction: ChatInputCommandInteraction, discordId: string, startOfDay: Date): Promise<void> {
   const userMention = interaction.options.getMentionable("user");
 
@@ -156,10 +163,11 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
     return;
   }
 
-  const tasks = await db.select({
+  const tasks: Task[] = await db.select({
     title: taskTable.title,
     isCompleted: taskTable.isCompleted,
     completedAt: taskTable.completedAt,
+    createdAt: taskTable.createdAt,
   }).from(taskTable).where(
     and(eq(taskTable.discordId, user.id), gte(taskTable.createdAt, startOfDay))
   ).orderBy(desc(taskTable.isCompleted), taskTable.createdAt);
@@ -167,7 +175,7 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
   assert(tasks.length < DAILY_TASK_LIMIT, `Expected tasks length to be less than ${DAILY_TASK_LIMIT} but found ${tasks.length}`);
 
   if (tasks.length === 0) {
-    const embed = createTaskTemplate(user, [], {
+    const embed = createTaskTemplate(user, null, {
       emptyState: true,
       emptyStateMessage:
         "🌟 **Ready to get productive?**\nUse `/tasks add <title>` to create your first task!",
@@ -190,7 +198,7 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
 
   // Get daily task limit information
   await interaction.editReply({
-    embeds: [(createTaskTemplate(
+    embeds: [createTaskTemplate(
       user,
       {
         incompleteTasks,
@@ -208,9 +216,8 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
         includeRecentCompleted: true,
         useTableFormat: true,
         maxRecentCompleted: 5,
-        showDailyLimit: true,
       }
-    ))]
+    )]
   });
   return;
 }
@@ -312,7 +319,17 @@ async function removeTask(interaction: ChatInputCommandInteraction, discordId: s
 
 function createTaskTemplate(
   user: User,
-  tasks: any,
+  tasks: {
+    incompleteTasks: Task[];
+    completedTasks: Task[];
+    stats: {
+      totalTasks: number;
+      totalCompleted: number;
+      totalPending: number;
+      totalTaskPoints: number;
+      completionRate: number;
+    },
+  } | null,
   {
     emptyState = false,
     emptyStateMessage = "",
@@ -321,7 +338,6 @@ function createTaskTemplate(
     maxRecentCompleted = 5,
     helpText = "",
     useTableFormat = true,
-    showDailyLimit = false,
   } = {}
 ) {
   const embed = createStyledEmbed("primary")
@@ -329,7 +345,7 @@ function createTaskTemplate(
     .setThumbnail(user.displayAvatarURL());
 
 
-  if (emptyState || (Array.isArray(tasks) && tasks.length === 0)) {
+  if (emptyState || tasks === null) {
     embed.setDescription(
       "Ready to get productive?" +
       (emptyStateMessage
@@ -346,10 +362,8 @@ function createTaskTemplate(
   }
 
   // Handle enhanced task data structure
-  const incompleteTasks =
-    tasks.incompleteTasks || tasks.filter?.((t: { is_complete: boolean }) => !t.is_complete) || [];
-  const completedTasks =
-    tasks.completedTasks || tasks.filter?.((t: { is_complete: boolean }) => t.is_complete) || [];
+  const incompleteTasks = tasks.incompleteTasks;
+  const completedTasks = tasks.completedTasks;
   const stats = tasks.stats || {};
 
   embed.setDescription(
@@ -386,44 +400,15 @@ function createTaskTemplate(
     ]);
   }
 
-  // Add daily limit information if requested
-  if (showDailyLimit && tasks.dailyStats) {
-    const dailyStats = tasks.dailyStats;
-    const limitProgress = createProgressSection(
-      "Daily Task Limit",
-      dailyStats.total_task_actions,
-      dailyStats.limit,
-      {
-        emoji: dailyStats.limitReached ? "🚫" : "📅",
-        style: "detailed",
-        showPercentage: true,
-        showNumbers: true,
-      }
-    );
-
-    const resetTime = Math.floor(
-      dayjs().add(1, "day").startOf("day").valueOf() / 1000
-    );
-    const limitInfo = `\n**Actions Used:** ${dailyStats.total_task_actions}/${dailyStats.limit} • **Remaining:** ${dailyStats.remaining} • **Resets:** <t:${resetTime}:R>`;
-
-    embed.addFields([
-      {
-        name: "📅 Daily Task Limit",
-        value: limitProgress + limitInfo,
-        inline: false,
-      },
-    ]);
-  }
-
   // Add pending tasks with enhanced formatting
   if (incompleteTasks.length > 0) {
-    const taskList = incompleteTasks.slice(0, 10).map((task: { created_at: number, title: string }, index: number) => {
+    const taskList = incompleteTasks.slice(0, 10).map((task, index) => {
       const taskNumber = index + 1;
-      const createdDate = dayjs(task.created_at).format("MMM DD");
+      const createdDate = dayjs(task.createdAt).format("MMM DD");
 
       if (useTableFormat) {
         const numberPadded = taskNumber.toString().padStart(2, "0");
-        return [`${numberPadded}. ${task.title}`, `📅 ${createdDate}`];
+        return [`${numberPadded}. ${task.title}`, `📅 ${createdDate}`] as [string, string];
       } else {
         return `\`${taskNumber.toString().padStart(2, "0")}.\` ${task.title}\n     ┕ 📅 ${createdDate}`;
       }
@@ -455,17 +440,16 @@ function createTaskTemplate(
   if (includeRecentCompleted && completedTasks.length > 0) {
     const recentCompleted = completedTasks
       .sort(
-        (a: any, b: any) =>
-          new Date(b.completed_at).getTime() -
-          new Date(a.completed_at).getTime()
+        (a, b) =>
+          (b.completedAt?.getTime() ?? 0) -
+          (a.completedAt?.getTime() ?? 0)
       )
       .slice(0, maxRecentCompleted);
 
     if (useTableFormat) {
-      const completedList = recentCompleted.map((task: { completed_at: number, points_awarded: number, title: string }) => {
-        const completedDate = dayjs(task.completed_at).format("MMM DD");
-        const points = task.points_awarded || 0;
-        return [`✅ ${task.title}`, `${completedDate} (+${points} pts)`];
+      const completedList: [string, string][] = recentCompleted.map((task) => {
+        const completedDate = dayjs(task.completedAt).format("MMM DD");
+        return [`✅ ${task.title}`, `${completedDate} (+${TASK_POINT_SCORE} pts)`];
       });
 
       embed.addFields([
@@ -477,10 +461,9 @@ function createTaskTemplate(
       ]);
     } else {
       const completedList = recentCompleted
-        .map((task: { completed_at: number, points_awarded: number, title: string }) => {
-          const completedDate = dayjs(task.completed_at).format("MMM DD");
-          const points = task.points_awarded || 0;
-          return `✅ ${task.title}\n*Completed: ${completedDate}* (+${points} pts)`;
+        .map((task) => {
+          const completedDate = dayjs(task.completedAt).format("MMM DD");
+          return `✅ ${task.title}\n*Completed: ${completedDate}* (+${TASK_POINT_SCORE} pts)`;
         })
         .join("\n\n");
 
@@ -499,7 +482,7 @@ function createTaskTemplate(
 
   // Add task statistics with enhanced table format
   if (stats.totalTasks !== undefined) {
-    const statsData = [
+    const statsData: [string, number][] = [
       ["Total Tasks", stats.totalTasks],
       ["Completed", stats.totalCompleted],
       ["Pending", stats.totalPending],

@@ -103,12 +103,12 @@ export default {
 
     // Add channel details if any were found
     if (scanResults.channels.length > 0) {
-      const channelData = scanResults.channels.map((channel) => [
+      const channelData: [string, string][] = scanResults.channels.map((channel) => [
         channel.name.length > 20
           ? channel.name.substring(0, 17) + "..."
           : channel.name,
         `${channel.userCount} users`,
-      ]);
+      ] as const);
 
       const channelTable = formatDataTable(channelData, [20, 15]);
 

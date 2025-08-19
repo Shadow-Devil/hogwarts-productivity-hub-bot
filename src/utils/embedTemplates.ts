@@ -45,7 +45,7 @@ function createSuccessTemplate(
     const rewards = [];
 
     if (useTableFormat) {
-      const rewardData = [];
+      const rewardData: [string, string][] = [];
       if (points !== null) rewardData.push(["Points Earned", `+${points}`]);
       if (streak !== null)
         rewardData.push(["Current Streak", `${streak} days`]);
