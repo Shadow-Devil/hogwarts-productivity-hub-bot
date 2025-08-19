@@ -63,7 +63,7 @@ async function fetchHouseLeaderboard(type: "daily" | "monthly" | "alltime") {
 }
 
 function createHouseTemplate(
-  houses: Array<{ house: House; points: number }>,
+  houses: { house: House; points: number }[],
   type: string,
 ) {
   const title = type === "daily" ? "Daily House Points" :

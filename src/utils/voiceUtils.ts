@@ -73,7 +73,7 @@ export async function startVoiceSession(
 export async function endVoiceSession(
   session: VoiceSession, 
   db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | NodePgDatabase<Schema>,
-  isTracked: boolean = true) {
+  isTracked = true) {
   const channelId = session.channelId;
   if (channelId === null || process.env.EXCLUDE_VOICE_CHANNEL_IDS?.split(",").includes(channelId)) {
     return;
@@ -103,7 +103,7 @@ export async function endVoiceSession(
     assert(voiceSessionWithDuration !== undefined, `Expected exactly one voice session to end, but found none`);
     assert(extra.length === 0, `Expected exactly one voice session to end, but found ${extra.length} extra rows`);
 
-    const duration = voiceSessionWithDuration.duration || 0;
+    const duration = voiceSessionWithDuration.duration ?? 0;
 
     // Update user's voice time stats
     const [user] = await db.update(userTable).set({

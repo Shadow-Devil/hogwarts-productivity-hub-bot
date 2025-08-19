@@ -16,7 +16,7 @@ let scanResults = {
   totalUsersFound: 0,
   trackingStarted: 0,
   errors: 0,
-  channels: [] as Array<{ id: string; name: string; userCount: number }>,
+  channels: [] as { id: string; name: string; userCount: number }[],
 };
 
 /**

@@ -82,7 +82,7 @@ async function startTimer(interaction: ChatInputCommandInteraction, activeVoiceT
   if (!(await cleanExistingTimer(interaction, voiceChannelId, activeVoiceTimers))) { return; }
 
   const work = interaction.options.getInteger("work", true);
-  const breakTime = interaction.options.getInteger("break") || 0;
+  const breakTime = interaction.options.getInteger("break") ?? 0;
 
   const now = dayjs();
   const startTime = now;

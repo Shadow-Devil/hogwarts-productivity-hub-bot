@@ -1,6 +1,6 @@
 import type { AutocompleteInteraction, ChatInputCommandInteraction, SharedSlashCommand } from "discord.js";
 
-export type Command = {
+export interface Command {
   data: SharedSlashCommand;
   execute: (
     interaction: ChatInputCommandInteraction,
@@ -13,17 +13,24 @@ export type Command = {
 
 export type House = "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin";
 
-export type VoiceSession = {
+export interface VoiceSession {
   username: string;
   discordId: string;
   channelId: string | null;
   channelName: string | null;
 }
 
-export type VoiceTimer = {
+export interface VoiceTimer {
   endTime: Date;
   phase: "work" | "break";
   startTime: number;
   workTimeout?: NodeJS.Timeout;
   breakTimeout?: NodeJS.Timeout;
+}
+
+export interface Task {
+  title: string;
+  isCompleted: boolean | null;
+  completedAt: Date | null;
+  createdAt: Date;
 }

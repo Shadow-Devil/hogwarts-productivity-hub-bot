@@ -78,12 +78,12 @@ export default {
 
 function createLeaderboardTemplate(
   type: string,
-  data: Array<{
+  data: {
     discordId: string;
     house: House | null;
     points: number;
     voiceTime: number | null;
-  }>,
+  }[],
 ) {
   const title = type === "daily" ? "Daily Leaderboard" :
     type === "monthly" ? "Monthly Leaderboard"

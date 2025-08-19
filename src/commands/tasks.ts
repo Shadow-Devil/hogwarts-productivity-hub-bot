@@ -11,6 +11,7 @@ import { BotColors, DAILY_TASK_LIMIT, TASK_MIN_TIME, TASK_POINT_SCORE } from "..
 import assert from "node:assert/strict";
 import { createHeader, createProgressSection, createStyledEmbed, formatDataGrid, formatDataTable } from "../utils/visualHelpers.ts";
 import { awardPoints } from "../utils/utils.ts";
+import type { Task } from "../types.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -135,13 +136,6 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
       }
     )]
   });
-}
-
-type Task = {
-  title: string;
-  isCompleted: boolean | null;
-  completedAt: Date | null;
-  createdAt: Date;
 }
 
 async function viewTasks(interaction: ChatInputCommandInteraction, discordId: string, startOfDay: Date): Promise<void> {

@@ -124,7 +124,7 @@ function formatDataTable(data: (string | [string, string | number])[]) {
 
 // 📊 Enhanced Centered Data Table with Better Spacing
 function formatCenteredDataTable(
-  data: [string, string][] | Array<string>,
+  data: [string, string][] | string[],
   {
     addPadding = true,
     useBoxFormat = false,

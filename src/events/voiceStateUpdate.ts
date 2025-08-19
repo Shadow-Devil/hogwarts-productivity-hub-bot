@@ -5,7 +5,7 @@ import { wrapWithAlerting } from "../utils/alerting.ts";
 import { voiceSessionExecutionTimer } from "../monitoring.ts";
 
 export async function execute(oldState: VoiceState, newState: VoiceState) {
-  const member = newState.member || oldState.member;
+  const member = newState.member ?? oldState.member;
   if (!member || member.user.bot) return; // Ignore bots
 
   const end = voiceSessionExecutionTimer.startTimer();
@@ -18,14 +18,14 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   const oldVoiceSession = {
     discordId,
     username,
-    channelId: oldChannel?.id || null,
-    channelName: oldChannel?.name || null,
+    channelId: oldChannel?.id ?? null,
+    channelName: oldChannel?.name ?? null,
   }
   const newVoiceSession = {
     discordId,
     username,
-    channelId: newChannel?.id || null,
-    channelName: newChannel?.name || null,
+    channelId: newChannel?.id ?? null,
+    channelName: newChannel?.name ?? null,
   }
   console.debug("+".repeat(5) + ` Voice state update for ${username} (${oldChannel?.name ?? ''} -> ${newChannel?.name ?? ''})`);
   await ensureUserExists(member, discordId, username);

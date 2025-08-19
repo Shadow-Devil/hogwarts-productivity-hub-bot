@@ -42,7 +42,7 @@ export async function fetchUserTimezone(discordId: string) {
   return await db.select({ timezone: schema.userTable.timezone })
     .from(schema.userTable)
     .where(eq(schema.userTable.discordId, discordId))
-    .then(rows => rows[0]?.timezone || "UTC");
+    .then(rows => rows[0]?.timezone ?? "UTC");
 }
 
 export async function fetchTasks(discordId: string) {
