@@ -15,10 +15,11 @@ import relativeTime from "dayjs/plugin/relativeTime.js";
 import { db, fetchOpenVoiceSessions } from "./db/db.ts";
 import { endVoiceSession } from "./utils/voiceUtils.ts";
 import { alertOwner } from "./utils/alerting.ts";
-import { interactionExecutionTimer, resetExecutionTimer, voiceSessionExecutionTimer } from "./monitoring.ts";
+import { interactionExecutionTimer, resetExecutionTimer, server, voiceSessionExecutionTimer } from "./monitoring.ts";
 import { commands } from "./commands.ts";
 import { housePointsTable, userTable } from "./db/schema.ts";
 import { eq } from "drizzle-orm";
+import { promisify } from "node:util";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -67,6 +68,11 @@ function registerShutdownHandlers() {
       const openVoiceSessions = await fetchOpenVoiceSessions(db);
       await Promise.all(openVoiceSessions.map(session => endVoiceSession(session, db)));
     });
+
+    const closeServer = promisify(server.close).bind(server);
+    await closeServer();
+    server.closeAllConnections();
+
     console.log("Bye");
     process.exit(0);
   }

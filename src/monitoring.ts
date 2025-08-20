@@ -34,5 +34,5 @@ app.get('/metrics', async (req, res) => {
     res.send(await register.metrics());
 });
 
-app.listen(8080, '127.0.0.1', () => { console.log('Server is running on http://localhost:8080, metrics are exposed on http://localhost:8080/metrics') });
+export const server = app.listen(8080, '127.0.0.1', () => { console.log('Server is running on http://localhost:8080, metrics are exposed on http://localhost:8080/metrics') });
 
