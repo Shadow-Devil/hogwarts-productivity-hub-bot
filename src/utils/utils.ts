@@ -31,19 +31,17 @@ export function getHouseFromMember(member: GuildMember | null): House | undefine
 
 export async function awardPoints(db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>, discordId: string, points: number) {
     // Update user's total points
-    const house = await db.update(userTable)
-        .set({
-            dailyPoints: sql`${userTable.dailyPoints} + ${points}`,
-            monthlyPoints: sql`${userTable.monthlyPoints} + ${points}`,
-            totalPoints: sql`${userTable.totalPoints} + ${points}`,
-        })
-        .where(eq(userTable.discordId, discordId)).returning({ house: userTable.house }).then(([row]) => row?.house);
+    const house = await db.update(userTable).set({
+        dailyPoints: sql`${userTable.dailyPoints} + ${points}`,
+        monthlyPoints: sql`${userTable.monthlyPoints} + ${points}`,
+        totalPoints: sql`${userTable.totalPoints} + ${points}`,
+    }).where(eq(userTable.discordId, discordId))
+        .returning({ house: userTable.house })
+        .then(([row]) => row?.house);
 
     if (house) {
-        await db.update(housePointsTable)
-            .set({
-                points: sql`${housePointsTable.points} + ${points}`,
-            })
-            .where(eq(housePointsTable.house, house));
+        await db.update(housePointsTable).set({
+            points: sql`${housePointsTable.points} + ${points}`,
+        }).where(eq(housePointsTable.house, house));
     }
 }

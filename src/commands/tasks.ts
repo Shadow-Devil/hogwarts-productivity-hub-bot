@@ -1,15 +1,12 @@
-import { AutocompleteInteraction, ChatInputCommandInteraction, GuildMember, SlashCommandBuilder, User, } from "discord.js";
-import {
-  createSuccessTemplate,
-  createErrorTemplate,
-} from "../utils/embedTemplates.ts";
+import { AutocompleteInteraction, ChatInputCommandInteraction, EmbedBuilder, GuildMember, SlashCommandBuilder, User, } from "discord.js";
+import { replyError } from "../utils/embedTemplates.ts";
 import dayjs from "dayjs";
 import { db, fetchTasks, fetchUserTimezone } from "../db/db.ts";
 import { taskTable } from "../db/schema.ts";
 import { and, desc, eq, gte } from "drizzle-orm";
 import { BotColors, DAILY_TASK_LIMIT, TASK_MIN_TIME, TASK_POINT_SCORE } from "../utils/constants.ts";
 import assert from "node:assert/strict";
-import { createHeader, createProgressSection, createStyledEmbed, formatDataGrid, formatDataTable } from "../utils/visualHelpers.ts";
+import { createHeader, createProgressSection, formatDataTable } from "../utils/visualHelpers.ts";
 import { awardPoints } from "../utils/utils.ts";
 import type { Task } from "../types.ts";
 
@@ -85,17 +82,15 @@ export default {
         await removeTask(interaction, discordId, startOfDay);
         break;
       default:
-        await interaction.editReply({
-          embeds: [createErrorTemplate(
-            "Invalid Subcommand",
-            "Please use `/tasks add`, `/tasks view`, `/tasks complete`, or `/tasks remove`.",
-          )],
-        });
-        break;
+        return await replyError(
+          interaction,
+          "Invalid Subcommand",
+          "Please use `/tasks add`, `/tasks view`, `/tasks complete`, or `/tasks remove`.",
+        );
     }
   }, autocomplete: async (interaction: AutocompleteInteraction) => {
-    const results = await fetchTasks(interaction.user.id);
-    await interaction.respond(results.map(task => ({
+    const tasks = await fetchTasks(interaction.user.id);
+    await interaction.respond(tasks.map(task => ({
       name: task.title,
       value: task.id,
     })));
@@ -112,13 +107,11 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
       dayjs().tz(userTimezone).add(1, "day").startOf("day").valueOf() / 1000
     );
 
-    await interaction.editReply({
-      embeds: [createErrorTemplate(
-        `Daily Task Limit Reached`,
-        `**Remaining:** ${DAILY_TASK_LIMIT - currentTaskCount} actions • **Resets:** <t:${resetTime}:R>\nDaily Progress: ${currentTaskCount}/${DAILY_TASK_LIMIT} task actions used`,
-      )]
-    });
-    return;
+    return await replyError(
+      interaction,
+      `Daily Task Limit Reached`,
+      `**Remaining:** ${DAILY_TASK_LIMIT - currentTaskCount} actions • **Resets:** <t:${resetTime}:R>\nDaily Progress: ${currentTaskCount}/${DAILY_TASK_LIMIT} task actions used`,
+    );
   }
 
   const [task] = await db.insert(taskTable).values({
@@ -128,13 +121,11 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
   assert(task !== undefined, "Task should be created successfully");
 
   await interaction.editReply({
-    embeds: [createSuccessTemplate(
-      `Task Added Successfully!`,
-      `**${task.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
-      {
-        celebration: true,
-      }
-    )]
+    embeds: [new EmbedBuilder({
+      color: BotColors.SUCCESS,
+      title: `Task Added Successfully!`,
+      description: `**${task.title}**\n\n🚀 Your task has been added to your personal to-do list and is ready for completion.`,
+    })]
   });
 }
 
@@ -149,13 +140,11 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
   } else if (userMention instanceof GuildMember) {
     user = userMention.user;
   } else {
-    await interaction.editReply({
-      embeds: [createErrorTemplate(
-        "Invalid User Mention",
-        "Please mention a valid user or leave it blank to view your own tasks."
-      )]
-    });
-    return;
+    return await replyError(
+      interaction,
+      "Invalid User Mention",
+      "Please mention a valid user or leave it blank to view your own tasks."
+    );
   }
 
   const tasks: Task[] = await db.select({
@@ -170,13 +159,14 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
   assert(tasks.length < DAILY_TASK_LIMIT, `Expected tasks length to be less than ${DAILY_TASK_LIMIT} but found ${tasks.length}`);
 
   if (tasks.length === 0) {
-    const embed = createTaskTemplate(user, null, {
-      emptyState: true,
-      emptyStateMessage:
-        "🌟 **Ready to get productive?**\nUse `/tasks add <title>` to create your first task!",
-      helpText: `Tip: Completing tasks earns you ${TASK_POINT_SCORE} points each!`,
+    await interaction.editReply({
+      embeds: [new EmbedBuilder({
+        color: BotColors.INFO,
+        title: "📋 Personal Task Dashboard",
+        description: "Ready to get productive?\nUse `/tasks add <title>` to create your first task!",
+        footer: { text: "Tip: Completing tasks earns you ${TASK_POINT_SCORE} points each!" }
+      }).setThumbnail(user.displayAvatarURL())]
     });
-    await interaction.editReply({ embeds: [embed] });
     return;
   }
 
@@ -229,25 +219,21 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
   ).orderBy(taskTable.createdAt);
 
   if (tasksResult === undefined) {
-    await interaction.editReply({
-      embeds: [createErrorTemplate(
-        `Task Completion Failed`,
-        `Could not find task. Use \`/tasks view\` to check your tasks`,
-      )]
-    });
-    return;
+    return await replyError(
+      interaction,
+      `Task Completion Failed`,
+      `Could not find task. Use \`/tasks view\` to check your tasks`,
+    );
   }
 
   const taskToComplete = tasksResult;
   const diffInMinutes = dayjs().diff(dayjs(taskToComplete.createdAt), 'minute')
   if (diffInMinutes < TASK_MIN_TIME) {
-    await interaction.editReply({
-      embeds: [createErrorTemplate(
-        `Task Completion Failed`,
-        `You can only complete tasks that are at least ${TASK_MIN_TIME} minutes old.\nPlease try again in ${TASK_MIN_TIME - diffInMinutes} min.`,
-      )]
-    });
-    return;
+    return await replyError(
+      interaction,
+      `Task Completion Failed`,
+      `You can only complete tasks that are at least ${TASK_MIN_TIME} minutes old.\nPlease try again in ${TASK_MIN_TIME - diffInMinutes} min.`,
+    );
   }
 
 
@@ -264,18 +250,16 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
   });
 
   await interaction.editReply({
-    embeds: [(createSuccessTemplate(
-      `Task Completed Successfully!`,
-      `**Completed: "${taskToComplete.title}" (+${TASK_POINT_SCORE} points)**\n\n🚀 Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
-      {
-        celebration: true,
-        points: 2,
-        includeEmoji: true,
-        useEnhancedLayout: true,
-        useTableFormat: true,
-        showBigNumbers: true,
-      }
-    ))]
+    embeds: [new EmbedBuilder({
+      color: BotColors.SUCCESS,
+      title: `🎉 Task Completed Successfully!`,
+      description: `**Completed: "${taskToComplete.title}" (+${TASK_POINT_SCORE} points)**\n\n🚀 Great job on completing your task! Keep up the momentum and continue building your productivity streak.`,
+      fields: [{
+        name: "🎁 Rewards Earned",
+        value: formatDataTable([["Points Earned", `+${TASK_POINT_SCORE}`]]),
+        inline: false,
+      }]
+    })]
   });
 }
 
@@ -292,19 +276,19 @@ async function removeTask(interaction: ChatInputCommandInteraction, discordId: s
   ).returning({ id: taskTable.id, title: taskTable.title });
 
   if (task === undefined) {
-    const embed = createErrorTemplate(
+    return await replyError(
+      interaction,
       `Task Removal Failed`,
-      "Task not found. Use `/tasks view` to check your tasks.",
+      "Task not found. Use `/tasks view` to check your tasks."
     );
-    await interaction.editReply({ embeds: [embed] });
-    return;
   }
 
   await interaction.editReply({
-    embeds: [(createSuccessTemplate(
-      `Task Removed Successfully`,
-      `**Removed task: "${task.title}"**\n\nℹ️ The task has been permanently removed from your to-do list.`
-    ))]
+    embeds: [new EmbedBuilder({
+      color: BotColors.SUCCESS,
+      title: `Task Removed Successfully`,
+      description: `**Removed task: "${task.title}"**\n\nℹ️ The task has been permanently removed from your to-do list.`,
+    })]
   });
   return;
 
@@ -322,10 +306,8 @@ function createTaskTemplate(
       totalTaskPoints: number;
       completionRate: number;
     },
-  } | null,
+  },
   {
-    emptyState = false,
-    emptyStateMessage = "",
     showProgress = false,
     includeRecentCompleted = false,
     maxRecentCompleted = 5,
@@ -333,26 +315,10 @@ function createTaskTemplate(
     useTableFormat = true,
   } = {}
 ) {
-  const embed = createStyledEmbed("primary")
-    .setTitle("📋 Personal Task Dashboard")
-    .setThumbnail(user.displayAvatarURL());
-
-
-  if (emptyState || tasks === null) {
-    embed.setDescription(
-      "Ready to get productive?" +
-      (emptyStateMessage
-        ? `\n\n${emptyStateMessage}`
-        : "\n\n### 💡 Getting Started\nUse `/addtask <description>` to create your first task!")
-    );
-    embed.setColor(BotColors.INFO);
-
-    if (helpText) {
-      embed.setFooter({ text: helpText });
-    }
-
-    return embed;
-  }
+  const embed = new EmbedBuilder({
+    color: BotColors.PRIMARY,
+    title: "📋 Personal Task Dashboard",
+  }).setThumbnail(user.displayAvatarURL());
 
   // Handle enhanced task data structure
   const incompleteTasks = tasks.incompleteTasks;
@@ -501,4 +467,43 @@ function createTaskTemplate(
   });
 
   return embed;
+}
+
+// 📊 Enhanced Data Grid with Table-Like Structure
+function formatDataGrid(
+  data: Record<string, string | number> | (string | [string, string | number])[],
+  {
+    columns = 2,
+    separator = " • ",
+    prefix = "├─",
+    spacing = true,
+    style = "compact",
+    useTable = false,
+  } = {},
+) {
+  const items = Array.isArray(data)
+    ? data
+    : Object.entries(data).map(([k, v]) => `${k}: ${v}`);
+
+  if (useTable && columns === 2) {
+    return formatDataTable(items);
+  }
+
+  const result = [];
+
+  for (let i = 0; i < items.length; i += columns) {
+    const row = items.slice(i, i + columns);
+
+    if (style === "spacious") {
+      result.push(""); // Add spacing between rows
+    }
+
+    if (spacing && prefix) {
+      result.push(`${prefix} ${row.join(separator)}`);
+    } else {
+      result.push(row.join(separator));
+    }
+  }
+
+  return result.join("\n");
 }

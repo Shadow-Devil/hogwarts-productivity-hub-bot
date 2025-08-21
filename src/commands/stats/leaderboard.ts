@@ -1,13 +1,13 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, userMention } from "discord.js";
+import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, userMention } from "discord.js";
 import {
-  createErrorTemplate,
+  replyError,
 } from "../../utils/embedTemplates.ts";
 import { db } from "../../db/db.ts";
 import { userTable } from "../../db/schema.ts";
 import { desc, gte } from "drizzle-orm";
-import { createStyledEmbed, formatDataTable } from "../../utils/visualHelpers.ts";
+import { formatDataTable } from "../../utils/visualHelpers.ts";
 import type { House } from "../../types.ts";
-import { houseEmojis } from "../../utils/constants.ts";
+import { BotColors, houseEmojis } from "../../utils/constants.ts";
 
 
 export default {
@@ -46,10 +46,7 @@ export default {
         voiceTimeColumn = userTable.totalVoiceTime;
         break;
       default:
-        await interaction.editReply({
-          embeds: [createErrorTemplate("Invalid Leaderboard Type", "Please select a valid leaderboard type: daily, monthly, or all time.")],
-        });
-        return;
+        return await replyError(interaction, "Invalid Leaderboard Type", "Please select a valid leaderboard type: daily, monthly, or all time.");
     }
     const leaderboard = await db.select({
       discordId: userTable.discordId,
@@ -62,21 +59,18 @@ export default {
       .orderBy(desc(pointsColumn), desc(voiceTimeColumn))
       .limit(10);
 
-    await interaction.editReply({
-      embeds: [leaderboard.length === 0 ?
-        createErrorTemplate(
+    leaderboard.length === 0 ?
+      await replyError(
+        interaction,
           `No Leaderboard Data`,
           "No data is available for the leaderboard yet. Be the first to start tracking your voice time!"
         ) :
-        createLeaderboardTemplate(
-          leaderboardType,
-          leaderboard,
-        )]
-    });
+      await replyLeaderboard(interaction, leaderboardType, leaderboard);
   },
 };
 
-function createLeaderboardTemplate(
+async function replyLeaderboard(
+  interaction: ChatInputCommandInteraction,
   type: string,
   data: {
     discordId: string;
@@ -97,11 +91,17 @@ function createLeaderboardTemplate(
     leaderboardData.push([`#${index + 1} ${userMention(entry.discordId)}`, `${hours}h ${minutes}min • ${entry.points}pts • ${entry.house ? houseEmojis[entry.house] : ""}`]);
   }
 
-  return createStyledEmbed("premium").setTitle(title).addFields([
-    {
-      name: "🏆 Top Rankings",
-      value: formatDataTable(leaderboardData) || "No rankings available",
-      inline: false,
-    },
-  ]);
+  await interaction.editReply({
+    embeds: [new EmbedBuilder({
+      color: BotColors.PREMIUM,
+      title,
+      fields: [
+        {
+          name: "🏆 Top Rankings",
+          value: formatDataTable(leaderboardData) || "No rankings available",
+          inline: false,
+        },
+      ]
+    })]
+  });
 }

@@ -11,7 +11,7 @@ export async function execute(c: Client<true>): Promise<void> {
     try {
         await VoiceStateScanner.scanAndStartTracking();
     } catch (error) {
-        console.log("❌ Bot Initialization Failed");
+        console.error("❌ Bot Initialization Failed");
         console.error("error:", error);
         process.exit(1);
     }

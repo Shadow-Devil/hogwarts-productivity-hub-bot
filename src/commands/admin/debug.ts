@@ -31,7 +31,7 @@ export default {
     const [voiceSession] = await db.select({
       joinTime: voiceSessionTable.joinedAt,
     }).from(voiceSessionTable)
-    .where(and(eq(voiceSessionTable.discordId, interaction.user.id), isNull(voiceSessionTable.leftAt)));
+      .where(and(eq(voiceSessionTable.discordId, interaction.user.id), isNull(voiceSessionTable.leftAt)));
 
     // Test voice channel detection
     const voiceChannel = getUserVoiceChannel(interaction);
@@ -53,19 +53,6 @@ export default {
         timerStatus = "Active timer detected";
         timerPhase = timer.phase.toUpperCase();
       }
-
-      const embed = new EmbedBuilder()
-        .setTitle(
-          createHeader(
-            "Voice Channel Debug",
-            "Detection Working",
-            "🔍",
-            "large"
-          )
-        )
-        .setColor(0x00ff00)
-        .setTimestamp();
-
       // Debug overview with enhanced grace period info
       let sessionTracked = "❌ Not Tracked";
       let sessionAge = 0;
@@ -76,7 +63,6 @@ export default {
           (Date.now() - voiceSession.joinTime.getTime()) / (1000 * 60)
         );
       }
-
 
       const debugStats = createStatsCard(
         "Debug Status",
@@ -93,12 +79,8 @@ export default {
         }
       );
 
-      embed.setDescription(
-        `Voice channel detection is working correctly!\n\n${debugStats}`
-      );
-
       // Channel info in table format
-      const channelData: [string, string][] = [
+      const channelTable = formatDataTable([
         ["Channel Name", voiceChannel.name],
         ["Channel ID", voiceChannel.id],
         ["Channel Type", `${voiceChannel.type}`],
@@ -108,17 +90,26 @@ export default {
           "Time Remaining",
           timeRemaining > 0 ? `${timeRemaining} minutes` : "N/A",
         ],
-      ];
-
-      const channelTable = formatDataTable(channelData);
-
-      embed.addFields([
-        {
-          name: createHeader("Channel Information", null, "📍", "emphasis"),
-          value: channelTable,
-          inline: false,
-        },
       ]);
+
+
+      const embed = new EmbedBuilder({
+        title: createHeader(
+          "Voice Channel Debug",
+          "Detection Working",
+          "🔍",
+          "large"
+        ),
+        color: 0x00ff00,
+        description: `Voice channel detection is working correctly!\n\n${debugStats}`,
+        fields: [
+          {
+            name: createHeader("Channel Information", null, "📍", "emphasis"),
+            value: channelTable,
+            inline: false,
+          },
+        ]
+      });
 
       if (activeVoiceTimers.has(voiceChannel.id)) {
         embed.addFields([
@@ -144,19 +135,6 @@ export default {
 
       // Get global session statistics with grace period info
       const totalActiveSessions = await db.$count(voiceSessionTable, isNull(voiceSessionTable.leftAt));
-
-      const embed = new EmbedBuilder()
-        .setTitle(
-          createHeader(
-            "Voice Channel Debug",
-            "No Channel Detected",
-            "🔍",
-            "large"
-          )
-        )
-        .setColor(0xff0000)
-        .setTimestamp();
-
       const debugStats = createStatsCard(
         "Debug Status",
         {
@@ -171,31 +149,35 @@ export default {
         }
       );
 
-      embed.setDescription(
-        `No voice channel detected for your user.\n\n${debugStats}`
-      );
-
       // Troubleshooting steps in table format
-      const troubleshootingData: [string, string][] = [
-        ["Step 1", "Join a voice channel"],
-        ["Step 2", "Check Discord permissions"],
-        ["Step 3", "Try leaving and rejoining"],
-        ["Step 4", "Restart Discord if needed"],
-      ];
-
       const troubleshootingTable = formatDataTable(
-        troubleshootingData,
+        [
+          ["Step 1", "Join a voice channel"],
+          ["Step 2", "Check Discord permissions"],
+          ["Step 3", "Try leaving and rejoining"],
+          ["Step 4", "Restart Discord if needed"],
+        ],
       );
 
-      embed.addFields([
-        {
-          name: createHeader("Troubleshooting Steps", null, "🔧", "emphasis"),
-          value: troubleshootingTable,
-          inline: false,
-        },
-      ]);
-
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({
+        embeds: [(new EmbedBuilder({
+          color: 0xff0000,
+          title: createHeader(
+            "Voice Channel Debug",
+            "No Channel Detected",
+            "🔍",
+            "large"
+          ),
+          description: `No voice channel detected for your user.\n\n${debugStats}`,
+          fields: [
+            {
+              name: createHeader("Troubleshooting Steps", null, "🔧", "emphasis"),
+              value: troubleshootingTable,
+              inline: false,
+            },
+          ]
+        }))]
+      });
     }
   },
 } as Command;

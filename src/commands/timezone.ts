@@ -9,6 +9,7 @@ import dayjs from "dayjs";
 import { db, fetchUserTimezone } from "../db/db.ts";
 import { userTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
+import { replyError } from "../utils/embedTemplates.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -37,17 +38,17 @@ export default {
     }
   },
   async autocomplete(interaction: AutocompleteInteraction) {
-    const results = []
+    const timezones = []
     const query = interaction.options.getFocused().toLowerCase();
     for (const timeZone of Intl.supportedValuesOf('timeZone')) {
       if (timeZone.toLowerCase().includes(query)) {
-        results.push({
+        timezones.push({
           name: `${timeZone} (Currently ${dayjs().tz(timeZone).format("HH:mm")})`,
           value: timeZone,
         });
       }
     }
-    await interaction.respond(results.slice(0, 25));
+    await interaction.respond(timezones.slice(0, 25));
   }
 };
 
@@ -58,29 +59,21 @@ async function viewTimezone(interaction: ChatInputCommandInteraction, discordId:
     .format("HH:mm");
 
   await interaction.editReply({
-    embeds: [(new EmbedBuilder()
-      .setColor(BotColors.SUCCESS)
-      .setDescription(`Your timezone is currently set to \`${userTimezone}\` (Currently ${userLocalTime})`))]
+    embeds: [new EmbedBuilder({
+      color: BotColors.SUCCESS,
+      description: `Your timezone is currently set to \`${userTimezone}\` (Currently ${userLocalTime})`
+    })]
   });
 }
 
 async function setTimezone(interaction: ChatInputCommandInteraction, discordId: string, newTimezone: string) {
   // Validate timezone
   if (!dayjs().tz(newTimezone).isValid()) {
-    await interaction.editReply({
-      embeds: [(new EmbedBuilder()
-        .setColor(BotColors.ERROR)
-        .setTitle(`❌ Invalid Timezone`)
-        .setDescription(`The timezone \`${newTimezone}\` is not valid.`)
-        .addFields({
-          name: "💡 Tips",
-          value: [
-            "• Check [IANA timezone list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)",
-            "• Format: `Continent/City` (e.g., `America/New_York`)",
-          ].join("\n"),
-        }))]
-    });
-    return;
+    return await replyError(
+      interaction,
+      'Invalid Timezone',
+      `The timezone \`${newTimezone}\` is not valid.`,
+      "Check [IANA timezone list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)");
   }
 
 
@@ -88,11 +81,11 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
   const oldTimezone = await fetchUserTimezone(discordId);
   if (oldTimezone === newTimezone) {
     await interaction.editReply({
-      embeds: [new EmbedBuilder()
-        .setColor(BotColors.WARNING)
-        .setTitle(`ℹ️ No Change Needed`)
-        .setDescription(`Your timezone is already set to \`${newTimezone}\`.`)
-      ]
+      embeds: [new EmbedBuilder({
+        color: BotColors.WARNING,
+        title: `ℹ️ No Change Needed`,
+        description: `Your timezone is already set to \`${newTimezone}\`.`,
+      })]
     });
     return;
   }
@@ -103,13 +96,7 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
   }).where(eq(userTable.discordId, discordId));
 
   if (result.rowCount === 0) {
-    await interaction.editReply({
-      embeds: [new EmbedBuilder()
-        .setColor(BotColors.ERROR)
-        .setTitle(`❌ Timezone Update Failed`)
-        .setDescription(`Failed to update your timezone. Please try again later.`)]
-    });
-    return;
+    return await replyError(interaction, `Timezone Update Failed`, `Failed to update your timezone. Please try again later.`);
   }
 
   const userLocalTime = dayjs()
@@ -118,35 +105,21 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
 
 
   await interaction.editReply({
-    embeds: [(createTimezoneChangeEmbed(
-      oldTimezone,
-      newTimezone,
-      userLocalTime,
-    ))]
+    embeds: [new EmbedBuilder({
+      color: BotColors.SUCCESS,
+      title: `Timezone Updated Successfully`,
+      fields: [
+        {
+          name: "Change Summary",
+          value: `From: \`${oldTimezone}\`\nTo: \`${newTimezone}\``,
+          inline: false,
+        },
+        {
+          name: "🕐 Your New Local Time",
+          value: userLocalTime,
+          inline: true,
+        }
+      ]
+    })]
   });
 }
-
-function createTimezoneChangeEmbed(
-  oldTimezone: string,
-  newTimezone: string,
-  userLocalTime: string,
-) {
-  const embed = new EmbedBuilder()
-    .setColor(BotColors.SUCCESS)
-    .setTitle(`Timezone Updated Successfully`)
-    .addFields(
-      {
-        name: "Change Summary",
-        value: `From: \`${oldTimezone}\`\nTo: \`${newTimezone}\``,
-        inline: false,
-      },
-      {
-        name: "🕐 Your New Local Time",
-        value: userLocalTime,
-        inline: true,
-      }
-  );
-  return embed;
-}
-
-

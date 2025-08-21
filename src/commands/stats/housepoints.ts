@@ -1,12 +1,10 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
-import {
-  createErrorTemplate,
-} from "../../utils/embedTemplates.ts";
+import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import { replyError } from "../../utils/embedTemplates.ts";
 import { db } from "../../db/db.ts";
 import { desc, isNotNull, sql } from "drizzle-orm";
 import { housePointsTable, userTable } from "../../db/schema.ts";
 import type { Command, House } from "../../types.ts";
-import { createStyledEmbed, formatDataTable } from "../../utils/visualHelpers.ts";
+import { formatDataTable } from "../../utils/visualHelpers.ts";
 import { BotColors, houseEmojis } from "../../utils/constants.ts";
 
 export default {
@@ -31,12 +29,15 @@ export default {
 
     const houseLeaderboard = await fetchHouseLeaderboard(type);
 
-    await interaction.editReply({
-      embeds: [
-        houseLeaderboard.length === 0
-          ? createErrorTemplate("No House Data", "No house data is available yet. Houses need to earn points first!\nJoin a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.")
-          : createHouseTemplate(houseLeaderboard, type)]
-    });
+    if (houseLeaderboard.length === 0) {
+      return await replyError(
+        interaction,
+        "No House Data",
+        "No house data is available yet. Houses need to earn points first!",
+        "Join a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.")
+    }
+
+    await interaction.editReply(createHouseTemplate(houseLeaderboard, type));
   },
 } as Command;
 
@@ -68,36 +69,41 @@ function createHouseTemplate(
 ) {
   const title = type === "daily" ? "Daily House Points" :
     type === "monthly" ? "Monthly House Points"
-    : "All-Time House Points";
+      : "All-Time House Points";
 
 
-  const embed = createStyledEmbed().setColor(BotColors.PRIMARY).setTitle(title);
+  const embed = new EmbedBuilder({
+    color: BotColors.PRIMARY,
+    title,
+  });
 
   // Add house rankings with enhanced table format
   if (houses.length > 0) {
     const houseData: [string, string][] = houses.map((house, index) => {
-        const position = index + 1;
-        const emoji = houseEmojis[house.house];
-        const medal =
-          position === 1
-            ? "🥇"
-            : position === 2
-              ? "🥈"
-              : position === 3
-                ? "🥉"
-                : `#${position}`;
+      const position = index + 1;
+      const emoji = houseEmojis[house.house];
+      const medal =
+        position === 1
+          ? "🥇"
+          : position === 2
+            ? "🥈"
+            : position === 3
+              ? "🥉"
+              : `#${position}`;
 
-        return [`${medal} ${emoji} ${house.house}`, `${house.points} points`];
-      });
+      return [`${medal} ${emoji} ${house.house}`, `${house.points} points`];
+    });
 
-      embed.addFields([
-        {
-          name: "House Rankings",
-          value: formatDataTable(houseData),
-          inline: false,
-        },
-      ]);
+    embed.addFields([
+      {
+        name: "House Rankings",
+        value: formatDataTable(houseData),
+        inline: false,
+      },
+    ]);
   }
 
-  return embed;
+  return {
+    embeds: [embed]
+  };
 }

@@ -1,12 +1,9 @@
 // Visual Helper Utilities for Discord Bot
 // Provides consistent visual formatting across all commands
-
-import { EmbedBuilder } from "discord.js";
-import { BotColors } from "./constants.ts";
 import assert from "node:assert/strict";
 
 // 📊 Progress Bar Generator
-function createProgressBar(
+export function createProgressBar(
   current: number,
   max: number,
   length = 10,
@@ -25,7 +22,7 @@ function createProgressBar(
 }
 
 // 📋 Create Decorated Header with Enhanced Typography
-function createHeader(title: string, subtitle: string | null = null, emoji = "🎯", style: "default" | "large" | "emphasis" = "default") {
+export function createHeader(title: string, subtitle: string | null = null, emoji = "🎯", style: "default" | "large" | "emphasis" = "default") {
   const styles = {
     default: {
       titleFormat: `${emoji} **${title}**`,
@@ -55,47 +52,8 @@ function createHeader(title: string, subtitle: string | null = null, emoji = "�
   return header;
 }
 
-// 📊 Enhanced Data Grid with Table-Like Structure
-function formatDataGrid(
-  data: Record<string, string | number> | (string | [string, string | number])[],
-  {
-    columns = 2,
-    separator = " • ",
-    prefix = "├─",
-    spacing = true,
-    style = "compact",
-    useTable = false,
-  } = {},
-) {
-  const items = Array.isArray(data)
-    ? data
-    : Object.entries(data).map(([k, v]) => `${k}: ${v}`);
-
-  if (useTable && columns === 2) {
-    return formatDataTable(items);
-  }
-
-  const result = [];
-
-  for (let i = 0; i < items.length; i += columns) {
-    const row = items.slice(i, i + columns);
-
-    if (style === "spacious") {
-      result.push(""); // Add spacing between rows
-    }
-
-    if (spacing && prefix) {
-      result.push(`${prefix} ${row.join(separator)}`);
-    } else {
-      result.push(row.join(separator));
-    }
-  }
-
-  return result.join("\n");
-}
-
 // 📊 Create Table-Like Structure for Better Space Utilization
-function formatDataTable(data: (string | [string, string | number])[]) {
+export function formatDataTable(data: (string | [string, string | number])[]) {
   if (!Array.isArray(data) || data.length === 0) return "";
 
   // Convert array items to key-value pairs if needed
@@ -204,34 +162,8 @@ function formatCenteredDataTable(
   }
 }
 
-// 🎨 Enhanced Embed Builder
-function createStyledEmbed(type = "default") {
-  const embed = new EmbedBuilder().setTimestamp().setColor(BotColors.PRIMARY);
-
-  // Set default styling based on type
-  switch (type) {
-    case "success":
-      embed.setColor(BotColors.SUCCESS);
-      break;
-    case "warning":
-      embed.setColor(BotColors.WARNING);
-      break;
-    case "error":
-      embed.setColor(BotColors.ERROR);
-      break;
-    case "info":
-      embed.setColor(BotColors.INFO);
-      break;
-    case "premium":
-      embed.setColor(BotColors.PREMIUM);
-      break;
-  }
-
-  return embed;
-}
-
 // 📊 Create Stats Card with Enhanced Typography
-function createStatsCard(
+export function createStatsCard(
   title: string,
   stats: Record<string, string> | [string, string][],
   {
@@ -294,7 +226,7 @@ function createStatsCard(
 }
 
 // 📊 Create Progress Section with Visual Enhancement
-function createProgressSection(
+export function createProgressSection(
   title: string,
   current: number,
   max: number,
@@ -327,13 +259,3 @@ function createProgressSection(
 
   return section;
 }
-
-export {
-  createProgressBar,
-  createHeader,
-  formatDataGrid,
-  formatDataTable,
-  createStatsCard,
-  createProgressSection,
-  createStyledEmbed,
-};
