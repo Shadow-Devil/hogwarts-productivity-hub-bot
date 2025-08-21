@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, userMention } from "discord.js";
 import {
   replyError,
-} from "../../utils/embedTemplates.ts";
+} from "../../utils/utils.ts";
 import { db } from "../../db/db.ts";
 import { userTable } from "../../db/schema.ts";
 import { desc, gte } from "drizzle-orm";
@@ -98,7 +98,7 @@ async function replyLeaderboard(
       fields: [
         {
           name: "🏆 Top Rankings",
-          value: formatDataTable(leaderboardData) || "No rankings available",
+          value: leaderboardData.length !== 0 ? formatDataTable(leaderboardData) : "No rankings available",
           inline: false,
         },
       ]

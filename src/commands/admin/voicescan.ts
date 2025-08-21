@@ -26,41 +26,37 @@ export default {
     // Check if scan is already running
     if (voiceStateScanner.isScanning) {
       await interaction.editReply({
-        embeds: [new EmbedBuilder()
-          .setTitle("🔄 Voice Scan Already Running")
-          .setDescription(
-            "A voice state scan is already in progress. Please wait for it to complete."
-          )
-          .setColor(0xfee75c)
-          .addFields([
+        embeds: [new EmbedBuilder({
+          title: "🔄 Voice Scan Already Running",
+          description: "A voice state scan is already in progress. Please wait for it to complete.",
+          color: 0xfee75c,
+          fields: [
             {
               name: "💡 Get Started",
               value: "The scan will begin immediately and show results when complete.",
               inline: false,
-            },
-          ])
-        .setTimestamp()]
+            }
+          ]
+        })]
       });
       return;
     }
 
     // Start the scan notification
-    const startEmbed = new EmbedBuilder()
-      .setTitle("🔍 Starting Voice State Scan")
-      .setDescription(
-        "Scanning all voice channels for users to automatically start tracking..."
-      )
-      .setColor(0x3498db)
-      .addFields([
-        {
-          name: "⚡ Process",
-          value: "This may take a few moments depending on server size.",
-          inline: false,
-        },
-      ])
-      .setTimestamp();
-
-    await interaction.editReply({ embeds: [startEmbed] });
+    await interaction.editReply({
+      embeds: [new EmbedBuilder({
+        title: "🔍 Starting Voice State Scan",
+        description: "Scanning all voice channels for users to automatically start tracking...",
+        color: 0x3498db,
+        fields: [
+          {
+            name: "⚡ Process",
+            value: "This may take a few moments depending on server size.",
+            inline: false,
+          }
+        ]
+      })]
+    });
 
     const scanResults = await voiceStateScanner.scanAndStartTracking();
 

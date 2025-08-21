@@ -7,7 +7,7 @@ import { vi, describe, afterEach, it, expect } from "vitest";
 import {
   createErrorTemplate,
   createSuccessTemplate,
-} from "../../src/utils/embedTemplates.ts";
+} from "../../src/utils/utils.ts";
 
 // Mock Discord.js components since they depend on the Discord API
 vi.mock("discord.js", () => ({

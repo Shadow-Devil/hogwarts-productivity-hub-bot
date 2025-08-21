@@ -53,20 +53,8 @@ export function createHeader(title: string, subtitle: string | null = null, emoj
 }
 
 // 📊 Create Table-Like Structure for Better Space Utilization
-export function formatDataTable(data: (string | [string, string | number])[]) {
-  if (!Array.isArray(data) || data.length === 0) return "";
-
-  // Convert array items to key-value pairs if needed
-  const pairs: [string, string | number][] = data.map((item) => {
-    if (Array.isArray(item)) {
-      return [item[0], item[1]];
-    } else if (typeof item === "string" && item.includes(":")) {
-      const [key, ...valueParts] = item.split(":");
-      assert(key, `Invalid item format: ${item}`);
-      return [key.trim(), valueParts.join(":").trim()];
-    }
-    return [item, ""];
-  });
+export function formatDataTable(pairs: [string, string | number][]) {
+  if (pairs.length === 0) return "";
 
   // Calculate column widths for alignment
   const maxKeyLength = Math.max(...pairs.map(([key]) => key.length));

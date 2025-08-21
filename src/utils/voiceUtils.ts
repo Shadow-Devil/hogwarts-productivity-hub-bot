@@ -67,8 +67,7 @@ export async function startVoiceSession(
 }
 
 /** End a voice session when user leaves VC
- *  @param {string} discordId - User's Discord ID
- *  @param {boolean} isTracked - If false, do not update user stats (for deleting old sessions)
+ *  @param isTracked - If false, do not update user stats (for deleting old sessions)
  */
 export async function endVoiceSession(
   session: VoiceSession, 

@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { replyError } from "../../utils/embedTemplates.ts";
+import { replyError } from "../../utils/utils.ts";
 import { db } from "../../db/db.ts";
 import { desc, isNotNull, sql } from "drizzle-orm";
 import { housePointsTable, userTable } from "../../db/schema.ts";
@@ -37,7 +37,7 @@ export default {
         "Join a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.")
     }
 
-    await interaction.editReply(createHouseTemplate(houseLeaderboard, type));
+    await replyHousepoints(interaction, houseLeaderboard, type);
   },
 } as Command;
 
@@ -63,7 +63,8 @@ async function fetchHouseLeaderboard(type: "daily" | "monthly" | "alltime") {
   return houseLeaderboard;
 }
 
-function createHouseTemplate(
+async function replyHousepoints(
+  interaction: ChatInputCommandInteraction,
   houses: { house: House; points: number }[],
   type: string,
 ) {
@@ -82,14 +83,8 @@ function createHouseTemplate(
     const houseData: [string, string][] = houses.map((house, index) => {
       const position = index + 1;
       const emoji = houseEmojis[house.house];
-      const medal =
-        position === 1
-          ? "🥇"
-          : position === 2
-            ? "🥈"
-            : position === 3
-              ? "🥉"
-              : `#${position}`;
+      const medals = ["🥇", "🥈", "🥉"];
+      const medal = medals[position - 1] ?? `#${position}`;
 
       return [`${medal} ${emoji} ${house.house}`, `${house.points} points`];
     });
@@ -103,7 +98,7 @@ function createHouseTemplate(
     ]);
   }
 
-  return {
+  await interaction.editReply({
     embeds: [embed]
-  };
+  });
 }

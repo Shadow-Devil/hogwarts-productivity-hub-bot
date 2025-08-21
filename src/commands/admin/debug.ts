@@ -79,20 +79,6 @@ export default {
         }
       );
 
-      // Channel info in table format
-      const channelTable = formatDataTable([
-        ["Channel Name", voiceChannel.name],
-        ["Channel ID", voiceChannel.id],
-        ["Channel Type", `${voiceChannel.type}`],
-        ["Members Count", `${voiceChannel.members.size}`],
-        ["Timer Status", timerStatus],
-        [
-          "Time Remaining",
-          timeRemaining > 0 ? `${timeRemaining} minutes` : "N/A",
-        ],
-      ]);
-
-
       const embed = new EmbedBuilder({
         title: createHeader(
           "Voice Channel Debug",
@@ -105,7 +91,15 @@ export default {
         fields: [
           {
             name: createHeader("Channel Information", null, "📍", "emphasis"),
-            value: channelTable,
+            // Channel info in table format
+            value: formatDataTable([
+              ["Channel Name", voiceChannel.name],
+              ["Channel ID", voiceChannel.id],
+              ["Channel Type", `${voiceChannel.type}`],
+              ["Members Count", `${voiceChannel.members.size}`],
+              ["Timer Status", timerStatus],
+              ["Time Remaining", timeRemaining > 0 ? `${timeRemaining} minutes` : "N/A"],
+            ]),
             inline: false,
           },
         ]
@@ -149,15 +143,6 @@ export default {
         }
       );
 
-      // Troubleshooting steps in table format
-      const troubleshootingTable = formatDataTable(
-        [
-          ["Step 1", "Join a voice channel"],
-          ["Step 2", "Check Discord permissions"],
-          ["Step 3", "Try leaving and rejoining"],
-          ["Step 4", "Restart Discord if needed"],
-        ],
-      );
 
       await interaction.editReply({
         embeds: [(new EmbedBuilder({
@@ -172,7 +157,15 @@ export default {
           fields: [
             {
               name: createHeader("Troubleshooting Steps", null, "🔧", "emphasis"),
-              value: troubleshootingTable,
+              // Troubleshooting steps in table format
+              value: formatDataTable(
+                [
+                  ["Step 1", "Join a voice channel"],
+                  ["Step 2", "Check Discord permissions"],
+                  ["Step 3", "Try leaving and rejoining"],
+                  ["Step 4", "Restart Discord if needed"],
+                ]
+              ),
               inline: false,
             },
           ]

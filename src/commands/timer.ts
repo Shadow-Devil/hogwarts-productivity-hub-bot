@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, type VoiceBasedChannel, EmbedBuilder } from "discord.js";
 import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
-import { replyError } from "../utils/embedTemplates.ts";
+import { replyError } from "../utils/utils.ts";
 import dayjs from "dayjs";
 import type { Command, VoiceTimer } from "../types.ts";
 import assert from "node:assert";

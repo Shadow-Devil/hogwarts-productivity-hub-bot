@@ -9,7 +9,7 @@ import dayjs from "dayjs";
 import { db, fetchUserTimezone } from "../db/db.ts";
 import { userTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
-import { replyError } from "../utils/embedTemplates.ts";
+import { replyError } from "../utils/utils.ts";
 
 export default {
   data: new SlashCommandBuilder()

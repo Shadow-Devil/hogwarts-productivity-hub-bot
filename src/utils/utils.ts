@@ -1,4 +1,4 @@
-import { type GuildMember } from "discord.js";
+import { ChatInputCommandInteraction, EmbedBuilder, type GuildMember } from "discord.js";
 import assert from "node:assert/strict";
 import type { House } from "../types.ts";
 import { eq, sql, type ExtractTablesWithRelations } from "drizzle-orm";
@@ -6,6 +6,7 @@ import { housePointsTable, userTable } from "../db/schema.ts";
 import type { Schema } from "../db/db.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
+import { BotColors } from "./constants.ts";
 
 export function getHouseFromMember(member: GuildMember | null): House | undefined {
     let house: House | undefined = undefined;
@@ -45,3 +46,18 @@ export async function awardPoints(db: PgTransaction<NodePgQueryResultHKT, Schema
         }).where(eq(housePointsTable.house, house));
     }
 }
+
+export async function replyError(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    ...messages: string[]
+) {
+    await interaction.editReply({
+        embeds: [new EmbedBuilder({
+            color: BotColors.ERROR,
+            title: `❌ ${title}`,
+            description: messages.join("\n"),
+        })]
+    });
+}
+

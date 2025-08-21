@@ -1,5 +1,5 @@
 import { AutocompleteInteraction, ChatInputCommandInteraction, EmbedBuilder, GuildMember, SlashCommandBuilder, User, } from "discord.js";
-import { replyError } from "../utils/embedTemplates.ts";
+import { replyError } from "../utils/utils.ts";
 import dayjs from "dayjs";
 import { db, fetchTasks, fetchUserTimezone } from "../db/db.ts";
 import { taskTable } from "../db/schema.ts";
@@ -147,7 +147,7 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
     );
   }
 
-  const tasks: Task[] = await db.select({
+  const tasks = await db.select({
     title: taskTable.title,
     isCompleted: taskTable.isCompleted,
     completedAt: taskTable.completedAt,
@@ -170,39 +170,9 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
     return;
   }
 
-  const incompleteTasks = tasks.filter(t => !t.isCompleted);
-  const completedTasks = tasks.filter(t => t.isCompleted);
-
-  // Calculate task statistics
-  const totalTasks = tasks.length;
-  const totalCompleted = completedTasks.length;
-  const totalPending = incompleteTasks.length;
-  const totalTaskPoints = totalCompleted * TASK_POINT_SCORE;
-  const completionRate =
-    totalTasks > 0 ? (totalCompleted / totalTasks) * 100 : 0;
-
   // Get daily task limit information
   await interaction.editReply({
-    embeds: [createTaskTemplate(
-      user,
-      {
-        incompleteTasks,
-        completedTasks,
-        stats: {
-          totalTasks,
-          totalCompleted,
-          totalPending,
-          totalTaskPoints,
-          completionRate,
-        },
-      },
-      {
-        showProgress: true,
-        includeRecentCompleted: true,
-        useTableFormat: true,
-        maxRecentCompleted: 5,
-      }
-    )]
+    embeds: [createTaskTemplate(user, tasks)]
   });
   return;
 }
@@ -211,14 +181,14 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
   const taskId = interaction.options.getInteger("task", true);
 
   // Get all incomplete tasks for the user, ordered by creation date
-  const [tasksResult] = await db.select().from(taskTable).where(and(
+  const [tasks] = await db.select().from(taskTable).where(and(
     eq(taskTable.discordId, discordId),
     eq(taskTable.isCompleted, false),
     eq(taskTable.id, taskId),
     gte(taskTable.createdAt, startOfDay))
   ).orderBy(taskTable.createdAt);
 
-  if (tasksResult === undefined) {
+  if (tasks === undefined) {
     return await replyError(
       interaction,
       `Task Completion Failed`,
@@ -226,7 +196,7 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
     );
   }
 
-  const taskToComplete = tasksResult;
+  const taskToComplete = tasks;
   const diffInMinutes = dayjs().diff(dayjs(taskToComplete.createdAt), 'minute')
   if (diffInMinutes < TASK_MIN_TIME) {
     return await replyError(
@@ -246,7 +216,6 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
       })
       .where(eq(taskTable.id, taskToComplete.id));
     await awardPoints(db, discordId, TASK_POINT_SCORE);
-
   });
 
   await interaction.editReply({
@@ -290,74 +259,43 @@ async function removeTask(interaction: ChatInputCommandInteraction, discordId: s
       description: `**Removed task: "${task.title}"**\n\nℹ️ The task has been permanently removed from your to-do list.`,
     })]
   });
-  return;
-
 }
 
 function createTaskTemplate(
   user: User,
-  tasks: {
-    incompleteTasks: Task[];
-    completedTasks: Task[];
-    stats: {
-      totalTasks: number;
-      totalCompleted: number;
-      totalPending: number;
-      totalTaskPoints: number;
-      completionRate: number;
-    },
-  },
-  {
-    showProgress = false,
-    includeRecentCompleted = false,
-    maxRecentCompleted = 5,
-    helpText = "",
-    useTableFormat = true,
-  } = {}
+  tasks: Task[],
 ) {
+  const incompleteTasks = tasks.filter(t => !t.isCompleted);
+  const completedTasks = tasks.filter(t => t.isCompleted);
+  const completionRate = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
+
   const embed = new EmbedBuilder({
     color: BotColors.PRIMARY,
     title: "📋 Personal Task Dashboard",
-  }).setThumbnail(user.displayAvatarURL());
-
-  // Handle enhanced task data structure
-  const incompleteTasks = tasks.incompleteTasks;
-  const completedTasks = tasks.completedTasks;
-  const stats = tasks.stats;
-
-  embed.setDescription(
-    createHeader(
+    description: createHeader(
       "Task Overview",
       `Progress tracking for **${user.username}**`,
       "📋",
       "emphasis"
-    )
-  );
-
-  // Add completion progress bar with enhanced layout
-  if (showProgress) {
-    const progressSection = createProgressSection(
-      "Overall Progress",
-      stats.totalCompleted,
-      stats.totalTasks,
-      {
-        emoji: "📊",
-        style: "detailed",
-        showPercentage: true,
-        showNumbers: true,
-      }
-    );
-
-    const extraInfo = `\n**Completion Rate:** ${stats.completionRate.toFixed(1)}% • **Points Earned:** ${stats.totalTaskPoints}`;
-
-    embed.addFields([
+    ),
+    fields: [
       {
         name: "📊 Progress Tracking",
-        value: progressSection + extraInfo,
+        value: createProgressSection(
+          "Overall Progress",
+          completedTasks.length,
+          tasks.length,
+          {
+            emoji: "📊",
+            style: "detailed",
+            showPercentage: true,
+            showNumbers: true,
+          }
+        ) + `\n**Completion Rate:** ${completionRate.toFixed(1)}% • **Points Earned:** ${completedTasks.length * TASK_POINT_SCORE}`,
         inline: false,
       },
-    ]);
-  }
+    ]
+  }).setThumbnail(user.displayAvatarURL());
 
   // Add pending tasks with enhanced formatting
   if (incompleteTasks.length > 0) {
@@ -365,145 +303,57 @@ function createTaskTemplate(
       const taskNumber = index + 1;
       const createdDate = dayjs(task.createdAt).format("MMM DD");
 
-      if (useTableFormat) {
-        const numberPadded = taskNumber.toString().padStart(2, "0");
-        return [`${numberPadded}. ${task.title}`, `📅 ${createdDate}`] as [string, string];
-      } else {
-        return `\`${taskNumber.toString().padStart(2, "0")}.\` ${task.title}\n     ┕ 📅 ${createdDate}`;
-      }
+      const numberPadded = taskNumber.toString().padStart(2, "0");
+      return [`${numberPadded}. ${task.title}`, `📅 ${createdDate}`] as [string, string];
     });
-
-    let fieldValue;
-    if (useTableFormat) {
-      fieldValue = formatDataTable(taskList);
-    } else {
-      const taskListString = taskList.join("\n\n");
-      fieldValue =
-        taskListString.length > 950
-          ? `\`\`\`md\n${taskListString.substring(0, 947)}...\n\`\`\``
-          : `\`\`\`md\n${taskListString}\n\`\`\``;
-    }
-
-    const fieldName = `📌 Pending Tasks • ${incompleteTasks.length} remaining`;
 
     embed.addFields([
       {
-        name: fieldName,
-        value: fieldValue,
+        name: `📌 Pending Tasks • ${incompleteTasks.length} remaining`,
+        value: formatDataTable(taskList),
         inline: false,
       },
     ]);
   }
 
   // Add recently completed tasks with enhanced formatting
-  if (includeRecentCompleted && completedTasks.length > 0) {
-    const recentCompleted = completedTasks
-      .sort(
-        (a, b) =>
-          (b.completedAt?.getTime() ?? 0) -
-          (a.completedAt?.getTime() ?? 0)
-      )
-      .slice(0, maxRecentCompleted);
+  if (completedTasks.length > 0) {
 
-    if (useTableFormat) {
-      const completedList: [string, string][] = recentCompleted.map((task) => {
-        const completedDate = dayjs(task.completedAt).format("MMM DD");
-        return [`✅ ${task.title}`, `${completedDate} (+${TASK_POINT_SCORE} pts)`];
-      });
+    embed.addFields([
+      {
+        name: `✅ Recently Completed (${completedTasks.length} total)`,
+        value: formatDataTable(
+          completedTasks
+            .sort((a, b) =>
+              (b.completedAt?.getTime() ?? 0) -
+              (a.completedAt?.getTime() ?? 0)
+            )
+            .slice(0, 5)
+            .map((task) => [`✅ ${task.title}`, `${dayjs(task.completedAt).format("MMM DD")} (+${TASK_POINT_SCORE} pts)`])),
+        inline: false,
+      },
+    ]);
 
-      embed.addFields([
-        {
-          name: `✅ Recently Completed (${completedTasks.length} total)`,
-          value: formatDataTable(completedList),
-          inline: false,
-        },
-      ]);
-    } else {
-      const completedList = recentCompleted
-        .map((task) => {
-          const completedDate = dayjs(task.completedAt).format("MMM DD");
-          return `✅ ${task.title}\n*Completed: ${completedDate}* (+${TASK_POINT_SCORE} pts)`;
-        })
-        .join("\n\n");
-
-      embed.addFields([
-        {
-          name: `✅ Recently Completed (${completedTasks.length} total)`,
-          value:
-            completedList.length > 1024
-              ? completedList.substring(0, 1021) + "..."
-              : completedList,
-          inline: false,
-        },
-      ]);
-    }
   }
 
   // Add task statistics with enhanced table format
-  const statsData: [string, number][] = [
-    ["Total Tasks", stats.totalTasks],
-    ["Completed", stats.totalCompleted],
-    ["Pending", stats.totalPending],
-    ["Points Earned", stats.totalTaskPoints],
-  ];
-
-  const statsDisplay = useTableFormat
-    ? formatDataTable(statsData)
-    : formatDataGrid(statsData, { useTable: true });
-
   embed.addFields([
     {
       name: "📊 Task Statistics",
-      value: statsDisplay,
+      value: formatDataTable([
+        ["Total Tasks", tasks.length],
+        ["Completed", completedTasks.length],
+        ["Pending", incompleteTasks.length],
+        ["Points Earned", `${completedTasks.length * TASK_POINT_SCORE} pts`],
+      ]),
       inline: false,
     },
   ]);
 
   // Add helpful footer
   embed.setFooter({
-    text:
-      helpText ||
-      "Use /task complete <number> to complete tasks • /task remove <number> to remove tasks",
+    text: "Use /task complete <number> to complete tasks • /task remove <number> to remove tasks",
   });
 
   return embed;
-}
-
-// 📊 Enhanced Data Grid with Table-Like Structure
-function formatDataGrid(
-  data: Record<string, string | number> | (string | [string, string | number])[],
-  {
-    columns = 2,
-    separator = " • ",
-    prefix = "├─",
-    spacing = true,
-    style = "compact",
-    useTable = false,
-  } = {},
-) {
-  const items = Array.isArray(data)
-    ? data
-    : Object.entries(data).map(([k, v]) => `${k}: ${v}`);
-
-  if (useTable && columns === 2) {
-    return formatDataTable(items);
-  }
-
-  const result = [];
-
-  for (let i = 0; i < items.length; i += columns) {
-    const row = items.slice(i, i + columns);
-
-    if (style === "spacious") {
-      result.push(""); // Add spacing between rows
-    }
-
-    if (spacing && prefix) {
-      result.push(`${prefix} ${row.join(separator)}`);
-    } else {
-      result.push(row.join(separator));
-    }
-  }
-
-  return result.join("\n");
 }
