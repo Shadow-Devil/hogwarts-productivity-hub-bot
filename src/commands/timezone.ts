@@ -14,27 +14,23 @@ import { replyError } from "../utils/utils.ts";
 export default {
   data: new SlashCommandBuilder()
     .setName("timezone")
-    .setDescription(
-      "Manage your timezone settings for accurate daily/monthly resets"
-    )
+    .setDescription("Manage your timezone settings for accurate daily/monthly resets")
     .addStringOption(option =>
       option
         .setName("timezone")
-        .setDescription(
-          "Your timezone (e.g., America/New_York, Europe/London)"
-        ).setAutocomplete(true)
+        .setDescription("Your timezone (e.g., America/New_York, Europe/London)")
+        .setAutocomplete(true)
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
     const newTimezone = interaction.options.getString("timezone");
-    const discordId = interaction.user.id;
 
     if (!newTimezone) {
-      await viewTimezone(interaction, discordId);
+      await viewTimezone(interaction, interaction.user.id);
     } else {
-      await setTimezone(interaction, discordId, newTimezone);
+      await setTimezone(interaction, interaction.user.id, newTimezone);
     }
   },
   async autocomplete(interaction: AutocompleteInteraction) {
@@ -47,6 +43,7 @@ export default {
           value: timeZone,
         });
       }
+      if (timezones.length >= 25) break;
     }
     await interaction.respond(timezones.slice(0, 25));
   }
@@ -54,9 +51,7 @@ export default {
 
 async function viewTimezone(interaction: ChatInputCommandInteraction, discordId: string) {
   const userTimezone = await fetchUserTimezone(discordId);
-  const userLocalTime = dayjs()
-    .tz(userTimezone)
-    .format("HH:mm");
+  const userLocalTime = dayjs().tz(userTimezone).format("HH:mm");
 
   await interaction.editReply({
     embeds: [new EmbedBuilder({
@@ -84,7 +79,7 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
     await interaction.editReply({
       embeds: [new EmbedBuilder({
         color: BotColors.WARNING,
-        title: `ℹ️ No Change Needed`,
+        title: `No Change Needed`,
         description: `Your timezone is already set to \`${newTimezone}\`.`,
       })]
     });
@@ -104,15 +99,11 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
     embeds: [new EmbedBuilder({
       color: BotColors.SUCCESS,
       title: `Timezone Updated Successfully`,
-      fields: [
-        {
-          name: "🕐 Your New Local Time",
-          value: dayjs()
-            .tz(newTimezone)
-            .format("dddd, MMMM D, YYYY [at] h:mm A"),
-          inline: true,
-        }
-      ]
+      fields: [{
+        name: "Your New Local Time",
+        value: dayjs().tz(newTimezone).format("dddd, MMMM D, YYYY [at] h:mm A"),
+        inline: true,
+      }]
     })]
   });
 }

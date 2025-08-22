@@ -2,25 +2,6 @@
 // Provides consistent visual formatting across all commands
 import assert from "node:assert/strict";
 
-// 📊 Progress Bar Generator
-export function createProgressBar(
-  current: number,
-  max: number,
-  length = 10,
-  fillChar = "▓",
-  emptyChar = "░",
-) {
-  const percentage = Math.min(100, Math.max(0, (current / max) * 100));
-  const filled = Math.round((percentage / 100) * length);
-  const empty = length - filled;
-
-  const bar = fillChar.repeat(filled) + emptyChar.repeat(empty);
-  return {
-    bar: `${bar} ${percentage.toFixed(1)}%`,
-    percentage: percentage.toFixed(1),
-  };
-}
-
 // 📋 Create Decorated Header with Enhanced Typography
 export function createHeader(title: string, subtitle: string | null = null, emoji = "🎯", style: "default" | "large" | "emphasis" = "default") {
   const styles = {
@@ -213,37 +194,31 @@ export function createStatsCard(
   return card;
 }
 
-// 📊 Create Progress Section with Visual Enhancement
-export function createProgressSection(
-  title: string,
+// 📊 Progress Bar Generator
+export function createProgressBar(
   current: number,
   max: number,
-  {
-    emoji = "📊",
-    showPercentage = true,
-    showNumbers = true,
-    barLength = 12,
-    style = "default",
-  } = {}
+  length: number,
+  fillChar = "▓",
+  emptyChar = "░",
 ) {
-  const progress = createProgressBar(current, max, barLength);
+  const percentage = Math.min(100, Math.max(0, (current / max) * 100));
+  const filled = Math.round((percentage / 100) * length);
+  const empty = length - filled;
 
-  let section = `### ${emoji} **${title}**\n\n`;
+  const bar = fillChar.repeat(filled) + emptyChar.repeat(empty);
+  return {
+    bar: `${bar} ${percentage.toFixed(1)}%`,
+    percentage: percentage.toFixed(1),
+  };
+}
 
-  if (style === "detailed") {
-    section += `\`\`\`\n${progress.bar}\n\`\`\`\n`;
-    if (showNumbers) {
-      section += `**Progress:** ${current}/${max}`;
-    }
-    if (showPercentage) {
-      section += ` (${progress.percentage}%)`;
-    }
-  } else {
-    section += progress.bar;
-    if (showNumbers) {
-      section += `\n**${current}** / **${max}**`;
-    }
-  }
+// 📊 Create Progress Section with Visual Enhancement
+export function createProgressSection(
+  current: number,
+  max: number,
+) {
+  const progress = createProgressBar(current, max, 10);
 
-  return section;
+  return `\`\`\`\n${progress.bar}\n\`\`\`\n**Progress:** ${current}/${max} (${progress.percentage}%)`;
 }
