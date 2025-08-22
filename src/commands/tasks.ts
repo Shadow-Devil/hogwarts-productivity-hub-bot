@@ -196,10 +196,10 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
       value: completedTasks.sort((a, b) =>
         (b.completedAt.getTime() ?? 0) -
         (a.completedAt.getTime() ?? 0)
-      ).map((task, index) => `${index + 1}. ${task.title} at ${time(task.completedAt, TimestampStyles.ShortTime)} (+${TASK_POINT_SCORE} pts)`).join("\n"),
+      ).map((task, index) => `${index + 1}. ${task.title} at ${time(task.completedAt, TimestampStyles.ShortTime)} (+${TASK_POINT_SCORE} points)`).join("\n"),
     }, {
       name: "Total Points Earned from Tasks",
-      value: `${completedTasks.length * TASK_POINT_SCORE} pts`,
+      value: `${completedTasks.length * TASK_POINT_SCORE} points`,
     });
   }
 

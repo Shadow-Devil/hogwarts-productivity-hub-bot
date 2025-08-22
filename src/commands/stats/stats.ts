@@ -102,9 +102,9 @@ export default {
           {
             name: "💰 Points Earned",
             value: [
-              `**Today:** ${userStats.dailyPoints} pts`,
-              `**This Month:** ${userStats.monthlyPoints} pts`,
-              `**All-Time:** ${userStats.totalPoints} pts`,
+              `**Today:** ${userStats.dailyPoints} points`,
+              `**This Month:** ${userStats.monthlyPoints} points`,
+              `**All-Time:** ${userStats.totalPoints} points`,
             ].join("\n"),
             inline: true,
           },

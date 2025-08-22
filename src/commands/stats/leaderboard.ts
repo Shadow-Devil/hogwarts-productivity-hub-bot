@@ -51,6 +51,7 @@ export default {
       house: userTable.house,
       points: pointsColumn,
       voiceTime: voiceTimeColumn,
+      streak: userTable.streak,
     })
       .from(userTable)
       .where(gte(voiceTimeColumn, 60))
@@ -82,18 +83,18 @@ async function replyLeaderboard(
     type === "monthly" ? "Monthly Leaderboard"
       : "All-Time Leaderboard";
 
-  const leaderboardData: [string, string][] = []
+  const leaderboardData: string[] = []
   for (const [index, entry] of data.entries()) {
     //const hours = timeToHours(entry.voiceTime);
 
-    leaderboardData.push([`#${index + 1} ${userMention(entry.discordId)}`, `• ${entry.points}pts • ${entry.house ? houseEmojis[entry.house] : ""}`]);
+    leaderboardData.push(`#${index + 1} ${userMention(entry.discordId)} • ${entry.points}points • ${entry.house ? houseEmojis[entry.house] : ""}`);
   }
 
   await interaction.editReply({
     embeds: [{
       color: BotColors.PREMIUM,
       title,
-      description: leaderboardData.length !== 0 ? formatDataTable(leaderboardData) : "No rankings available"
+      description: leaderboardData.length !== 0 ? leaderboardData.join("\n") : "No rankings available"
     }]
   });
 }
