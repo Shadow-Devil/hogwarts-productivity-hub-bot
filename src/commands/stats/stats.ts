@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, time, TimestampStyles } from "discord.js";
 import dayjs from "dayjs";
 import { BotColors, MAX_HOURS_PER_DAY } from "../../utils/constants.ts";
 import { db } from "../../db/db.ts";
@@ -6,16 +6,6 @@ import { taskTable, userTable } from "../../db/schema.ts";
 import { and, eq, gt } from "drizzle-orm";
 import assert from "node:assert";
 
-
-/**
- * Format hours for display (consistent formatting across the bot)
- * @param {number} seconds
- * @returns {string} Formatted hours (e.g., "2.5h")
- */
-function formatHours(seconds: number): string {
-    const hours = seconds / 3600;
-    return `${Math.floor(hours)}h ${(Math.floor(hours % 60))}min`;
-}
 
 
 /**
@@ -59,11 +49,9 @@ export default {
             pendingTasksValue = "🎉 **All caught up!**";
         } else {
             // Show all tasks if 3 or fewer
-            const taskList = pendingTasks
-                .slice(0, 3)
-                .map(
-                    (task, index) =>
-                        `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + "..." : task.title}`
+            const taskList = pendingTasks.slice(0, 3)
+                .map((task, index) =>
+                    `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + "..." : task.title}`
                 )
                 .join("\n");
             pendingTasksValue = `**${pendingTasks.length}** tasks:\n${taskList}`;
@@ -84,10 +72,7 @@ export default {
 
 
         const userLocalTime = dayjs().tz(userStats.timezone);
-        const nextMidnight = dayjs()
-            .tz(userStats.timezone)
-            .add(1, "day")
-            .startOf("day");
+        const nextMidnight = dayjs().tz(userStats.timezone).add(1, "day").startOf("day");
         const hoursUntilReset = nextMidnight.diff(userLocalTime, "hour");
 
         await interaction.editReply({
@@ -106,9 +91,9 @@ export default {
                     {
                         name: "🎧 Voice Hours",
                         value: [
-                            `**Today:** ${formatHours(userStats.dailyVoiceTime)}`,
-                            `**This Month:** ${formatHours(userStats.monthlyVoiceTime)}`,
-                            `**All-Time:** ${formatHours(userStats.totalVoiceTime)}`,
+                            `**Today:** ${time(userStats.dailyVoiceTime, TimestampStyles.ShortTime)}`,
+                            `**This Month:** ${time(userStats.monthlyVoiceTime, TimestampStyles.ShortTime)}`,
+                            `**All-Time:** ${time(userStats.totalVoiceTime, TimestampStyles.ShortTime)}`,
                         ].join("\n"),
                         inline: true,
                     },

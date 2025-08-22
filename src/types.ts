@@ -28,9 +28,18 @@ export interface VoiceTimer {
   breakTimeout?: NodeJS.Timeout;
 }
 
-export interface Task {
+export interface IncompleteTask {
   title: string;
-  isCompleted: boolean | null;
-  completedAt: Date | null;
+  isCompleted: false | null;
+  completedAt: null;
   createdAt: Date;
 }
+
+export interface CompletedTask {
+  title: string;
+  isCompleted: true;
+  completedAt: Date;
+  createdAt: Date;
+}
+
+export type Task = IncompleteTask | CompletedTask

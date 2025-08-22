@@ -1,4 +1,4 @@
-import { AutocompleteInteraction, ChatInputCommandInteraction, EmbedBuilder, GuildMember, SlashCommandBuilder, time, TimestampStyles, User, } from "discord.js";
+import { AutocompleteInteraction, bold, ChatInputCommandInteraction, EmbedBuilder, GuildMember, SlashCommandBuilder, time, TimestampStyles, User, } from "discord.js";
 import { replyError } from "../utils/utils.ts";
 import dayjs from "dayjs";
 import { db, fetchTasks, fetchUserTimezone } from "../db/db.ts";
@@ -6,7 +6,7 @@ import { taskTable } from "../db/schema.ts";
 import { and, desc, eq, gte } from "drizzle-orm";
 import { BotColors, DAILY_TASK_LIMIT, TASK_MIN_TIME, TASK_POINT_SCORE } from "../utils/constants.ts";
 import assert from "node:assert/strict";
-import { createHeader, createProgressSection, formatDataTable } from "../utils/visualHelpers.ts";
+import { createProgressSection } from "../utils/visualHelpers.ts";
 import { awardPoints } from "../utils/utils.ts";
 import type { Task } from "../types.ts";
 
@@ -86,7 +86,7 @@ export default {
     }
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
-  // TODO will also old tasks be shown?
+    // TODO will also old tasks be shown?
     const tasks = await fetchTasks(interaction.user.id);
     await interaction.respond(tasks.map(task => ({
       name: task.title,
@@ -153,7 +153,7 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
     createdAt: taskTable.createdAt,
   }).from(taskTable).where(
     and(eq(taskTable.discordId, user.id), gte(taskTable.createdAt, startOfDay))
-  ).orderBy(desc(taskTable.isCompleted), taskTable.createdAt);
+  ).orderBy(desc(taskTable.isCompleted), taskTable.createdAt) as Task[];
 
   assert(tasks.length <= DAILY_TASK_LIMIT, `Expected tasks length to be less than ${DAILY_TASK_LIMIT} but found ${tasks.length}`);
 
@@ -170,7 +170,7 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
   }
 
   const incompleteTasks = tasks.filter(t => !t.isCompleted);
-  const completedTasks = tasks.filter(t => t.isCompleted);
+  const completedTasks = tasks.filter(t => t.isCompleted === true);
 
   const embed = new EmbedBuilder({
     color: BotColors.PRIMARY,
@@ -180,7 +180,7 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
       value: createProgressSection(completedTasks.length, tasks.length),
       inline: false,
     }],
-    footer: { text: "Use `/task complete` to complete tasks • `/task remove` to remove tasks" }
+    footer: { text: "Use /task complete to complete tasks or /task remove to remove tasks" }
   }).setThumbnail(user.displayAvatarURL());
 
   // Add pending tasks
@@ -198,11 +198,11 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
   if (completedTasks.length > 0) {
     embed.addFields([
       {
-        name: `✅ Recently Completed (${completedTasks.length} total)`,
+        name: `✅ Recently Completed • ${completedTasks.length} total`,
         value: completedTasks.sort((a, b) =>
-          (b.completedAt?.getTime() ?? 0) -
-          (a.completedAt?.getTime() ?? 0)
-        ).map((task) => `✅ ${task.title} ${dayjs(task.completedAt).format("HH:mm")} (+${TASK_POINT_SCORE} pts)`).join("\n"),
+          (b.completedAt.getTime() ?? 0) -
+          (a.completedAt.getTime() ?? 0)
+        ).map((task, index) => `${index + 1}. ${task.title} at ${time(task.completedAt, TimestampStyles.ShortTime)} (+${TASK_POINT_SCORE} pts)`).join("\n"),
         inline: false,
       },
       {
@@ -230,22 +230,13 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
   ).orderBy(taskTable.createdAt);
 
   if (tasks === undefined) {
-    return await replyError(
-      interaction,
-      `Task Completion Failed`,
-      `Could not find task. Use \`/tasks view\` to check your tasks`,
-    );
+    return await replyError(interaction, `Task Completion Failed`, `Could not find task. Use \`/tasks view\` to check your tasks`);
   }
 
   const taskToComplete = tasks;
   const diffInMinutes = dayjs().diff(dayjs(taskToComplete.createdAt), 'minute')
   if (diffInMinutes < TASK_MIN_TIME) {
-    return await replyError(
-      interaction,
-      `Task Completion Failed`,
-      `You can only complete tasks that are at least ${TASK_MIN_TIME} minutes old.`,
-      `Please try again in ${TASK_MIN_TIME - diffInMinutes} min.`,
-    );
+    return await replyError(interaction, `Task Completion Failed`, `You can only complete tasks that are at least ${TASK_MIN_TIME} minutes old.`, `Please try again in ${TASK_MIN_TIME - diffInMinutes} min.`);
   }
 
   // Mark task as complete
@@ -263,7 +254,7 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
     embeds: [new EmbedBuilder({
       color: BotColors.SUCCESS,
       title: `🎉 Task Completed Successfully!`,
-      description: `**Completed: "${taskToComplete.title}" (+${TASK_POINT_SCORE} points)**`,
+      description: bold(`Completed: "${taskToComplete.title}" (+${TASK_POINT_SCORE} points)`),
       footer: { text: "🚀 Great job on completing your task! Keep up the momentum and continue building your productivity streak." }
     })]
   });
@@ -289,7 +280,8 @@ async function removeTask(interaction: ChatInputCommandInteraction, discordId: s
     embeds: [new EmbedBuilder({
       color: BotColors.SUCCESS,
       title: `Task Removed Successfully`,
-      description: `**Removed task: "${task.title}"**\n\nℹ️ The task has been permanently removed from your to-do list.`,
+      description: `**Removed task: "${task.title}"**`,
+      footer: { text: "The task has been permanently removed from your to-do list." }
     })]
   });
 }

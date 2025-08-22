@@ -1,6 +1,3 @@
-// Visual Helper Utilities for Discord Bot
-// Provides consistent visual formatting across all commands
-import assert from "node:assert/strict";
 
 // 📋 Create Decorated Header with Enhanced Typography
 export function createHeader(title: string, subtitle: string | null = null, emoji = "🎯", style: "default" | "large" | "emphasis" = "default") {
@@ -49,148 +46,19 @@ export function formatDataTable(pairs: [string, string | number][]) {
   return tableRows.join("\n");
 }
 
-// 📊 Enhanced Centered Data Table with Better Spacing
-function formatCenteredDataTable(
-  data: [string, string][] | string[],
-  {
-    addPadding = true,
-    useBoxFormat = false,
-    centerAlign = true,
-    spacing = "normal", // 'compact', 'normal', 'spacious'
-  } = {},
-) {
-  if (!Array.isArray(data) || data.length === 0) return "";
-
-  // Convert array items to key-value pairs if needed
-  const pairs: [string, string][] = data.map((item) => {
-    if (Array.isArray(item)) {
-      return [item[0], item[1]];
-    } else if (typeof item === "string" && item.includes(":")) {
-      const [key, ...valueParts] = item.split(":");
-      assert(key, `Invalid item format: ${item}`);
-      return [key.trim(), valueParts.join(":").trim()];
-    }
-    return [item, ""];
-  });
-
-  // Calculate column widths for alignment
-  const maxKeyLength = Math.max(...pairs.map(([key]) => key.length));
-  const maxValueLength = Math.max(
-    ...pairs.map(([, value]) => value.length),
-  );
-
-  const keyWidth = Math.min(maxKeyLength + 2, 16);
-  const valueWidth = Math.min(maxValueLength + 2, 12);
-
-  let tableRows: string[];
-
-  if (useBoxFormat) {
-    // Create box-style format with borders
-    const totalWidth = keyWidth + valueWidth + 3;
-    const topBorder = "┌" + "─".repeat(totalWidth) + "┐";
-    const bottomBorder = "└" + "─".repeat(totalWidth) + "┘";
-    const separator = "├" + "─".repeat(totalWidth) + "┤";
-
-    tableRows = [topBorder];
-    pairs.forEach(([key, value], index) => {
-      const paddedKey = centerAlign
-        ? key.padStart((keyWidth + key.length) / 2).padEnd(keyWidth)
-        : key.padEnd(keyWidth);
-      const paddedValue = centerAlign
-        ? value
-          .padStart((valueWidth + value.length) / 2)
-            .padEnd(valueWidth)
-        : value.padEnd(valueWidth);
-      tableRows.push(`│ ${paddedKey} │ **${paddedValue}** │`);
-      if (index < pairs.length - 1 && spacing === "spacious") {
-        tableRows.push(separator);
-      }
-    });
-    tableRows.push(bottomBorder);
-  } else {
-    // Standard format with improved spacing and alignment
-    tableRows = pairs.map(([key, value]) => {
-      const paddedKey = key.padEnd(keyWidth, " ");
-      const formattedValue = `**${value}**`;
-
-      if (addPadding) {
-        return `\`  ${paddedKey}  \` ${formattedValue}`;
-      } else {
-        return `\`${paddedKey}\` ${formattedValue}`;
-      }
-    });
-  }
-
-  // Add spacing between rows based on spacing option
-  if (spacing === "spacious" && !useBoxFormat) {
-    return tableRows.join("\n\n");
-  } else if (spacing === "compact") {
-    return tableRows.join("\n");
-  } else {
-    return tableRows.join("\n");
-  }
-}
-
 // 📊 Create Stats Card with Enhanced Typography
 export function createStatsCard(
   title: string,
-  stats: Record<string, string> | [string, string][],
-  {
-    emoji = "📊",
-    style = "card",
-    highlightMain = false,
-    emphasizeFirst = false,
-  } = {}
+  stats: Record<string, string>,
 ) {
-  let card = "";
+  let card = `### 📊 ${title}\n` + "```\n";
 
-  if (style === "card") {
-    card += `### ${emoji} ${title}\n`;
-    card += "```\n";
+  for (const [key, value] of Object.entries(stats)) {
+    const formattedKey = key.padEnd(15, ".");
+    card += `${formattedKey} ${value}\n`;
+  };
 
-    if (Array.isArray(stats)) {
-      // Handle array format
-      stats.forEach(([key, value]) => {
-        const formattedKey = key.padEnd(15, ".");
-        card += `${formattedKey} ${value}\n`;
-      });
-    } else {
-      // Handle object format
-      Object.entries(stats).forEach(([key, value]) => {
-        const formattedKey = key.padEnd(15, ".");
-        card += `${formattedKey} ${value}\n`;
-      });
-    }
-
-    card += "```";
-  } else if (style === "modern") {
-    card += `## ${emoji} **${title}**\n\n`;
-
-    const entries = Array.isArray(stats) ? stats : Object.entries(stats);
-    entries.forEach(([key, value], index) => {
-      const isMainStat =
-        highlightMain && (key.includes("Total") || key.includes("Points"));
-      const isFirst = emphasizeFirst && index === 0;
-
-      if (isMainStat || isFirst) {
-        card += `**${key}:** # ${value}\n`;
-      } else {
-        card += `**${key}:** ${value}\n`;
-      }
-    });
-  } else if (style === "inline") {
-    // Compact inline format
-    const entries = Array.isArray(stats) ? stats : Object.entries(stats);
-    card = entries.map(([key, value]) => `**${key}:** ${value}`).join(" • ");
-  } else if (style === "table") {
-    // Table format using our enhanced data table
-    const entries = Array.isArray(stats) ? stats : Object.entries(stats);
-    card = formatCenteredDataTable(entries, {
-      addPadding: true,
-      spacing: "normal",
-    });
-  }
-
+  card += "```";
   return card;
 }
 

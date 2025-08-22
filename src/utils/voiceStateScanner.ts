@@ -24,14 +24,17 @@ let scanResults = {
  */
 export async function scanAndStartTracking() {
   if (isScanning) {
-    console.log("🔄 Voice state scan already in progress, skipping...");
+    console.warn("🔄 Voice state scan already in progress, skipping...");
     return scanResults;
   }
 
   isScanning = true;
-  resetScanResults();
-
-  const startTime = Date.now();
+  scanResults = {
+    totalUsersFound: 0,
+    trackingStarted: 0,
+    errors: 0,
+    channels: [],
+  };
 
   const activeVoiceSessions = await db.select({
     discordId: voiceSessionTable.discordId,
@@ -44,28 +47,15 @@ export async function scanAndStartTracking() {
     const guilds = client.guilds.cache;
 
     if (guilds.size === 0) {
-      console.log("⚠️  No guilds found for voice state scanning");
+      console.warn("No guilds found for voice state scanning");
       return scanResults;
     }
 
     for (const [, guild] of guilds) {
-      console.log(`🏰 Scanning guild: ${guild.name} (${guild.id})`);
-      await scanGuildVoiceStates(
-        guild, activeVoiceSessions
-      );
+      await scanGuildVoiceStates(guild, activeVoiceSessions);
     }
 
-    const scanDuration = Date.now() - startTime;
-
-    console.log("📊 VOICE SCAN SUMMARY:");
-    console.log(`   🔍 Scan Duration: ${scanDuration}ms`);
-    console.log(`   👥 Users Found: ${scanResults.totalUsersFound}`);
-    console.log(
-      `   ✅ Tracking Started: ${scanResults.trackingStarted}`
-    );
-    console.log(`   ❌ Errors: ${scanResults.errors}`);
-    console.log(`   🎤 Active Channels: ${scanResults.channels.length}`);
-
+    console.log("VOICE SCAN SUMMARY:");
     if (scanResults.channels.length > 0) {
       console.log("   📍 Voice Channels with Users:");
       scanResults.channels.forEach((channel) => {
@@ -74,20 +64,11 @@ export async function scanAndStartTracking() {
     }
 
     if (scanResults.trackingStarted > 0) {
-      console.log(
-        `   🎯 Successfully started automatic tracking for ${scanResults.trackingStarted} users`
-      );
+      console.log(`   Successfully started automatic tracking for ${scanResults.trackingStarted} users`);
     } else if (scanResults.totalUsersFound > 0) {
-      console.log("   ℹ️  All found users were already being tracked");
+      console.log("   All found users were already being tracked");
     } else {
-      console.log("   📭 No users currently in voice channels");
-    }
-    console.log("═".repeat(40));
-
-    if (scanResults.trackingStarted > 0) {
-      console.log(
-        `🎤 Auto-started tracking for ${scanResults.trackingStarted} users already in voice channels`
-      );
+      console.log("   No users currently in voice channels");
     }
 
     return scanResults;
@@ -113,8 +94,6 @@ async function scanGuildVoiceStates(guild: Guild, activeVoiceSessions: string[])
         channel.members.size > 0 // Has members
     ) as Collection<string, BaseGuildVoiceChannel>;
 
-    console.log(`🎤 Found ${voiceChannels.size} voice channels with users`);
-
     for (const [, channel] of voiceChannels) {
       await scanVoiceChannel(channel, activeVoiceSessions);
     }
@@ -131,8 +110,6 @@ async function scanGuildVoiceStates(guild: Guild, activeVoiceSessions: string[])
 async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessions: string[]) {
   try {
     const members = channel.members;
-
-    console.log(`🔍 Scanning ${channel.name}: ${members.size} users found`);
 
     // Add to scan results
     scanResults.channels.push({
@@ -155,7 +132,6 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
 
         // Check if user already has an active session
         if (discordId in activeVoiceSessions) {
-          console.log(`User ${username} already being tracked, skipping...`);
           continue;
         }
 
@@ -171,9 +147,8 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
         scanResults.trackingStarted++;
         usersStarted.push(username);
 
-        console.log(`✅ Started tracking for ${username} in ${channel.name}`);
       } catch (userError) {
-        console.error(`❌ Error starting tracking for user ${username}:`, userError);
+        console.error(`Error starting tracking for user ${username}:`, userError);
         scanResults.errors++;
       }
     }
@@ -185,20 +160,7 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
       );
     }
   } catch (error) {
-    console.error(`❌ Error scanning voice channel ${channel.name}:`, error);
+    console.error(`Error scanning voice channel ${channel.name}:`, error);
     scanResults.errors++;
   }
 }
-
-/**
- * Reset scan results for a new scan
- */
-function resetScanResults() {
-  scanResults = {
-    totalUsersFound: 0,
-    trackingStarted: 0,
-    errors: 0,
-    channels: [],
-  };
-}
-

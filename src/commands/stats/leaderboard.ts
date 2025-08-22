@@ -1,7 +1,5 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, userMention } from "discord.js";
-import {
-  replyError,
-} from "../../utils/utils.ts";
+import { replyError } from "../../utils/utils.ts";
 import { db } from "../../db/db.ts";
 import { userTable } from "../../db/schema.ts";
 import { desc, gte } from "drizzle-orm";

@@ -76,9 +76,6 @@ export default {
         "Tracking Started": `${scanResults.trackingStarted}`,
         "Channels Scanned": `${scanResults.channels.length}`,
         Errors: `${scanResults.errors}`,
-      },
-      {
-        emphasizeFirst: true,
       }
     );
 

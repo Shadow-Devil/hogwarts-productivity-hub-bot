@@ -73,9 +73,6 @@ export default {
           "Session Age": voiceSession !== undefined ? `${sessionAge} min` : "N/A",
           "Timer Status": timerStatus,
           Phase: timerPhase,
-        },
-        {
-          emphasizeFirst: true,
         }
       );
 
@@ -137,9 +134,6 @@ export default {
           "Active Sessions": `${totalActiveSessions}`,
           Recommendation: "Join Voice Channel",
           "Commands Available": "Limited",
-        },
-        {
-          emphasizeFirst: true,
         }
       );
 
