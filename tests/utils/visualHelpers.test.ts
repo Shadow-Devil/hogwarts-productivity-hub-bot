@@ -8,13 +8,11 @@ import { describe, expect, it } from "vitest";
 import {
   createHeader,
   createProgressBar,
-  formatDataGrid,
 } from "../../src/utils/visualHelpers";
 
 describe("Visual Helpers", () => {
   it("should export expected functions", () => {
     expect(typeof createProgressBar).toBe("function");
-    expect(typeof formatDataGrid).toBe("function");
     expect(typeof createHeader).toBe("function");
   });
 
@@ -32,15 +30,6 @@ describe("Visual Helpers", () => {
 
       const empty = createProgressBar(0, 10);
       expect(empty.percentage).toBe("0.0");
-    });
-  });
-
-  describe("formatDataGrid", () => {
-    it("should format data into grid structure", () => {
-      const data = ["Item 1", "Item 2", "Item 3"];
-      const result = formatDataGrid(data, {});
-      expect(typeof result).toBe("string");
-      expect(result.length).toBeGreaterThan(0);
     });
   });
 

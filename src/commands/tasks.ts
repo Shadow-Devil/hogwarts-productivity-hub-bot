@@ -294,7 +294,8 @@ function createTaskTemplate(
         ) + `\n**Completion Rate:** ${completionRate.toFixed(1)}% • **Points Earned:** ${completedTasks.length * TASK_POINT_SCORE}`,
         inline: false,
       },
-    ]
+    ],
+    footer: { text: "Use /task complete <number> to complete tasks • /task remove <number> to remove tasks" }
   }).setThumbnail(user.displayAvatarURL());
 
   // Add pending tasks with enhanced formatting
@@ -349,11 +350,6 @@ function createTaskTemplate(
       inline: false,
     },
   ]);
-
-  // Add helpful footer
-  embed.setFooter({
-    text: "Use /task complete <number> to complete tasks • /task remove <number> to remove tasks",
-  });
 
   return embed;
 }

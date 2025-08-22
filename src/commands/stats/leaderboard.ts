@@ -59,13 +59,14 @@ export default {
       .orderBy(desc(pointsColumn), desc(voiceTimeColumn))
       .limit(10);
 
-    leaderboard.length === 0 ?
-      await replyError(
+    if (leaderboard.length === 0) {
+      return await replyError(
         interaction,
-          `No Leaderboard Data`,
-          "No data is available for the leaderboard yet. Be the first to start tracking your voice time!"
-        ) :
-      await replyLeaderboard(interaction, leaderboardType, leaderboard);
+        `No Leaderboard Data`,
+        "No data is available for the leaderboard yet. Be the first to start tracking your voice time!"
+      )
+    }
+    await replyLeaderboard(interaction, leaderboardType, leaderboard);
   },
 };
 

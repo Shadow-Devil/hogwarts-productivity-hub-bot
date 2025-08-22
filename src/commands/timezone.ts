@@ -68,14 +68,15 @@ async function viewTimezone(interaction: ChatInputCommandInteraction, discordId:
 
 async function setTimezone(interaction: ChatInputCommandInteraction, discordId: string, newTimezone: string) {
   // Validate timezone
-  if (!dayjs().tz(newTimezone).isValid()) {
+  try {
+    dayjs().tz(newTimezone);
+  } catch (error) {
     return await replyError(
       interaction,
       'Invalid Timezone',
       `The timezone \`${newTimezone}\` is not valid.`,
       "Check [IANA timezone list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)");
   }
-
 
   // Get current timezone for comparison
   const oldTimezone = await fetchUserTimezone(discordId);
@@ -99,24 +100,16 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
     return await replyError(interaction, `Timezone Update Failed`, `Failed to update your timezone. Please try again later.`);
   }
 
-  const userLocalTime = dayjs()
-    .tz(newTimezone)
-    .format("dddd, MMMM D, YYYY [at] h:mm A");
-
-
   await interaction.editReply({
     embeds: [new EmbedBuilder({
       color: BotColors.SUCCESS,
       title: `Timezone Updated Successfully`,
       fields: [
         {
-          name: "Change Summary",
-          value: `From: \`${oldTimezone}\`\nTo: \`${newTimezone}\``,
-          inline: false,
-        },
-        {
           name: "🕐 Your New Local Time",
-          value: userLocalTime,
+          value: dayjs()
+            .tz(newTimezone)
+            .format("dddd, MMMM D, YYYY [at] h:mm A"),
           inline: true,
         }
       ]
