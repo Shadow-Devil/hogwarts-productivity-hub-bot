@@ -72,33 +72,21 @@ async function replyHousepoints(
     type === "monthly" ? "Monthly House Points"
       : "All-Time House Points";
 
+  // Add house rankings
+  const houseData: [string, string][] = houses.map((house, index) => {
+    const position = index + 1;
+    const emoji = houseEmojis[house.house];
+    const medals = ["🥇", "🥈", "🥉"];
+    const medal = medals[position - 1] ?? `#${position}`;
 
-  const embed = new EmbedBuilder({
-    color: BotColors.PRIMARY,
-    title,
+    return [`${medal} ${emoji} ${house.house}`, `${house.points} points`];
   });
 
-  // Add house rankings with enhanced table format
-  if (houses.length > 0) {
-    const houseData: [string, string][] = houses.map((house, index) => {
-      const position = index + 1;
-      const emoji = houseEmojis[house.house];
-      const medals = ["🥇", "🥈", "🥉"];
-      const medal = medals[position - 1] ?? `#${position}`;
-
-      return [`${medal} ${emoji} ${house.house}`, `${house.points} points`];
-    });
-
-    embed.addFields([
-      {
-        name: "House Rankings",
-        value: formatDataTable(houseData),
-        inline: false,
-      },
-    ]);
-  }
-
   await interaction.editReply({
-    embeds: [embed]
+    embeds: [{
+      color: BotColors.PRIMARY,
+      title,
+      description: formatDataTable(houseData)
+    }]
   });
 }

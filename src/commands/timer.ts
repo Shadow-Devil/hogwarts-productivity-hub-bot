@@ -4,7 +4,7 @@ import { replyError } from "../utils/utils.ts";
 import dayjs from "dayjs";
 import type { Command, VoiceTimer } from "../types.ts";
 import assert from "node:assert";
-import { createHeader, createProgressBar } from "../utils/visualHelpers.ts";
+import { createProgressBar } from "../utils/visualHelpers.ts";
 import { BotColors } from "../utils/constants.ts";
 
 
@@ -225,12 +225,12 @@ async function stopTimer(interaction: ChatInputCommandInteraction, activeVoiceTi
   activeVoiceTimers.delete(voiceChannelId);
 
   await interaction.editReply({
-    embeds: [new EmbedBuilder({
+    embeds: [{
       color: BotColors.SUCCESS,
       title: `✅ Timer Stopped Successfully`,
       description: `Your Pomodoro timer in <#${voiceChannelId}> has been stopped. 🚀 No worries - every session counts towards building your productivity habits!`,
       footer: { text: `🌍 Timer stopped | Use /timer start to start a new session` }
-    })]
+    }]
   });
 }
 
@@ -326,11 +326,8 @@ function createTimerTemplate(
       embed = new EmbedBuilder({
         color: BotColors.PRIMARY,
         title: "⏱️ Pomodoro Timer Started",
-        description: createHeader(
-          "Focus Session Active",
+        description: "Focus Session Active\n" +
           "Time to boost your productivity!",
-          "🎯"
-        ),
         fields: [
           {
             name: "📋 Session Configuration",
@@ -373,11 +370,7 @@ function createTimerTemplate(
       embed = new EmbedBuilder({
         color: BotColors.SUCCESS,
         title: "🔔 Work Session Complete!",
-        description: createHeader(
-          "Great Work!",
-          "You've successfully completed your focus session",
-          "🎉"
-        )
+        description: "Great Work!\nYou've successfully completed your focus session",
       });
 
       if (data.breakTime > 0) {
@@ -404,11 +397,7 @@ function createTimerTemplate(
       embed = new EmbedBuilder({
         color: BotColors.INFO,
         title: "🕒 Break Time Is Over!",
-        description: createHeader(
-          "Back to Work!",
-          "Time to get back to your productive flow",
-          "💪"
-        ),
+        description: "Back to Work!\nTime to get back to your productive flow",
         fields: [
           {
             name: "🎯 Ready to Focus",
@@ -429,11 +418,7 @@ function createTimerTemplate(
       embed = new EmbedBuilder({
         color: isBreak ? BotColors.WARNING : BotColors.PRIMARY,
         title: `⏰ Timer Status - ${data.phase.charAt(0).toUpperCase() + data.phase.slice(1)} Phase`,
-        description: createHeader(
-          "Active Session",
-          `Currently in ${data.phase} phase`,
-          isBreak ? "☕" : "🎯"
-        )
+        description: `Active Session\nCurrently in ${data.phase} phase`,
       });
 
       if (showProgress && data.timeRemaining !== undefined) {
@@ -464,11 +449,7 @@ function createTimerTemplate(
       embed = new EmbedBuilder({
         color: BotColors.SECONDARY,
         title: "⏰ Timer Status",
-        description: createHeader(
-          "No Active Timer",
-          `No Pomodoro timer is currently running in <#${data.voiceChannel.id}>`,
-          "💤"
-        ),
+        description: `No Active Timer\nNo Pomodoro timer is currently running in <#${data.voiceChannel.id}>`,
         fields: [
           {
             name: "💡 Get Started",

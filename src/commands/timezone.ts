@@ -54,10 +54,10 @@ async function viewTimezone(interaction: ChatInputCommandInteraction, discordId:
   const userLocalTime = dayjs().tz(userTimezone).format("HH:mm");
 
   await interaction.editReply({
-    embeds: [new EmbedBuilder({
+    embeds: [{
       color: BotColors.SUCCESS,
       description: `Your timezone is currently set to \`${userTimezone}\` (Currently ${userLocalTime})`
-    })]
+    }]
   });
 }
 
@@ -77,11 +77,11 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
   const oldTimezone = await fetchUserTimezone(discordId);
   if (oldTimezone === newTimezone) {
     await interaction.editReply({
-      embeds: [new EmbedBuilder({
+      embeds: [{
         color: BotColors.WARNING,
         title: `No Change Needed`,
         description: `Your timezone is already set to \`${newTimezone}\`.`,
-      })]
+      }]
     });
     return;
   }
@@ -96,7 +96,7 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
   }
 
   await interaction.editReply({
-    embeds: [new EmbedBuilder({
+    embeds: [{
       color: BotColors.SUCCESS,
       title: `Timezone Updated Successfully`,
       fields: [{
@@ -104,6 +104,6 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
         value: dayjs().tz(newTimezone).format("dddd, MMMM D, YYYY [at] h:mm A"),
         inline: true,
       }]
-    })]
+    }]
   });
 }

@@ -1,35 +1,3 @@
-
-// 📋 Create Decorated Header with Enhanced Typography
-export function createHeader(title: string, subtitle: string | null = null, emoji = "🎯", style: "default" | "large" | "emphasis" = "default") {
-  const styles = {
-    default: {
-      titleFormat: `${emoji} **${title}**`,
-      separator: "═",
-      spacing: "\n",
-    },
-    large: {
-      titleFormat: `# ${emoji} ${title}`,
-      separator: "═",
-      spacing: "\n\n",
-    },
-    emphasis: {
-      titleFormat: `## ${emoji} **${title}**`,
-      separator: "▬",
-      spacing: "\n",
-    },
-  };
-
-  const currentStyle = styles[style];
-  let header = currentStyle.titleFormat;
-
-  if (subtitle) {
-    const separatorLength = Math.min(40, title.length + 4);
-    header += `${currentStyle.spacing}${currentStyle.separator.repeat(separatorLength)}${currentStyle.spacing}${subtitle}`;
-  }
-
-  return header;
-}
-
 // 📊 Create Table-Like Structure for Better Space Utilization
 export function formatDataTable(pairs: [string, string | number][]) {
   if (pairs.length === 0) return "";

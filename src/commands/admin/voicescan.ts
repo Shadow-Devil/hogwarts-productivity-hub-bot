@@ -7,7 +7,6 @@ import {
 } from "discord.js";
 import * as voiceStateScanner from "../../utils/voiceStateScanner.ts";
 import {
-  createHeader,
   formatDataTable,
   createStatsCard,
 } from "../../utils/visualHelpers.ts";
@@ -26,47 +25,35 @@ export default {
     // Check if scan is already running
     if (voiceStateScanner.isScanning) {
       await interaction.editReply({
-        embeds: [new EmbedBuilder({
+        embeds: [{
           title: "🔄 Voice Scan Already Running",
           description: "A voice state scan is already in progress. Please wait for it to complete.",
           color: 0xfee75c,
-          fields: [
-            {
-              name: "💡 Get Started",
-              value: "The scan will begin immediately and show results when complete.",
-              inline: false,
-            }
-          ]
-        })]
+          fields: [{
+            name: "💡 Get Started",
+            value: "The scan will begin immediately and show results when complete.",
+            inline: false,
+          }]
+        }]
       });
       return;
     }
 
     // Start the scan notification
     await interaction.editReply({
-      embeds: [new EmbedBuilder({
+      embeds: [{
         title: "🔍 Starting Voice State Scan",
         description: "Scanning all voice channels for users to automatically start tracking...",
         color: 0x3498db,
-        fields: [
-          {
-            name: "⚡ Process",
-            value: "This may take a few moments depending on server size.",
-            inline: false,
-          }
-        ]
-      })]
+        fields: [{
+          name: "⚡ Process",
+          value: "This may take a few moments depending on server size.",
+          inline: false,
+        }]
+      }]
     });
 
     const scanResults = await voiceStateScanner.scanAndStartTracking();
-
-    // Create comprehensive results embed
-    const resultsEmbed = new EmbedBuilder()
-      .setTitle(
-        createHeader("Voice Scan Results", "Scan Completed", "🎯", "large")
-      )
-      .setColor(scanResults.errors > 0 ? 0xfee75c : 0x57f287)
-      .setTimestamp();
 
     // Scan statistics
     const scanStats = createStatsCard(
@@ -79,6 +66,16 @@ export default {
       }
     );
 
+    const resultsEmbed = new EmbedBuilder({
+      title: "Voice Scan Results",
+      color: scanResults.errors > 0 ? 0xfee75c : 0x57f287,
+      footer: {
+        text:
+          scanResults.errors > 0
+            ? `Scan completed with ${scanResults.errors} errors - check logs for details`
+            : "Voice state scan completed successfully",
+      }
+    });
     // Set description based on results
     if (scanResults.trackingStarted > 0) {
       resultsEmbed.setDescription(
@@ -103,29 +100,14 @@ export default {
         `${channel.userCount} users`,
       ] as const);
 
-      const channelTable = formatDataTable(channelData);
-
       resultsEmbed.addFields([
         {
-          name: createHeader(
-            "Active Voice Channels",
-            null,
-            "🎤",
-            "emphasis"
-          ),
-          value: channelTable,
+          name: "Active Voice Channels",
+          value: formatDataTable(channelData),
           inline: false,
         },
       ]);
     }
-
-    // Set footer based on errors
-    resultsEmbed.setFooter({
-      text:
-        scanResults.errors > 0
-          ? `Scan completed with ${scanResults.errors} errors - check logs for details`
-          : "Voice state scan completed successfully",
-    });
 
     await interaction.editReply({ embeds: [resultsEmbed] });
   },

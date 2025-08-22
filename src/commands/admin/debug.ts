@@ -2,10 +2,10 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
   ChatInputCommandInteraction,
+  type APIEmbedField,
 } from "discord.js";
 import { getUserVoiceChannel } from "../../utils/voiceUtils.ts";
 import {
-  createHeader,
   formatDataTable,
   createStatsCard,
 } from "../../utils/visualHelpers.ts";
@@ -14,6 +14,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../../db/db.ts";
 import type { Command } from "../../types.ts";
 import assert from "node:assert";
+import dayjs from "dayjs";
 
 export default {
   data: new SlashCommandBuilder()
@@ -47,9 +48,7 @@ export default {
       if (activeVoiceTimers.has(voiceChannel.id)) {
         const timer = activeVoiceTimers.get(voiceChannel.id);
         assert(timer !== undefined, "Active timer should exist for this channel");
-        timeRemaining = Math.ceil(
-          (timer.endTime.getTime() - Date.now()) / 60000
-        );
+        timeRemaining = dayjs(timer.endTime).diff(dayjs(), 'minutes');
         timerStatus = "Active timer detected";
         timerPhase = timer.phase.toUpperCase();
       }
@@ -67,7 +66,6 @@ export default {
       const debugStats = createStatsCard(
         "Debug Status",
         {
-          Detection: "✅ Working",
           "Channel Members": `${voiceChannel.members.size}`,
           "Session Tracking": sessionTracked,
           "Session Age": voiceSession !== undefined ? `${sessionAge} min` : "N/A",
@@ -76,51 +74,42 @@ export default {
         }
       );
 
-      const embed = new EmbedBuilder({
-        title: createHeader(
-          "Voice Channel Debug",
-          "Detection Working",
-          "🔍",
-          "large"
-        ),
-        color: 0x00ff00,
-        description: `Voice channel detection is working correctly!\n\n${debugStats}`,
-        fields: [
-          {
-            name: createHeader("Channel Information", null, "📍", "emphasis"),
-            // Channel info in table format
-            value: formatDataTable([
-              ["Channel Name", voiceChannel.name],
-              ["Channel ID", voiceChannel.id],
-              ["Channel Type", `${voiceChannel.type}`],
-              ["Members Count", `${voiceChannel.members.size}`],
-              ["Timer Status", timerStatus],
-              ["Time Remaining", timeRemaining > 0 ? `${timeRemaining} minutes` : "N/A"],
-            ]),
-            inline: false,
-          },
-        ]
-      });
+      const fields: APIEmbedField[] = [{
+        name: "Channel Information",
+        // Channel info in table format
+        value: formatDataTable([
+          ["Channel Name", voiceChannel.name],
+          ["Channel ID", voiceChannel.id],
+          ["Channel Type", `${voiceChannel.type}`],
+          ["Members Count", `${voiceChannel.members.size}`],
+          ["Timer Status", timerStatus],
+          ["Time Remaining", timeRemaining > 0 ? `${timeRemaining} minutes` : "N/A"],
+        ]),
+        inline: false,
+      },];
 
       if (activeVoiceTimers.has(voiceChannel.id)) {
-        embed.addFields([
-          {
-            name: createHeader("Active Timer", null, "⏳", "emphasis"),
-            value: `**Phase:** ${timerPhase}\n**Time Remaining:** ${timeRemaining} minutes`,
-            inline: false,
-          },
-        ]);
+        fields.push({
+          name: "Active Timer",
+          value: `**Phase:** ${timerPhase}\n**Time Remaining:** ${timeRemaining} minutes`,
+          inline: false,
+        });
       } else {
-        embed.addFields([
-          {
-            name: createHeader("Timer Status", null, "✅", "emphasis"),
-            value: "No active timer - Ready for new session!",
-            inline: false,
-          },
-        ]);
+        fields.push({
+          name: "Timer Status",
+          value: "No active timer - Ready for new session!",
+          inline: false,
+        });
       }
 
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({
+        embeds: [{
+          title: "Voice Channel Debug",
+          color: 0x00ff00,
+          description: `Voice channel detection is working correctly!\n\n${debugStats}`,
+          fields
+        }]
+      });
     } else {
       console.log(`User ${interaction.user.tag} is not in any voice channel`);
 
@@ -139,31 +128,25 @@ export default {
 
 
       await interaction.editReply({
-        embeds: [(new EmbedBuilder({
+        embeds: [{
           color: 0xff0000,
-          title: createHeader(
-            "Voice Channel Debug",
-            "No Channel Detected",
-            "🔍",
-            "large"
-          ),
+          title: "Voice Channel Debug",
           description: `No voice channel detected for your user.\n\n${debugStats}`,
-          fields: [
-            {
-              name: createHeader("Troubleshooting Steps", null, "🔧", "emphasis"),
-              // Troubleshooting steps in table format
-              value: formatDataTable(
-                [
-                  ["Step 1", "Join a voice channel"],
-                  ["Step 2", "Check Discord permissions"],
-                  ["Step 3", "Try leaving and rejoining"],
-                  ["Step 4", "Restart Discord if needed"],
-                ]
-              ),
-              inline: false,
-            },
+          fields: [{
+            name: "Troubleshooting Steps",
+            // Troubleshooting steps in table format
+            value: formatDataTable(
+              [
+                ["Step 1", "Join a voice channel"],
+                ["Step 2", "Check Discord permissions"],
+                ["Step 3", "Try leaving and rejoining"],
+                ["Step 4", "Restart Discord if needed"],
+              ]
+            ),
+            inline: false,
+          },
           ]
-        }))]
+        }]
       });
     }
   },

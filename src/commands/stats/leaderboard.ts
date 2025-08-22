@@ -91,16 +91,14 @@ async function replyLeaderboard(
   }
 
   await interaction.editReply({
-    embeds: [new EmbedBuilder({
+    embeds: [{
       color: BotColors.PREMIUM,
       title,
-      fields: [
-        {
-          name: "🏆 Top Rankings",
-          value: leaderboardData.length !== 0 ? formatDataTable(leaderboardData) : "No rankings available",
-          inline: false,
-        },
-      ]
-    })]
+      fields: [{
+        name: "🏆 Top Rankings",
+        value: leaderboardData.length !== 0 ? formatDataTable(leaderboardData) : "No rankings available",
+        inline: false,
+      }]
+    }]
   });
 }

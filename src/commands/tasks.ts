@@ -1,4 +1,4 @@
-import { AutocompleteInteraction, bold, ChatInputCommandInteraction, EmbedBuilder, GuildMember, SlashCommandBuilder, time, TimestampStyles, User, } from "discord.js";
+import { AutocompleteInteraction, bold, ChatInputCommandInteraction, Embed, EmbedBuilder, GuildMember, SlashCommandBuilder, time, TimestampStyles, User, type APIEmbedField, type EmbedData, type EmbedField, } from "discord.js";
 import { replyError } from "../utils/utils.ts";
 import dayjs from "dayjs";
 import { db, fetchTasks, fetchUserTimezone } from "../db/db.ts";
@@ -104,14 +104,14 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
     const resetTime = dayjs().tz(userTimezone).add(1, "day").startOf("day").toDate();
 
     await interaction.editReply({
-      embeds: [new EmbedBuilder({
+      embeds: [{
         color: BotColors.WARNING,
         title: `Daily Task Limit Reached`,
         description: `You have reached your daily task limit of ${DAILY_TASK_LIMIT} tasks.\n` +
           "You can add more tasks tomorrow after the daily reset or by removing existing tasks(`/tasks remove`).\n" +
           `**Your Daily Reset:** ${time(resetTime, TimestampStyles.RelativeTime)}`,
         footer: { text: "Tip: You can change your timezone with `/timezone` if your daily reset is not at midnight" }
-      })]
+      }]
     });
     return;
   }
@@ -120,7 +120,7 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
   assert(task !== undefined, "Task should be created successfully");
 
   await interaction.editReply({
-    embeds: [new EmbedBuilder({
+    embeds: [{
       color: BotColors.SUCCESS,
       title: `Task Added Successfully!`,
       description: `**${task.title}**\n\n`,
@@ -128,7 +128,7 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
         text: "Your task has been added to your personal to-do list and is ready for completion.\n" +
           "After you are done you can finish it with `/task complete`"
       }
-    })]
+    }]
   });
 }
 
@@ -159,12 +159,15 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
 
   if (tasks.length === 0) {
     await interaction.editReply({
-      embeds: [new EmbedBuilder({
+      embeds: [{
         color: BotColors.INFO,
         title: "📋 Your Task Dashboard",
         description: "Ready to get productive?\nUse `/tasks add` to create your first task!",
-        footer: { text: `Tip: Completing tasks earns you ${TASK_POINT_SCORE} points each!` }
-      }).setThumbnail(user.displayAvatarURL())]
+        footer: { text: `Tip: Completing tasks earns you ${TASK_POINT_SCORE} points each!` },
+        thumbnail: {
+          url: user.displayAvatarURL(),
+        }
+      }]
     });
     return;
   }
@@ -172,49 +175,44 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
   const incompleteTasks = tasks.filter(t => !t.isCompleted);
   const completedTasks = tasks.filter(t => t.isCompleted === true);
 
-  const embed = new EmbedBuilder({
-    color: BotColors.PRIMARY,
-    title: `📋 Task Dashboard for **${user.username}**`,
-    fields: [{
-      name: "📊 Progress Tracking",
-      value: createProgressSection(completedTasks.length, tasks.length),
-      inline: false,
-    }],
-    footer: { text: "Use /task complete to complete tasks or /task remove to remove tasks" }
-  }).setThumbnail(user.displayAvatarURL());
+  const fields: APIEmbedField[] = [{
+    name: "📊 Progress Tracking",
+    value: createProgressSection(completedTasks.length, tasks.length),
+  }]
 
   // Add pending tasks
   if (incompleteTasks.length > 0) {
-    embed.addFields([
-      {
-        name: `📌 Pending Tasks • ${incompleteTasks.length} remaining`,
-        value: incompleteTasks.map((task, index) => `${index + 1}. ${task.title}`).join("\n"),
-        inline: false,
-      },
-    ]);
+    fields.push({
+      name: `📌 Pending Tasks • ${incompleteTasks.length} remaining`,
+      value: incompleteTasks.map((task, index) => `${index + 1}. ${task.title}`).join("\n"),
+      inline: false,
+    });
   }
 
   // Add completed tasks
   if (completedTasks.length > 0) {
-    embed.addFields([
-      {
-        name: `✅ Recently Completed • ${completedTasks.length} total`,
-        value: completedTasks.sort((a, b) =>
-          (b.completedAt.getTime() ?? 0) -
-          (a.completedAt.getTime() ?? 0)
-        ).map((task, index) => `${index + 1}. ${task.title} at ${time(task.completedAt, TimestampStyles.ShortTime)} (+${TASK_POINT_SCORE} pts)`).join("\n"),
-        inline: false,
-      },
-      {
-        name: "Total Points Earned from Tasks",
-        value: `${completedTasks.length * TASK_POINT_SCORE} pts`,
-      }
-    ]);
+    fields.push({
+      name: `✅ Recently Completed • ${completedTasks.length} total`,
+      value: completedTasks.sort((a, b) =>
+        (b.completedAt.getTime() ?? 0) -
+        (a.completedAt.getTime() ?? 0)
+      ).map((task, index) => `${index + 1}. ${task.title} at ${time(task.completedAt, TimestampStyles.ShortTime)} (+${TASK_POINT_SCORE} pts)`).join("\n"),
+    }, {
+      name: "Total Points Earned from Tasks",
+      value: `${completedTasks.length * TASK_POINT_SCORE} pts`,
+    });
   }
 
-  // Get daily task limit information
   await interaction.editReply({
-    embeds: [embed]
+    embeds: [{
+      color: BotColors.PRIMARY,
+      title: `📋 Task Dashboard for **${user.username}**`,
+      fields,
+      footer: { text: "Use /task complete to complete tasks or /task remove to remove tasks" },
+      thumbnail: {
+        url: user.displayAvatarURL()
+      }
+    }]
   });
 }
 
@@ -251,12 +249,12 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
   });
 
   await interaction.editReply({
-    embeds: [new EmbedBuilder({
+    embeds: [{
       color: BotColors.SUCCESS,
       title: `🎉 Task Completed Successfully!`,
       description: bold(`Completed: "${taskToComplete.title}" (+${TASK_POINT_SCORE} points)`),
       footer: { text: "🚀 Great job on completing your task! Keep up the momentum and continue building your productivity streak." }
-    })]
+    }]
   });
 }
 
@@ -277,11 +275,11 @@ async function removeTask(interaction: ChatInputCommandInteraction, discordId: s
   }
 
   await interaction.editReply({
-    embeds: [new EmbedBuilder({
+    embeds: [{
       color: BotColors.SUCCESS,
       title: `Task Removed Successfully`,
       description: `**Removed task: "${task.title}"**`,
       footer: { text: "The task has been permanently removed from your to-do list." }
-    })]
+    }]
   });
 }
