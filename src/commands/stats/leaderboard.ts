@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, userMention } from "discord.js";
-import { replyError } from "../../utils/utils.ts";
+import { replyError, timeToHours } from "../../utils/utils.ts";
 import { db } from "../../db/db.ts";
 import { userTable } from "../../db/schema.ts";
 import { desc, gte } from "drizzle-orm";
@@ -84,21 +84,16 @@ async function replyLeaderboard(
 
   const leaderboardData: [string, string][] = []
   for (const [index, entry] of data.entries()) {
-    const hours = entry.voiceTime ? Math.floor(entry.voiceTime / 3600) : "0";
-    const minutes = entry.voiceTime ? Math.floor((entry.voiceTime % 3600) / 60) : "0";
+    //const hours = timeToHours(entry.voiceTime);
 
-    leaderboardData.push([`#${index + 1} ${userMention(entry.discordId)}`, `${hours}h ${minutes}min • ${entry.points}pts • ${entry.house ? houseEmojis[entry.house] : ""}`]);
+    leaderboardData.push([`#${index + 1} ${userMention(entry.discordId)}`, `• ${entry.points}pts • ${entry.house ? houseEmojis[entry.house] : ""}`]);
   }
 
   await interaction.editReply({
     embeds: [{
       color: BotColors.PREMIUM,
       title,
-      fields: [{
-        name: "🏆 Top Rankings",
-        value: leaderboardData.length !== 0 ? formatDataTable(leaderboardData) : "No rankings available",
-        inline: false,
-      }]
+      description: leaderboardData.length !== 0 ? formatDataTable(leaderboardData) : "No rankings available"
     }]
   });
 }

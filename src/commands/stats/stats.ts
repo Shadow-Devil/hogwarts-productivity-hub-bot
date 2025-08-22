@@ -5,6 +5,7 @@ import { db } from "../../db/db.ts";
 import { taskTable, userTable } from "../../db/schema.ts";
 import { and, eq, gt } from "drizzle-orm";
 import assert from "node:assert";
+import { timeToHours } from "../../utils/utils.ts";
 
 
 
@@ -91,15 +92,10 @@ export default {
           {
             name: "🎧 Voice Hours",
             value: [
-              `**Today:** ${time(userStats.dailyVoiceTime, TimestampStyles.ShortTime)}`,
-              `**This Month:** ${time(userStats.monthlyVoiceTime, TimestampStyles.ShortTime)}`,
-              `**All-Time:** ${time(userStats.totalVoiceTime, TimestampStyles.ShortTime)}`,
+              `**Today:** ${timeToHours(userStats.dailyVoiceTime)}`,
+              `**This Month:** ${timeToHours(userStats.monthlyVoiceTime)}`,
+              `**All-Time:** ${timeToHours(userStats.totalVoiceTime)}`,
             ].join("\n"),
-            inline: true,
-          },
-          {
-            name: "⏳ Daily Limit (15h)",
-            value: formatDailyLimitStatus(userStats.dailyVoiceTime, userStats.timezone),
             inline: true,
           },
           // 4. Points Breakdown (today, this month, all-time)
@@ -135,3 +131,5 @@ export default {
     });
   },
 };
+
+
