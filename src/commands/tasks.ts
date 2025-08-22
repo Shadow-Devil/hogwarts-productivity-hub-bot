@@ -110,7 +110,7 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
         description: `You have reached your daily task limit of ${DAILY_TASK_LIMIT} tasks.\n` +
           "You can add more tasks tomorrow after the daily reset or by removing existing tasks(`/tasks remove`).\n" +
           `**Your Daily Reset:** ${time(resetTime, TimestampStyles.RelativeTime)}`,
-        footer: { text: "Tip: You can change your timezone with `/timezone` if your daily reset is not at midnight" }
+        footer: { text: "Tip: You can change your timezone with /timezone if your daily reset is not at midnight" }
       }]
     });
     return;
