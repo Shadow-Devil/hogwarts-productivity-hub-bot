@@ -16,10 +16,10 @@ import { timeToHours } from "../../utils/utils.ts";
  */
 function formatDailyLimitStatus(dailyVoiceTime: number, timezone: string): string {
   if (dailyVoiceTime / 3600 >= MAX_HOURS_PER_DAY) {
-    return "🚫 **Limit Reached**";
+    return "**Limit Reached** 🚫";
   }
 
-  return `⏰ **${dayjs().tz(timezone).endOf('day').diff(dayjs().tz(timezone), 'hour')}h** until reset (resets at midnight)`;
+  return `**${dayjs().tz(timezone).endOf('day').diff(dayjs().tz(timezone), 'hour')}h** until reset (resets at midnight) ⏰`;
 }
 
 
@@ -45,9 +45,9 @@ export default {
     let pendingTasksValue;
 
     if (userTasks.length === 0) {
-      pendingTasksValue = "🎯 **No tasks yet**";
+      pendingTasksValue = "**No tasks yet** 🎯";
     } else if (pendingTasks.length === 0) {
-      pendingTasksValue = "🎉 **All caught up!**";
+      pendingTasksValue = "**All caught up!** 🎉";
     } else {
       // Show all tasks if 3 or fewer
       const taskList = pendingTasks.slice(0, 3)
@@ -64,11 +64,11 @@ export default {
     // Personalized greeting based on streak
     let greeting = "";
     if (userStats.streak >= 7) {
-      greeting = `🔥 Hey ${userStats.username}! You're on a ${userStats.streak}-day streak!`;
+      greeting = `Hey ${userStats.username}! You're on a ${userStats.streak}-day streak! 🔥`;
     } else if (userStats.streak > 0) {
-      greeting = `💪 Great work ${userStats.username}! ${userStats.streak} days and counting!`;
+      greeting = `Great work ${userStats.username}! ${userStats.streak} days and counting! 💪`;
     } else {
-      greeting = `👋 Hi ${userStats.username}! Ready to start your productivity journey?`;
+      greeting = `Hi ${userStats.username}! Ready to start your productivity journey? 👋`;
     }
 
 
@@ -84,7 +84,7 @@ export default {
         fields: [
           // 1. Streak Information
           {
-            name: "🔥 Current Streak",
+            name: "Current Streak 🔥",
             value: `**${userStats.streak}** days`,
             inline: true,
           },
@@ -100,7 +100,7 @@ export default {
           },
           // 4. Points Breakdown (today, this month, all-time)
           {
-            name: "💰 Points Earned",
+            name: "Points Earned 💰",
             value: [
               `**Today:** ${userStats.dailyPoints} points`,
               `**This Month:** ${userStats.monthlyPoints} points`,
@@ -109,7 +109,7 @@ export default {
             inline: true,
           },
           {
-            name: "📋 Pending Tasks",
+            name: "Pending Tasks 📋",
             value: pendingTasksValue,
             inline: true,
           },
@@ -125,7 +125,7 @@ export default {
         },
         // Add timezone context to footer for user awareness
         footer: {
-          text: `🌍 Your timezone: ${userStats.timezone} | Local time: ${userLocalTime.format("h:mm A")} | Daily reset in ${hoursUntilReset}h`,
+          text: `Your timezone: ${userStats.timezone} | Local time: ${userLocalTime.format("h:mm A")} | Daily reset in ${hoursUntilReset}h 🌍`,
         }
       }]
     });
