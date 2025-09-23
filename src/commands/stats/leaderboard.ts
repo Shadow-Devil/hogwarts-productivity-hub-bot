@@ -51,7 +51,7 @@ export default {
       house: userTable.house,
       points: pointsColumn,
       voiceTime: voiceTimeColumn,
-      streak: userTable.streak,
+      streakVoice: userTable.streakVoice,
     })
       .from(userTable)
       .where(gte(voiceTimeColumn, 60))

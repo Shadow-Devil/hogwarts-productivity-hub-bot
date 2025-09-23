@@ -80,8 +80,8 @@ async function processDailyResets() {
           dailyPoints: 0,
           dailyVoiceTime: 0,
           lastDailyReset: new Date(),
-          streak: sql`CASE WHEN ${userTable.isStreakUpdatedToday} = false THEN 0 ELSE ${userTable.streak} END`,
-          isStreakUpdatedToday: false,
+          streakVoice: sql`CASE WHEN ${userTable.isStreakVoiceUpdatedToday} = false THEN 0 ELSE ${userTable.streakVoice} END`,
+          isStreakVoiceUpdatedToday: false,
         }
       ).where(inArray(userTable.discordId, usersNeedingReset))
 

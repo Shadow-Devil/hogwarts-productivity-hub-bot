@@ -63,10 +63,10 @@ export default {
 
     // Personalized greeting based on streak
     let greeting = "";
-    if (userStats.streak >= 7) {
-      greeting = `Hey ${userStats.username}! You're on a ${userStats.streak}-day streak! 🔥`;
-    } else if (userStats.streak > 0) {
-      greeting = `Great work ${userStats.username}! ${userStats.streak} days and counting! 💪`;
+    if (userStats.streakVoice >= 7) {
+      greeting = `Hey ${userStats.username}! You're on a ${userStats.streakVoice}-day streak! 🔥`;
+    } else if (userStats.streakVoice > 0) {
+      greeting = `Great work ${userStats.username}! ${userStats.streakVoice} days and counting! 💪`;
     } else {
       greeting = `Hi ${userStats.username}! Ready to start your productivity journey? 👋`;
     }
@@ -85,7 +85,7 @@ export default {
           // 1. Streak Information
           {
             name: "Current Streak 🔥",
-            value: `**${userStats.streak}** days`,
+            value: `**${userStats.streakVoice}** days`,
             inline: true,
           },
           // 2. Voice Channel Hours (today, this month, all-time)

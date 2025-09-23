@@ -111,17 +111,17 @@ export async function endVoiceSession(
       totalVoiceTime: sql`${userTable.totalVoiceTime} + ${duration}`,
     }).where(eq(userTable.discordId, session.discordId)).returning({
       dailyVoiceTime: userTable.dailyVoiceTime,
-      isStreakUpdatedToday: userTable.isStreakUpdatedToday,
+      isStreakUpdatedToday: userTable.isStreakVoiceUpdatedToday,
     });
     assert(user !== undefined, `User not found for Discord ID ${session.discordId}`);
 
     // update streak
     if (user.dailyVoiceTime >= MIN_DAILY_MINUTES_FOR_STREAK && !user.isStreakUpdatedToday) {
       const streakResult = await db.update(userTable).set({
-        streak: sql`${userTable.streak} + 1`,
-        isStreakUpdatedToday: true,
+        streakVoice: sql`${userTable.streakVoice} + 1`,
+        isStreakVoiceUpdatedToday: true,
       }).where(eq(userTable.discordId, session.discordId)).returning({
-        streak: userTable.streak,
+        streakVoice: userTable.streakVoice,
       });
 
       if (streakResult.length === 0) {
