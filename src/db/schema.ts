@@ -22,10 +22,12 @@ export const userTable = pgTable("user", {
     monthlyVoiceTime: integer().default(0).notNull(),
     totalVoiceTime: integer().default(0).notNull(),
 
-    streakVoice: integer().default(0).notNull(),
-    isStreakVoiceUpdatedToday: boolean().default(false).notNull(),
+    voiceStreak: integer().default(0).notNull(),
+    isVoiceStreakUpdatedToday: boolean().default(false).notNull(),
 
-
+    dailyMessagesSent: integer().default(0).notNull(),
+    messageStreak: integer(),
+    isMessageStreakUpdatedToday: boolean().default(false).notNull(),
 });
 
 export const voiceSessionTable = pgTable("voice_session", {

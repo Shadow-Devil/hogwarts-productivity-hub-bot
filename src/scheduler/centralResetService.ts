@@ -2,10 +2,11 @@ import cron from "node-cron";
 import dayjs from "dayjs";
 import { db, fetchOpenVoiceSessions } from "../db/db.ts";
 import { userTable } from "../db/schema.ts";
-import { inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
 import { wrapWithAlerting } from "../utils/alerting.ts";
 import { resetExecutionTimer } from "../monitoring.ts";
+import { client } from "../client.ts";
 
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
 
@@ -75,13 +76,26 @@ async function processDailyResets() {
 
       await Promise.all(usersInVoiceSessions.map(session => endVoiceSession(session, db)));
 
+      await db.select().from(userTable).where(and(inArray(userTable.discordId, usersNeedingReset), eq(userTable.isMessageStreakUpdatedToday, false), isNotNull(userTable.messageStreak))).then(async rows => {
+        for (const row of rows) {
+          console.log(`Resetting message streak for user ${row.discordId} due to inactivity`);
+          const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null)).filter(member => member !== null);
+          for await (const member of members) {
+            member?.setNickname(member?.nickname?.replace(/⚡\d+$/, "").trim() || member?.user.username);
+          }
+        };
+      });
+
       const result = await db.update(userTable).set(
         {
           dailyPoints: 0,
           dailyVoiceTime: 0,
           lastDailyReset: new Date(),
-          streakVoice: sql`CASE WHEN ${userTable.isStreakVoiceUpdatedToday} = false THEN 0 ELSE ${userTable.streakVoice} END`,
-          isStreakVoiceUpdatedToday: false,
+          voiceStreak: sql`CASE WHEN ${userTable.isVoiceStreakUpdatedToday} = false THEN 0 ELSE ${userTable.voiceStreak} END`,
+          isVoiceStreakUpdatedToday: false,
+          messageStreak: sql`CASE WHEN ${userTable.isMessageStreakUpdatedToday} = false AND ${userTable.messageStreak} IS NOT NULL THEN 0 ELSE ${userTable.messageStreak} END`,
+          isMessageStreakUpdatedToday: false,
+          dailyMessagesSent: 0,
         }
       ).where(inArray(userTable.discordId, usersNeedingReset))
 

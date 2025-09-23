@@ -8,6 +8,7 @@ import { Events, SlashCommandSubcommandBuilder, type Client } from "discord.js";
 import * as VoiceStateUpdate from "./events/voiceStateUpdate.ts";
 import * as ClientReady from "./events/clientReady.ts";
 import * as InteractionCreate from "./events/interactionCreate.ts";
+import * as MessageCreate from "./events/messageCreate.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
@@ -44,6 +45,7 @@ function registerEvents(client: Client) {
   client.on(Events.ClientReady, (i) => void ClientReady.execute(i));
   client.on(Events.InteractionCreate, (i) => void InteractionCreate.execute(i));
   client.on(Events.VoiceStateUpdate, (a, b) => void VoiceStateUpdate.execute(a, b));
+  client.on(Events.MessageCreate, (m) => void MessageCreate.execute(m));
 }
 
 async function initializeHousePoints() {
