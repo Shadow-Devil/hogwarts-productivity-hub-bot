@@ -6,7 +6,6 @@ import assert from "node:assert/strict";
 import { db } from "./db/db.ts";
 
 assert(process.env.CLIENT_ID)
-assert(process.env.GUILD_IDS)
 assert(process.env.DISCORD_TOKEN)
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
