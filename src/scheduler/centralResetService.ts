@@ -76,7 +76,7 @@ async function processDailyResets() {
 
       await Promise.all(usersInVoiceSessions.map(session => endVoiceSession(session, db)));
 
-      await db.select().from(userTable).where(and(inArray(userTable.discordId, usersNeedingReset), eq(userTable.isMessageStreakUpdatedToday, false), isNotNull(userTable.messageStreak))).then(async rows => {
+      await db.select().from(userTable).where(and(inArray(userTable.discordId, usersNeedingReset), eq(userTable.isMessageStreakUpdatedToday, false))).then(async rows => {
         for (const row of rows) {
           console.log(`Resetting message streak for user ${row.discordId} due to inactivity`);
           const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null)).filter(member => member !== null);
@@ -93,9 +93,9 @@ async function processDailyResets() {
           lastDailyReset: new Date(),
           voiceStreak: sql`CASE WHEN ${userTable.isVoiceStreakUpdatedToday} = false THEN 0 ELSE ${userTable.voiceStreak} END`,
           isVoiceStreakUpdatedToday: false,
-          messageStreak: sql`CASE WHEN ${userTable.isMessageStreakUpdatedToday} = false AND ${userTable.messageStreak} IS NOT NULL THEN 0 ELSE ${userTable.messageStreak} END`,
+          messageStreak: sql`CASE WHEN ${userTable.isMessageStreakUpdatedToday} = false THEN 0 ELSE ${userTable.messageStreak} END`,
           isMessageStreakUpdatedToday: false,
-          dailyMessagesSent: 0,
+          dailyMessages: 0,
         }
       ).where(inArray(userTable.discordId, usersNeedingReset))
 

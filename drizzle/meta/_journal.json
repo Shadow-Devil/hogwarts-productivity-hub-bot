@@ -57,6 +57,13 @@
       "when": 1758663767416,
       "tag": "0007_messy_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1758699617337,
+      "tag": "0008_flimsy_mantis",
+      "breakpoints": true
     }
   ]
 }
