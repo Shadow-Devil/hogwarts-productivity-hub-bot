@@ -35,7 +35,7 @@ export async function execute(message: OmitPartialGroupDMChannel<Message<boolean
         }
 
         if (newDailyMessages >= MIN_DAILY_MESSAGES_FOR_STREAK) {
-            const newNickname = `${message.member?.nickname?.replace(/⚡\d+$/, "").trim() || message.author.username} ⚡${newStreak}`;
+            const newNickname = `${message.member?.nickname?.replace(/⚡\d+$/, "").trim() || message.author.displayName} ⚡${newStreak}`;
 
             if (newNickname !== message.member?.nickname && message.member?.guild.ownerId !== discordId) {
                 await message.member?.setNickname(newNickname);
