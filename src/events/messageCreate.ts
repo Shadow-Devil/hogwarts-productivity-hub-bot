@@ -10,7 +10,6 @@ export async function execute(message: OmitPartialGroupDMChannel<Message<boolean
     // Ignore messages not in a guild
     if (!message.inGuild()) return
     const discordId = message.author.id;
-    if (discordId !== process.env.OWNER_ID) return;
 
     console.log(`Message received from ${message.author.tag} in guild ${message.guild.name}: ${message.content}`);
     ensureUserExists(message.member, discordId, message.author.username);
@@ -24,17 +23,23 @@ export async function execute(message: OmitPartialGroupDMChannel<Message<boolean
         }).from(userTable).where(eq(userTable.discordId, discordId)).then(rows => rows[0]!!);
 
         const newDailyMessages = user.dailyMessages + 1;
+        let newStreak = user.messageStreak;
         if (newDailyMessages >= MIN_DAILY_MESSAGES_FOR_STREAK && !user.ismessageStreakUpdatedToday) {
-            const newStreak = await db.update(userTable)
+            newStreak = await db.update(userTable)
                 .set({ dailyMessages: newDailyMessages, messageStreak: sql`${userTable.messageStreak} + 1`, isMessageStreakUpdatedToday: true })
                 .where(eq(userTable.discordId, discordId)).returning({ messageStreak: userTable.messageStreak }).then(rows => rows[0]!!.messageStreak!!);
-
-            message.member?.setNickname(`${message.member.nickname?.replace(/⚡\d+$/, "").trim() || message.author.username} ⚡${newStreak}`)
         } else {
             await db.update(userTable)
                 .set({ dailyMessages: newDailyMessages })
                 .where(eq(userTable.discordId, discordId));
         }
-    });
 
+        if (newDailyMessages >= MIN_DAILY_MESSAGES_FOR_STREAK) {
+            const newNickname = `${message.member?.nickname?.replace(/⚡\d+$/, "").trim() || message.author.username} ⚡${newStreak}`;
+
+            if (newNickname !== message.member?.nickname) {
+                await message.member?.setNickname(newNickname);
+            }
+        }
+    });
 }
