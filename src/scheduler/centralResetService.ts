@@ -78,11 +78,11 @@ async function processDailyResets() {
 
       await db.select().from(userTable).where(and(inArray(userTable.discordId, usersNeedingReset), eq(userTable.isMessageStreakUpdatedToday, false))).then(async rows => {
         for (const row of rows) {
-          console.log(`Resetting message streak for user ${row.discordId} due to inactivity`);
-          const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null)).filter(member => member !== null);
+          console.log(`Resetting message streak for user ${row.username} due to inactivity`);
+          const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null));
           for await (const member of members) {
-            if (member?.guild.ownerId !== member?.user.id) {
-              await member?.setNickname(member?.nickname?.replace(/⚡\d+$/, "").trim() || member?.user.globalName);
+            if (member && member.guild.ownerId !== member?.user.id && member.nickname) {
+              await member.setNickname(member.nickname.replace(/⚡\d+$/, "").trim() || member.user.globalName || member.user.displayName);
             }
           }
         };
