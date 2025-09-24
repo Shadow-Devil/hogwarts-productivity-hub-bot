@@ -33,6 +33,7 @@ try {
   registerShutdownHandlers();
   registerMonitoringEvents();
   await initializeHousePoints();
+  await resetNicknameStreaks(client);
 
   await CentralResetService.start();
   await client.login(process.env.DISCORD_TOKEN);
@@ -108,4 +109,19 @@ function registerMonitoringEvents() {
 
   resetExecutionTimer.zero({ action: "daily" });
   resetExecutionTimer.zero({ action: "monthly" });
+}
+function resetNicknameStreaks(client: Client<boolean>) {
+  db.select().from(userTable).where(eq(userTable.messageStreak, 0)).then(async rows => {
+    for (const row of rows) {
+      console.log(`Resetting message streak for user ${row.discordId} due to 0 streak`);
+      const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null)).filter(member => member !== null);
+      for await (const member of members) {
+        try {
+          member?.setNickname(member?.nickname?.replace(/⚡\d+$/, "").trim() || member?.user.username);
+        } catch (e) {
+          console.error(`Failed to reset nickname for user ${row.username}:`, e);
+        }
+      }
+    };
+  });
 }

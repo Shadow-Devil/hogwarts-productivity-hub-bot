@@ -38,7 +38,11 @@ export async function execute(message: OmitPartialGroupDMChannel<Message<boolean
             const newNickname = `${message.member?.nickname?.replace(/⚡\d+$/, "").trim() || message.author.username} ⚡${newStreak}`;
 
             if (newNickname !== message.member?.nickname) {
-                await message.member?.setNickname(newNickname);
+                try {
+                    await message.member?.setNickname(newNickname);
+                } catch (e) {
+                    console.error(`Failed to set nickname for user ${message.member?.nickname}:`, e);
+                }
             }
         }
     });
