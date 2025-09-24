@@ -29,7 +29,7 @@ export async function execute(message: OmitPartialGroupDMChannel<Message<boolean
                 .set({ dailyMessages: newDailyMessages, messageStreak: sql`${userTable.messageStreak} + 1`, isMessageStreakUpdatedToday: true })
                 .where(eq(userTable.discordId, discordId)).returning({ messageStreak: userTable.messageStreak }).then(rows => rows[0]!!.messageStreak!!);
 
-            message.member?.setNickname(`${message.member.nickname?.replace(/⚡\d+$/, "").trim() || message.author.username} ⚡${newStreak + 1}`)
+            message.member?.setNickname(`${message.member.nickname?.replace(/⚡\d+$/, "").trim() || message.author.username} ⚡${newStreak}`)
         } else {
             await db.update(userTable)
                 .set({ dailyMessages: newDailyMessages })
