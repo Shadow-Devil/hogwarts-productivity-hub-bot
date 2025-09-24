@@ -110,7 +110,8 @@ function registerMonitoringEvents() {
   resetExecutionTimer.zero({ action: "daily" });
   resetExecutionTimer.zero({ action: "monthly" });
 }
-function resetNicknameStreaks(client: Client<boolean>) {
+async function resetNicknameStreaks(client: Client<boolean>) {
+  console.log("Guilds Cache Size:", client.guilds.cache.size)
   db.select().from(userTable).where(eq(userTable.messageStreak, 0)).then(async rows => {
     for (const row of rows) {
       console.log(`Resetting message streak for user ${row.username} due to 0 streak`);
