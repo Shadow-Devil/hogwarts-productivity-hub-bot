@@ -28,7 +28,11 @@ async function resetNicknameStreaks(client: Client<boolean>) {
         discordId: userTable.discordId,
     }).from(userTable).where(gt(userTable.messageStreak, 0)).then(rows => rows.map(r => r.discordId))
 
-    const members = client.guilds.cache.flatMap(guild => guild.members.cache.filter(member => !discordIds.includes(member.id))).filter(member => member.guild.ownerId !== member.user.id && member.nickname?.match(/⚡\d+$/));
+    const members = client.guilds.cache.flatMap(guild => {
+        console.log(`Processing guild: ${guild.name} (${guild.id}), Members Cache Size: ${guild.members.cache.size}, filtered ${guild.members.cache.filter(member => discordIds.includes(member.id)).size}`);
+        return guild.members.cache.filter(member => !discordIds.includes(member.id))
+    }).filter(member => member.guild.ownerId !== member.user.id && member.nickname?.match(/⚡\d+$/));
+
     console.log("Members to reset:", members.map(m => m.user.tag).join(", "));
     for await (const [, member] of members) {
         const newNickname = member.nickname?.replace(/⚡\d+$/, "").trim() || member.user.username;
