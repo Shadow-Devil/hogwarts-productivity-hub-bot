@@ -41,7 +41,7 @@ async function resetNicknameStreaks(client: Client<boolean>) {
         for (const member of filteredMembers.values()) {
             const newNickname = member.nickname?.replace(/⚡\d+$/, "").trim() || member.user.username;
             console.log(`Resetting nickname from ${member?.nickname} to ${newNickname}`);
-            member?.setNickname(newNickname);
+            await member?.setNickname(newNickname);
         }
     }
 }
