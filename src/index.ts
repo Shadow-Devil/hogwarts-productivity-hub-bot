@@ -110,20 +110,3 @@ function registerMonitoringEvents() {
   resetExecutionTimer.zero({ action: "daily" });
   resetExecutionTimer.zero({ action: "monthly" });
 }
-async function resetNicknameStreaks(client: Client<boolean>) {
-  console.log("Guilds Cache Size:", client.guilds.cache.size)
-  db.select({
-    discordId: userTable.discordId,
-  }).from(userTable).where(gt(userTable.messageStreak, 0)).then(rows => rows.map(r => r.discordId)).then(async discordIds => {
-    const members = client.guilds.cache.flatMap(guild => guild.members.cache.filter(member => !discordIds.includes(member.id))).filter(member => member !== null);
-    for await (const [, member] of members) {
-      try {
-        const newNickname = member.nickname?.replace(/⚡\d+$/, "").trim() || member.user.username;
-        console.log(`Resetting nickname from ${member?.nickname} to ${newNickname}`);
-        member?.setNickname(member.nickname?.replace(/⚡\d+$/, "").trim() || member.user.username);
-      } catch (e) {
-        console.error(`Failed to reset nickname for user ${member.user.username}:`, e);
-      }
-    }
-  });
-}

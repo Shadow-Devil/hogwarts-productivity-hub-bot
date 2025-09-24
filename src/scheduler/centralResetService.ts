@@ -81,10 +81,8 @@ async function processDailyResets() {
           console.log(`Resetting message streak for user ${row.discordId} due to inactivity`);
           const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null)).filter(member => member !== null);
           for await (const member of members) {
-            try {
+            if (member?.guild.ownerId !== member?.user.id) {
               await member?.setNickname(member?.nickname?.replace(/⚡\d+$/, "").trim() || member?.user.username);
-            } catch (e) {
-              console.error(`Failed to reset nickname for user ${row.username}:`, e);
             }
           }
         };
