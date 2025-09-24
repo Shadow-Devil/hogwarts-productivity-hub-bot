@@ -19,7 +19,7 @@ import { alertOwner } from "./utils/alerting.ts";
 import { interactionExecutionTimer, resetExecutionTimer, server, voiceSessionExecutionTimer } from "./monitoring.ts";
 import { commands } from "./commands.ts";
 import { housePointsTable, userTable } from "./db/schema.ts";
-import { eq } from "drizzle-orm";
+import { eq, gt } from "drizzle-orm";
 import { promisify } from "node:util";
 
 dayjs.extend(utc);
@@ -112,20 +112,18 @@ function registerMonitoringEvents() {
 }
 async function resetNicknameStreaks(client: Client<boolean>) {
   console.log("Guilds Cache Size:", client.guilds.cache.size)
-  db.select().from(userTable).where(eq(userTable.messageStreak, 0)).then(async rows => {
-    for (const row of rows) {
-      console.log(`Resetting message streak for user ${row.username} due to 0 streak`);
-
-      const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null)).filter(member => member !== null);
-      for await (const member of members) {
-        try {
-          const newNickname = member?.nickname?.replace(/⚡\d+$/, "").trim() || member?.user.username;
-          console.log(`Resetting nickname from ${member?.nickname} to ${newNickname}`);
-          member?.setNickname(member?.nickname?.replace(/⚡\d+$/, "").trim() || member?.user.username);
-        } catch (e) {
-          console.error(`Failed to reset nickname for user ${row.username}:`, e);
-        }
+  db.select({
+    discordId: userTable.discordId,
+  }).from(userTable).where(gt(userTable.messageStreak, 0)).then(rows => rows.map(r => r.discordId)).then(async discordIds => {
+    const members = client.guilds.cache.flatMap(guild => guild.members.cache.filter(member => !discordIds.includes(member.id))).filter(member => member !== null);
+    for await (const [, member] of members) {
+      try {
+        const newNickname = member.nickname?.replace(/⚡\d+$/, "").trim() || member.user.username;
+        console.log(`Resetting nickname from ${member?.nickname} to ${newNickname}`);
+        member?.setNickname(member.nickname?.replace(/⚡\d+$/, "").trim() || member.user.username);
+      } catch (e) {
+        console.error(`Failed to reset nickname for user ${member.user.username}:`, e);
       }
-    };
+    }
   });
 }
