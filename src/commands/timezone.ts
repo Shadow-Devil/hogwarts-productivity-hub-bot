@@ -1,6 +1,5 @@
 import {
   SlashCommandBuilder,
-  EmbedBuilder,
   ChatInputCommandInteraction,
   AutocompleteInteraction,
 } from "discord.js";
@@ -65,12 +64,14 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
   // Validate timezone
   try {
     dayjs().tz(newTimezone);
-  } catch (error) {
-    return await replyError(
+  } catch (e) {
+    console.error("Invalid timezone provided:", newTimezone, e);
+    await replyError(
       interaction,
       'Invalid Timezone',
       `The timezone \`${newTimezone}\` is not valid.`,
       "Check [IANA timezone list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)");
+    return;
   }
 
   // Get current timezone for comparison
@@ -92,7 +93,8 @@ async function setTimezone(interaction: ChatInputCommandInteraction, discordId: 
   }).where(eq(userTable.discordId, discordId));
 
   if (result.rowCount === 0) {
-    return await replyError(interaction, `Timezone Update Failed`, `Failed to update your timezone. Please try again later.`);
+    await replyError(interaction, `Timezone Update Failed`, `Failed to update your timezone. Please try again later.`);
+    return;
   }
 
   await interaction.editReply({

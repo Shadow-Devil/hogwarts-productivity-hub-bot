@@ -2,7 +2,7 @@ import cron from "node-cron";
 import dayjs from "dayjs";
 import { db, fetchOpenVoiceSessions } from "../db/db.ts";
 import { userTable } from "../db/schema.ts";
-import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
 import { wrapWithAlerting } from "../utils/alerting.ts";
 import { resetExecutionTimer } from "../monitoring.ts";
@@ -80,9 +80,9 @@ async function processDailyResets() {
         for (const row of rows) {
           console.log(`Resetting message streak for user ${row.username} due to inactivity`);
           const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null));
-          for await (const member of members) {
-            if (member && member.guild.ownerId !== member?.user.id && member.nickname) {
-              await member.setNickname(member.nickname.replace(/⚡\d+$/, "").trim() || member.user.globalName || member.user.displayName);
+          for (const member of await Promise.all(members)) {
+            if (member && member.guild.ownerId !== member.user.id && member.nickname) {
+              await member.setNickname(member.nickname.replace(/⚡\d+$/, "").trim());
             }
           }
         };

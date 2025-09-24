@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder, type GuildMember } from "discord.js";
+import { ChatInputCommandInteraction, type GuildMember } from "discord.js";
 import assert from "node:assert/strict";
 import type { House } from "../types.ts";
 import { eq, sql, type ExtractTablesWithRelations } from "drizzle-orm";

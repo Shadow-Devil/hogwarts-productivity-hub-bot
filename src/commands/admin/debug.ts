@@ -1,6 +1,5 @@
 import {
   SlashCommandBuilder,
-  EmbedBuilder,
   ChatInputCommandInteraction,
   type APIEmbedField,
 } from "discord.js";

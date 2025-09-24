@@ -22,7 +22,7 @@ export async function execute(c: Client<true>): Promise<void> {
     await alertOwner("Bot deployed successfully.");
 }
 
-async function resetNicknameStreaks(client: Client<boolean>) {
+async function resetNicknameStreaks(client: Client) {
     console.log("Guilds Cache Size:", client.guilds.cache.size)
     const discordIds = await db.select({
         discordId: userTable.discordId,
@@ -42,7 +42,7 @@ async function resetNicknameStreaks(client: Client<boolean>) {
             if (member.nickname === null) continue;
             const newNickname = member.nickname.replace(/⚡\d+$/, "").trim();
             console.log(`Resetting nickname from ${member.nickname} to ${newNickname}`);
-            await member?.setNickname(newNickname);
+            await member.setNickname(newNickname);
         }
     }
 }

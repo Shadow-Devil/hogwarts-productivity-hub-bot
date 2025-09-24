@@ -19,7 +19,7 @@ import { alertOwner } from "./utils/alerting.ts";
 import { interactionExecutionTimer, resetExecutionTimer, server, voiceSessionExecutionTimer } from "./monitoring.ts";
 import { commands } from "./commands.ts";
 import { housePointsTable, userTable } from "./db/schema.ts";
-import { eq, gt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { promisify } from "node:util";
 
 dayjs.extend(utc);
@@ -71,7 +71,7 @@ function registerShutdownHandlers() {
       await Promise.all(openVoiceSessions.map(session => endVoiceSession(session, db)));
     });
 
-    const closeServer = promisify(server.close).bind(server);
+    const closeServer = promisify(() => server.close()).bind(server);
     await closeServer();
     server.closeAllConnections();
 

@@ -66,11 +66,12 @@ async function startTimer(interaction: ChatInputCommandInteraction, activeVoiceT
   const voiceChannel = getUserVoiceChannel(interaction);
 
   if (voiceChannel === null) {
-    return await replyError(
+    await replyError(
       interaction,
       `Voice Channel Required`,
       "You must be in a voice channel to start a Pomodoro timer and track your productivity.\nJoin any voice channel first, then try again.\nTimers help you maintain focus during productive voice sessions."
     );
+    return;
   }
 
   const voiceChannelId = voiceChannel.id;
@@ -200,25 +201,27 @@ async function stopTimer(interaction: ChatInputCommandInteraction, activeVoiceTi
   const voiceChannel = getUserVoiceChannel(interaction);
 
   if (!voiceChannel) {
-    return await replyError(
+    await replyError(
       interaction,
       `Voice Channel Required`,
       "You must be in a voice channel to stop a timer and manage your productivity sessions.",
       "Join the voice channel with an active timer",
       "Timer controls are tied to your current voice channel location."
     );
+    return;
   }
 
   const voiceChannelId = voiceChannel.id;
   const timer = activeVoiceTimers.get(voiceChannelId);
   if (timer === undefined) {
-    return await replyError(
+    await replyError(
       interaction,
       `No Active Timer Found`,
       `No Pomodoro timer is currently running in <#${voiceChannelId}>. There's nothing to stop!`,
       `Use \`/timer <work_minutes>\` to start a new Pomodoro session`,
       `Check \`/time\` to see if there are any active timers in your current voice channel.`
     );
+    return;
   }
   if (timer.workTimeout) clearTimeout(timer.workTimeout);
   if (timer.breakTimeout) clearTimeout(timer.breakTimeout);
@@ -240,11 +243,12 @@ async function checkTimerStatus(interaction: ChatInputCommandInteraction, active
   const voiceChannel = getUserVoiceChannel(interaction);
 
   if (!voiceChannel) {
-    return await replyError(
+    await replyError(
       interaction,
       `Voice Channel Required`,
       `You must be in a voice channel to check timer status and track your productivity sessions.\nJoin a voice channel first, then try again`
     );
+    return;
   }
 
   const voiceChannelId = voiceChannel.id;

@@ -1,9 +1,8 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder, userMention } from "discord.js";
-import { replyError, timeToHours } from "../../utils/utils.ts";
+import { ChatInputCommandInteraction, SlashCommandBuilder, userMention } from "discord.js";
+import { replyError } from "../../utils/utils.ts";
 import { db } from "../../db/db.ts";
 import { userTable } from "../../db/schema.ts";
 import { desc, gte } from "drizzle-orm";
-import { formatDataTable } from "../../utils/visualHelpers.ts";
 import type { House } from "../../types.ts";
 import { BotColors, houseEmojis } from "../../utils/constants.ts";
 
@@ -44,7 +43,8 @@ export default {
         voiceTimeColumn = userTable.totalVoiceTime;
         break;
       default:
-        return await replyError(interaction, "Invalid Leaderboard Type", "Please select a valid leaderboard type: daily, monthly, or all time.");
+        await replyError(interaction, "Invalid Leaderboard Type", "Please select a valid leaderboard type: daily, monthly, or all time.");
+        return;
     }
     const leaderboard = await db.select({
       discordId: userTable.discordId,
@@ -59,11 +59,12 @@ export default {
       .limit(10);
 
     if (leaderboard.length === 0) {
-      return await replyError(
+      await replyError(
         interaction,
         `No Leaderboard Data`,
         "No data is available for the leaderboard yet. Be the first to start tracking your voice time!"
       )
+      return;
     }
     await replyLeaderboard(interaction, leaderboardType, leaderboard);
   },

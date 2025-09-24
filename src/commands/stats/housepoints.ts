@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { replyError } from "../../utils/utils.ts";
 import { db } from "../../db/db.ts";
 import { desc, isNotNull, sql } from "drizzle-orm";
@@ -30,11 +30,12 @@ export default {
     const houseLeaderboard = await fetchHouseLeaderboard(type);
 
     if (houseLeaderboard.length === 0) {
-      return await replyError(
+      await replyError(
         interaction,
         "No House Data",
         "No house data is available yet. Houses need to earn points first!",
         "Join a voice channel and complete tasks to start earning house points. House points are awarded for voice time and task completion.")
+      return;
     }
 
     await replyHousepoints(interaction, houseLeaderboard, type);

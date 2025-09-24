@@ -1,4 +1,4 @@
-import { AutocompleteInteraction, bold, ChatInputCommandInteraction, Embed, EmbedBuilder, GuildMember, SlashCommandBuilder, time, TimestampStyles, User, type APIEmbedField, type EmbedData, type EmbedField, } from "discord.js";
+import { AutocompleteInteraction, bold, ChatInputCommandInteraction, GuildMember, SlashCommandBuilder, time, TimestampStyles, User, type APIEmbedField, } from "discord.js";
 import { replyError } from "../utils/utils.ts";
 import dayjs from "dayjs";
 import { db, fetchTasks, fetchUserTimezone } from "../db/db.ts";
@@ -78,11 +78,12 @@ export default {
         await removeTask(interaction, discordId, startOfDay);
         break;
       default:
-        return await replyError(
+        await replyError(
           interaction,
           "Invalid Subcommand",
           "Please use `/tasks add`, `/tasks view`, `/tasks complete`, or `/tasks remove`.",
         );
+        return;
     }
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
@@ -143,7 +144,8 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
   } else if (userMention instanceof GuildMember) {
     user = userMention.user;
   } else {
-    return await replyError(interaction, "Invalid User Mention", "Please mention a valid user or leave it blank to view your own tasks.");
+    await replyError(interaction, "Invalid User Mention", "Please mention a valid user or leave it blank to view your own tasks.");
+    return;
   }
 
   const tasks = await db.select({
@@ -194,8 +196,8 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
     fields.push({
       name: `✅ Recently Completed • ${completedTasks.length} total`,
       value: completedTasks.sort((a, b) =>
-        (b.completedAt.getTime() ?? 0) -
-        (a.completedAt.getTime() ?? 0)
+        b.completedAt.getTime() -
+        a.completedAt.getTime()
       ).map((task, index) => `${index + 1}. ${task.title} at ${time(task.completedAt, TimestampStyles.ShortTime)} (+${TASK_POINT_SCORE} points)`).join("\n"),
     }, {
       name: "Total Points Earned from Tasks",
@@ -228,13 +230,15 @@ async function completeTask(interaction: ChatInputCommandInteraction, discordId:
   ).orderBy(taskTable.createdAt);
 
   if (tasks === undefined) {
-    return await replyError(interaction, `Task Completion Failed`, `Could not find task. Use \`/tasks view\` to check your tasks`);
+    await replyError(interaction, `Task Completion Failed`, `Could not find task. Use \`/tasks view\` to check your tasks`);
+    return;
   }
 
   const taskToComplete = tasks;
   const diffInMinutes = dayjs().diff(dayjs(taskToComplete.createdAt), 'minute')
   if (diffInMinutes < TASK_MIN_TIME) {
-    return await replyError(interaction, `Task Completion Failed`, `You can only complete tasks that are at least ${TASK_MIN_TIME} minutes old.`, `Please try again in ${TASK_MIN_TIME - diffInMinutes} min.`);
+    await replyError(interaction, `Task Completion Failed`, `You can only complete tasks that are at least ${TASK_MIN_TIME} minutes old.`, `Please try again in ${TASK_MIN_TIME - diffInMinutes} min.`);
+    return;
   }
 
   // Mark task as complete
@@ -271,7 +275,8 @@ async function removeTask(interaction: ChatInputCommandInteraction, discordId: s
   ).returning({ id: taskTable.id, title: taskTable.title });
 
   if (task === undefined) {
-    return await replyError(interaction, `Task Removal Failed`, "Task not found. Use `/tasks view` to check your tasks.");
+    await replyError(interaction, `Task Removal Failed`, "Task not found. Use `/tasks view` to check your tasks.");
+    return;
   }
 
   await interaction.editReply({
