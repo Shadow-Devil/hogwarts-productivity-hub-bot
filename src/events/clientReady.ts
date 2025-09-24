@@ -28,15 +28,20 @@ async function resetNicknameStreaks(client: Client<boolean>) {
         discordId: userTable.discordId,
     }).from(userTable).where(gt(userTable.messageStreak, 0)).then(rows => rows.map(r => r.discordId))
 
-    const members = client.guilds.cache.flatMap(guild => {
-        console.log(`Processing guild: ${guild.name} (${guild.id}), Members Cache Size: ${guild.members.cache.size}, filtered ${guild.members.cache.filter(member => discordIds.includes(member.id)).size}`);
-        return guild.members.cache.filter(member => !discordIds.includes(member.id))
-    }).filter(member => member.guild.ownerId !== member.user.id && member.nickname?.match(/⚡\d+$/));
+    for (const guild of client.guilds.cache.values()) {
+        const filteredMembers = await guild.members.fetch().then(members =>
+            members.filter(member =>
+                !discordIds.includes(member.id) &&
+                member.guild.ownerId !== member.user.id &&
+                member.nickname?.match(/⚡\d+$/))
+        );
 
-    console.log("Members to reset:", members.map(m => m.user.tag).join(", "));
-    for await (const [, member] of members) {
-        const newNickname = member.nickname?.replace(/⚡\d+$/, "").trim() || member.user.username;
-        console.log(`Resetting nickname from ${member?.nickname} to ${newNickname}`);
-        member?.setNickname(newNickname);
+        console.log(`Processing guild: ${guild.name} (${guild.id}), Members Cache Size: ${guild.members.cache.size}, filtered ${filteredMembers.size}`);
+        console.log("Members to reset:", filteredMembers.map(m => m.user.tag).join(", "));
+        for (const member of filteredMembers.values()) {
+            const newNickname = member.nickname?.replace(/⚡\d+$/, "").trim() || member.user.username;
+            console.log(`Resetting nickname from ${member?.nickname} to ${newNickname}`);
+            member?.setNickname(newNickname);
+        }
     }
 }
