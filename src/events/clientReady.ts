@@ -39,7 +39,7 @@ async function resetNicknameStreaks(client: Client<boolean>) {
         console.log(`Processing guild: ${guild.name} (${guild.id}), Members Cache Size: ${guild.members.cache.size}, filtered ${filteredMembers.size}`);
         console.log("Members to reset:", filteredMembers.map(m => m.user.tag).join(", "));
         for (const member of filteredMembers.values()) {
-            const newNickname = member.nickname?.replace(/⚡\d+$/, "").trim() || member.user.displayName;
+            const newNickname = member.nickname === member.user.username ? member.user.globalName : member.nickname?.replace(/⚡\d+$/, "").trim() || member.user.globalName;
             console.log(`Resetting nickname from ${member?.nickname} to ${newNickname}`);
             await member?.setNickname(newNickname);
         }

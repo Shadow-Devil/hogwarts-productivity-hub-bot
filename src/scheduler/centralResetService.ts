@@ -82,7 +82,7 @@ async function processDailyResets() {
           const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null)).filter(member => member !== null);
           for await (const member of members) {
             if (member?.guild.ownerId !== member?.user.id) {
-              await member?.setNickname(member?.nickname?.replace(/⚡\d+$/, "").trim() || member?.user.displayName);
+              await member?.setNickname(member?.nickname?.replace(/⚡\d+$/, "").trim() || member?.user.globalName);
             }
           }
         };
