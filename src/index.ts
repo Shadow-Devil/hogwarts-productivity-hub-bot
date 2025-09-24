@@ -113,10 +113,12 @@ function registerMonitoringEvents() {
 function resetNicknameStreaks(client: Client<boolean>) {
   db.select().from(userTable).where(eq(userTable.messageStreak, 0)).then(async rows => {
     for (const row of rows) {
-      console.log(`Resetting message streak for user ${row.discordId} due to 0 streak`);
+      console.log(`Resetting message streak for user ${row.username} due to 0 streak`);
       const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null)).filter(member => member !== null);
       for await (const member of members) {
         try {
+          const newNickname = member?.nickname?.replace(/⚡\d+$/, "").trim() || member?.user.username;
+          console.log(`Resetting nickname from ${member?.nickname} to ${newNickname}`);
           member?.setNickname(member?.nickname?.replace(/⚡\d+$/, "").trim() || member?.user.username);
         } catch (e) {
           console.error(`Failed to reset nickname for user ${row.username}:`, e);
