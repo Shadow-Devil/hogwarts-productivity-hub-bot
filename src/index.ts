@@ -33,10 +33,10 @@ try {
   registerShutdownHandlers();
   registerMonitoringEvents();
   await initializeHousePoints();
-  await resetNicknameStreaks(client);
 
   await CentralResetService.start();
   await client.login(process.env.DISCORD_TOKEN);
+  await resetNicknameStreaks(client);
 } catch (error) {
   console.error("Error initializing bot:", error);
   process.exit(1);
@@ -115,6 +115,7 @@ async function resetNicknameStreaks(client: Client<boolean>) {
   db.select().from(userTable).where(eq(userTable.messageStreak, 0)).then(async rows => {
     for (const row of rows) {
       console.log(`Resetting message streak for user ${row.username} due to 0 streak`);
+
       const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null)).filter(member => member !== null);
       for await (const member of members) {
         try {
