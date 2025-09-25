@@ -71,7 +71,7 @@ function registerShutdownHandlers() {
       await Promise.all(openVoiceSessions.map(session => endVoiceSession(session, db)));
     });
 
-    const closeServer = promisify(() => server.close()).bind(server);
+    const closeServer = promisify(server.close).bind(server);
     await closeServer();
     server.closeAllConnections();
 
