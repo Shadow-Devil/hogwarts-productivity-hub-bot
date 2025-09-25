@@ -6,10 +6,11 @@ import { MIN_DAILY_MESSAGES_FOR_STREAK } from "../utils/constants.ts";
 import assert from "assert";
 
 export async function execute(message: OmitPartialGroupDMChannel<Message>): Promise<void> {
-    // Ignore messages from bots
-    if (message.author.bot) return;
-    // Ignore messages not in a guild
-    if (!message.inGuild()) return
+    // Ignore messages from bots, Ignore messages not in a guild and system messages
+    if (message.author.bot || !message.inGuild() || message.system) return;
+    // Ignore replies to system messages (Wave Hi)
+    if (message.reference && await message.fetchReference().then(msg => msg.system)) return;
+
     const discordId = message.author.id;
 
     console.log(`Message received from ${message.author.tag} in guild ${message.guild.name}: ${message.content}`);
