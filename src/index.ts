@@ -71,6 +71,7 @@ function registerShutdownHandlers() {
       await Promise.all(openVoiceSessions.map(session => endVoiceSession(session, db)));
     });
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const closeServer = promisify(server.close).bind(server);
     await closeServer();
     server.closeAllConnections();
