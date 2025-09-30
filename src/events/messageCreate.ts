@@ -41,6 +41,7 @@ export async function execute(message: OmitPartialGroupDMChannel<Message>): Prom
             const newNickname = `${message.member?.nickname?.replace(/⚡\d+$/, "").trim() ?? message.author.globalName ?? message.author.displayName} ⚡${newStreak}`;
 
             if (newNickname !== message.member?.nickname && message.member?.guild.ownerId !== discordId) {
+                console.log(`Updating nickname ${message.member?.nickname} -> ${newNickname}`);
                 await message.member?.setNickname(newNickname);
             }
         }
