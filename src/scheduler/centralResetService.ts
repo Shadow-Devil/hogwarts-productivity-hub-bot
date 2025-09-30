@@ -7,6 +7,7 @@ import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
 import { wrapWithAlerting } from "../utils/alerting.ts";
 import { resetExecutionTimer } from "../monitoring.ts";
 import { client } from "../client.ts";
+import { updateMessageStreakInNickname } from "../utils/utils.ts";
 
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
 
@@ -79,13 +80,7 @@ async function processDailyResets() {
       await db.select().from(userTable).where(and(inArray(userTable.discordId, usersNeedingReset), eq(userTable.isMessageStreakUpdatedToday, false))).then(async rows => {
         for (const row of rows) {
           const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null));
-          for (const member of await Promise.all(members)) {
-            if (member && member.guild.ownerId !== member.user.id && member.nickname) {
-              const newNickname = member.nickname.replace(/⚡\d+$/, "").trim();
-              console.log(`Resetting message streak for user ${member.nickname} -> ${newNickname} due to inactivity`);
-              await member.setNickname(member.nickname.replace(/⚡\d+$/, "").trim());
-            }
-          }
+          Promise.all(members.map(async m => await updateMessageStreakInNickname(await m, 0)));
         };
       });
 

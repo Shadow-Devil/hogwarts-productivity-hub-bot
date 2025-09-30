@@ -4,6 +4,7 @@ import { userTable } from "../db/schema.ts";
 import { eq, sql } from "drizzle-orm";
 import { MIN_DAILY_MESSAGES_FOR_STREAK } from "../utils/constants.ts";
 import assert from "assert";
+import { updateMessageStreakInNickname } from "../utils/utils.ts";
 
 export async function execute(message: OmitPartialGroupDMChannel<Message>): Promise<void> {
     // Ignore messages from bots, Ignore messages not in a guild and system messages
@@ -38,12 +39,7 @@ export async function execute(message: OmitPartialGroupDMChannel<Message>): Prom
         }
 
         if (newDailyMessages >= MIN_DAILY_MESSAGES_FOR_STREAK) {
-            const newNickname = `${message.member?.nickname?.replace(/⚡\d+$/, "").trim() ?? message.author.globalName ?? message.author.displayName} ⚡${newStreak}`;
-
-            if (newNickname !== message.member?.nickname && message.member?.guild.ownerId !== discordId) {
-                console.log(`Updating nickname ${message.member?.nickname} -> ${newNickname}`);
-                await message.member?.setNickname(newNickname);
-            }
+            await updateMessageStreakInNickname(message.member, newStreak);
         }
     });
 }

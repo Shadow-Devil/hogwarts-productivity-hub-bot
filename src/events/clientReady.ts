@@ -5,6 +5,7 @@ import { alertOwner } from "../utils/alerting.ts";
 import { db } from "../db/db.ts";
 import { userTable } from "../db/schema.ts";
 import { gt } from "drizzle-orm";
+import { updateMessageStreakInNickname } from "../utils/utils.ts";
 
 export async function execute(c: Client<true>): Promise<void> {
     console.log(`Bot User: ${c.user.tag}`);
@@ -24,25 +25,28 @@ export async function execute(c: Client<true>): Promise<void> {
 
 async function resetNicknameStreaks(client: Client) {
     console.log("Guilds Cache Size:", client.guilds.cache.size)
-    const discordIds = await db.select({
+    const discordIdsToStreak = await db.select({
         discordId: userTable.discordId,
-    }).from(userTable).where(gt(userTable.messageStreak, 0)).then(rows => rows.map(r => r.discordId))
+        messageStreak: userTable.messageStreak,
+    }).from(userTable).where(gt(userTable.messageStreak, 0)).then(rows => rows.reduce((acc, r) => {
+        acc[r.discordId] = r.messageStreak
+        return acc;
+    }, {} as {[x: string]: number}));
+    const discordIds = new Set(Object.keys(discordIdsToStreak));
 
     for (const guild of client.guilds.cache.values()) {
-        const filteredMembers = await guild.members.fetch().then(members =>
+        const membersToReset = await guild.members.fetch().then(members =>
             members.filter(member =>
-                !discordIds.includes(member.id) &&
+                !discordIds.has(member.id) &&
                 member.guild.ownerId !== member.user.id &&
                 member.nickname?.match(/⚡\d+$/))
         );
+        const membersToUpdate = guild.members.cache.filter(member => discordIds.has(member.id) && !member.nickname?.endsWith(`⚡${discordIdsToStreak[member.id]}`));
 
-        console.log(`Processing guild: ${guild.name} (${guild.id}), Members Cache Size: ${guild.members.cache.size}, filtered ${filteredMembers.size}`);
-        console.log("Members to reset:", filteredMembers.map(m => m.user.tag).join(", "));
-        for (const member of filteredMembers.values()) {
-            if (member.nickname === null) continue;
-            const newNickname = member.nickname.replace(/⚡\d+$/, "").trim();
-            console.log(`Resetting nickname from ${member.nickname} to ${newNickname}`);
-            await member.setNickname(newNickname);
-        }
+        console.log(`Processing guild: ${guild.name} (${guild.id}), Members Cache Size: ${guild.members.cache.size}, toReset ${membersToReset.size} toUpdate ${membersToUpdate.size}`);
+        await Promise.all([
+            ...membersToReset.values().map(async m => await updateMessageStreakInNickname(m, 0)),
+            ...membersToUpdate.values().map(async m => await updateMessageStreakInNickname(m, discordIdsToStreak[m.id]!!))
+        ]);
     }
 }

@@ -67,3 +67,21 @@ export function timeToHours(seconds: number | null): string {
   const minutes = Math.floor((seconds % 3600) / 60);
   return `${hours}h ${minutes}m`;
 }
+
+export async function updateMessageStreakInNickname(member: GuildMember | null, newStreak: number): Promise<void> {
+  // Can't update nickname of guild owner
+  if (!member || member.guild.ownerId === member.user.id) return;
+
+  let newNickname = member.nickname?.replace(/⚡\d+$/, "").trim() ?? member.user.globalName ?? member.user.displayName;
+  if (newStreak == 0) {
+    // If member has no nickname, no need to reset
+    if (member.nickname === null) return;
+  } else {
+    newNickname += ` ⚡${newStreak}`;
+  }
+
+  if (newNickname !== member.nickname) {
+    console.log(`Updating nickname from ${member.nickname} to ${newNickname}`);
+    await member.setNickname(newNickname);
+  }
+}
