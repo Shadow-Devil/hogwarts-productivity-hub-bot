@@ -77,7 +77,11 @@ export async function updateMessageStreakInNickname(member: GuildMember | null, 
     // If member has no nickname, no need to reset
     if (member.nickname === null) return;
   } else {
-    newNickname += ` ⚡${newStreak}`;
+    newNickname += `⚡${newStreak}`;
+  }
+  if (newNickname.length > 32) {
+    console.warn(`Nickname for ${member.user.tag} is too long (${newNickname}). Ignoring update.`);
+    return;
   }
 
   if (newNickname !== member.nickname) {
