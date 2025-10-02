@@ -81,7 +81,7 @@ export async function updateMessageStreakInNickname(member: GuildMember | null, 
   }
 
   if (newNickname !== member.nickname) {
-    console.log(`Updating nickname from ${member.nickname} to ${newNickname}`);
+    console.log(`Updating nickname from ${member.nickname ?? 'NO NICKNAME'} to ${newNickname}`);
     await member.setNickname(newNickname);
   }
 }

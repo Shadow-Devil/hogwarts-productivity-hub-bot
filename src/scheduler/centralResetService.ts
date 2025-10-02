@@ -80,7 +80,7 @@ async function processDailyResets() {
       await db.select().from(userTable).where(and(inArray(userTable.discordId, usersNeedingReset), eq(userTable.isMessageStreakUpdatedToday, false))).then(async rows => {
         for (const row of rows) {
           const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null));
-          Promise.all(members.map(async m => await updateMessageStreakInNickname(await m, 0)));
+          await Promise.all(members.map(async m => { await updateMessageStreakInNickname(await m, 0); }));
         };
       });
 

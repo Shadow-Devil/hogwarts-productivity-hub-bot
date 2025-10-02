@@ -28,10 +28,10 @@ async function resetNicknameStreaks(client: Client) {
     const discordIdsToStreak = await db.select({
         discordId: userTable.discordId,
         messageStreak: userTable.messageStreak,
-    }).from(userTable).where(gt(userTable.messageStreak, 0)).then(rows => rows.reduce((acc, r) => {
+    }).from(userTable).where(gt(userTable.messageStreak, 0)).then(rows => rows.reduce<Record<string, number>>((acc, r) => {
         acc[r.discordId] = r.messageStreak
         return acc;
-    }, {} as {[x: string]: number}));
+    }, {}));
     const discordIds = new Set(Object.keys(discordIdsToStreak));
 
     for (const guild of client.guilds.cache.values()) {
@@ -41,12 +41,18 @@ async function resetNicknameStreaks(client: Client) {
                 member.guild.ownerId !== member.user.id &&
                 member.nickname?.match(/⚡\d+$/))
         );
-        const membersToUpdate = guild.members.cache.filter(member => discordIds.has(member.id) && !member.nickname?.endsWith(`⚡${discordIdsToStreak[member.id]}`));
+        const membersToUpdate = guild.members.cache.filter(member => discordIds.has(member.id) && !member.nickname?.endsWith(`⚡${String(discordIdsToStreak[member.id])}`));
 
         console.log(`Processing guild: ${guild.name} (${guild.id}), Members Cache Size: ${guild.members.cache.size}, toReset ${membersToReset.size} toUpdate ${membersToUpdate.size}`);
         await Promise.all([
-            ...membersToReset.values().map(async m => await updateMessageStreakInNickname(m, 0)),
-            ...membersToUpdate.values().map(async m => await updateMessageStreakInNickname(m, discordIdsToStreak[m.id]!!))
+            ...membersToReset.values().map(async m => { await updateMessageStreakInNickname(m, 0); }),
+            ...membersToUpdate.values().map(async m => {
+                const streak = discordIdsToStreak[m.id];
+                if (typeof streak === "undefined") {
+                    throw new Error(`unreachable: Streak for member ${m.id} does not exist`);
+                }
+                await updateMessageStreakInNickname(m, streak);
+            })
         ]);
     }
 }
