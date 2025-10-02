@@ -45,5 +45,9 @@
     "noEmit": true,
     "allowSyntheticDefaultImports": true,
   },
-  "include": ["src/**/*.ts", "drizzle.config.ts"],
+  "include": [
+    "src/**/*.ts",
+    "drizzle.config.ts",
+    "eslint.config.ts"
+  ],
 }
