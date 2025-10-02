@@ -41,7 +41,7 @@ async function resetNicknameStreaks(client: Client) {
                 member.guild.ownerId !== member.user.id &&
                 member.nickname?.match(/⚡\d+$/))
         );
-        const membersToUpdate = guild.members.cache.filter(member => discordIds.has(member.id) && !member.nickname?.endsWith(`⚡${String(discordIdsToStreak[member.id])}`));
+        const membersToUpdate = guild.members.cache.filter(member => discordIds.has(member.id) && (!member.nickname?.endsWith(`⚡${String(discordIdsToStreak[member.id])}`) || member.nickname.endsWith(` ⚡${String(discordIdsToStreak[member.id])}`)));
 
         console.log(`Processing guild: ${guild.name} (${guild.id}), Members Cache Size: ${guild.members.cache.size}, toReset ${membersToReset.size} toUpdate ${membersToUpdate.size}`);
         await Promise.all([
