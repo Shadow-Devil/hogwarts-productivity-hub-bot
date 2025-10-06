@@ -47,6 +47,7 @@
   },
   "include": [
     "src/**/*.ts",
+    "tests/**/*.ts",
     "drizzle.config.ts",
     "eslint.config.ts"
   ],
