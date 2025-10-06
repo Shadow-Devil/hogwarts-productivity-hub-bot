@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createProgressBar,
-} from "../../src/utils/visualHelpers";
+} from "../../src/utils/visualHelpers.ts";
 
 describe("Visual Helpers", () => {
   it("should export expected functions", () => {
