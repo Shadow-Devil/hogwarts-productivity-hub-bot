@@ -95,7 +95,7 @@ async function replyLeaderboard(
     embeds: [{
       color: BotColors.PREMIUM,
       title,
-      description: leaderboardData.length !== 0 ? leaderboardData.join("\n") : "No rankings available"
+      description: leaderboardData.length === 0 ? "No rankings available" : leaderboardData.join("\n")
     }]
   });
 }

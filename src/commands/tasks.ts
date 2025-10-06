@@ -1,5 +1,5 @@
 import { AutocompleteInteraction, bold, ChatInputCommandInteraction, GuildMember, SlashCommandBuilder, time, TimestampStyles, User, type APIEmbedField, } from "discord.js";
-import { replyError } from "../utils/utils.ts";
+import { replyError, awardPoints } from "../utils/utils.ts";
 import dayjs from "dayjs";
 import { db, fetchTasks, fetchUserTimezone } from "../db/db.ts";
 import { taskTable } from "../db/schema.ts";
@@ -7,7 +7,6 @@ import { and, desc, eq, gte } from "drizzle-orm";
 import { BotColors, DAILY_TASK_LIMIT, TASK_MIN_TIME, TASK_POINT_SCORE } from "../utils/constants.ts";
 import assert from "node:assert/strict";
 import { createProgressSection } from "../utils/visualHelpers.ts";
-import { awardPoints } from "../utils/utils.ts";
 import type { Task } from "../types.ts";
 
 export default {
@@ -195,7 +194,7 @@ async function viewTasks(interaction: ChatInputCommandInteraction, discordId: st
   if (completedTasks.length > 0) {
     fields.push({
       name: `✅ Recently Completed • ${completedTasks.length} total`,
-      value: completedTasks.sort((a, b) =>
+      value: completedTasks.toSorted((a, b) =>
         b.completedAt.getTime() -
         a.completedAt.getTime()
       ).map((task, index) => `${index + 1}. ${task.title} at ${time(task.completedAt, TimestampStyles.ShortTime)} (+${TASK_POINT_SCORE} points)`).join("\n"),
