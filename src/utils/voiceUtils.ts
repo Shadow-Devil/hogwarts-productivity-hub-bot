@@ -44,7 +44,7 @@ export async function startVoiceSession(
 ) {
   const channelId = session.channelId;
   const channelName = session.channelName;
-  if (channelId === null || process.env.EXCLUDE_VOICE_CHANNEL_IDS?.split(",").includes(channelId)) {
+  if (channelId === null || process.env.EXCLUDE_VOICE_CHANNEL_IDS.split(",").includes(channelId)) {
     return;
   }
   assert(channelName !== null, "Channel name must be provided for voice session");
@@ -74,7 +74,7 @@ export async function endVoiceSession(
   db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | NodePgDatabase<Schema>,
   isTracked = true) {
   const channelId = session.channelId;
-  if (channelId === null || process.env.EXCLUDE_VOICE_CHANNEL_IDS?.split(",").includes(channelId)) {
+  if (channelId === null || process.env.EXCLUDE_VOICE_CHANNEL_IDS.split(",").includes(channelId)) {
     return;
   }
   await db.transaction(async (db) => {
