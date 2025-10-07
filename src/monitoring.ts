@@ -29,7 +29,7 @@ register.registerMetric(voiceSessionExecutionTimer);
 
 client.collectDefaultMetrics({register});
 
-app.get('/metrics', async (req, res) => {
+app.get('/metrics', async (_req, res) => {
     res.setHeader('Content-Type', register.contentType);
     res.send(await register.metrics());
 });

@@ -68,7 +68,7 @@ export default {
         await addTask(interaction, discordId, userTimezone, startOfDay);
         break;
       case "view":
-        await viewTasks(interaction, discordId, startOfDay);
+        await viewTasks(interaction, startOfDay);
         break;
       case "complete":
         await completeTask(interaction, discordId, startOfDay);
@@ -132,7 +132,7 @@ async function addTask(interaction: ChatInputCommandInteraction, discordId: stri
   });
 }
 
-async function viewTasks(interaction: ChatInputCommandInteraction, discordId: string, startOfDay: Date): Promise<void> {
+async function viewTasks(interaction: ChatInputCommandInteraction, startOfDay: Date): Promise<void> {
   const userMention = interaction.options.getMentionable("user");
 
   let user;

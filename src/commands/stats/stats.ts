@@ -1,27 +1,11 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
 import dayjs from "dayjs";
-import { BotColors, MAX_HOURS_PER_DAY } from "../../utils/constants.ts";
+import { BotColors } from "../../utils/constants.ts";
 import { db } from "../../db/db.ts";
 import { taskTable, userTable } from "../../db/schema.ts";
 import { and, eq, gt } from "drizzle-orm";
 import assert from "node:assert";
 import { timeToHours } from "../../utils/utils.ts";
-
-
-
-/**
- * Generate daily limit status text for display
- * @param {Object} limitInfo - Daily limit info from calculateDailyLimitInfo
- * @returns {string} Formatted status text
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function formatDailyLimitStatus(dailyVoiceTime: number, timezone: string): string {
-  if (dailyVoiceTime / 3600 >= MAX_HOURS_PER_DAY) {
-    return "**Limit Reached** 🚫";
-  }
-
-  return `**${dayjs().tz(timezone).endOf('day').diff(dayjs().tz(timezone), 'hour')}h** until reset (resets at midnight) ⏰`;
-}
 
 
 export default {
