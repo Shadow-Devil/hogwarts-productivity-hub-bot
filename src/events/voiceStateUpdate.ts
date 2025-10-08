@@ -20,34 +20,37 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
     username,
     channelId: oldChannel?.id ?? null,
     channelName: oldChannel?.name ?? null,
-  }
+  };
   const newVoiceSession = {
     discordId,
     username,
     channelId: newChannel?.id ?? null,
     channelName: newChannel?.name ?? null,
-  }
+  };
 
-  console.debug("+".repeat(5) + ` Voice state update for ${username} (${oldChannel?.name ?? ''} -> ${newChannel?.name ?? ''})`);
+  console.debug(
+    "+".repeat(5) +
+      ` Voice state update for ${username} (${oldChannel?.name ?? ""} -> ${newChannel?.name ?? ""})`,
+  );
   await ensureUserExists(member, discordId, username);
-  let event = 'unknown';
+  let event = "unknown";
 
   await wrapWithAlerting(async () => {
     // User joined a voice channel
     if (!oldChannel && newChannel) {
       await startVoiceSession(newVoiceSession, db);
-      event = 'join';
+      event = "join";
     } else if (oldChannel && !newChannel) {
       await endVoiceSession(oldVoiceSession, db);
-      event = 'leave';
+      event = "leave";
     } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
       // For channel switches, end the old session and start new one immediately
       await endVoiceSession(oldVoiceSession, db);
       await startVoiceSession(newVoiceSession, db);
-      event = 'switch';
+      event = "switch";
     }
   }, `Voice state update for ${username} (${discordId})`);
 
-  console.debug("-".repeat(5))
+  console.debug("-".repeat(5));
   end({ event });
 }

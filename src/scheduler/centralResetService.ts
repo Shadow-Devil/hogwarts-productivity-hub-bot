@@ -12,7 +12,6 @@ import { updateMessageStreakInNickname } from "../utils/utils.ts";
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
 
 export async function start() {
-
   // Schedule daily reset checks - run every hour to catch all timezones
   const dailyResetJob = cron.schedule(
     "0 * * * *",
@@ -21,7 +20,7 @@ export async function start() {
     },
     {
       timezone: "UTC",
-    }
+    },
   );
 
   // Schedule monthly reset checks - run on the 1st of the month
@@ -32,7 +31,7 @@ export async function start() {
     },
     {
       timezone: "UTC",
-    }
+    },
   );
 
   // Track all jobs
@@ -47,15 +46,21 @@ export async function start() {
 
 async function processDailyResets() {
   const end = resetExecutionTimer.startTimer();
-  console.debug("+".repeat(5) + " Processing daily resets at " + dayjs().format("MMM DD HH:mm:ss"));
+  console.debug(
+    "+".repeat(5) +
+      " Processing daily resets at " +
+      dayjs().format("MMM DD HH:mm:ss"),
+  );
 
   await wrapWithAlerting(async () => {
     await db.transaction(async (db) => {
-      const usersNeedingPotentialReset = await db.select({
-        discordId: userTable.discordId,
-        timezone: userTable.timezone,
-        lastDailyReset: userTable.lastDailyReset,
-      }).from(userTable)
+      const usersNeedingPotentialReset = await db
+        .select({
+          discordId: userTable.discordId,
+          timezone: userTable.timezone,
+          lastDailyReset: userTable.lastDailyReset,
+        })
+        .from(userTable);
 
       // Filter to only include users who are actually past their local midnight
       const usersNeedingReset = [];
@@ -73,19 +78,40 @@ async function processDailyResets() {
         return;
       }
 
-      const usersInVoiceSessions = await fetchOpenVoiceSessions(db, usersNeedingReset);
+      const usersInVoiceSessions = await fetchOpenVoiceSessions(
+        db,
+        usersNeedingReset,
+      );
 
-      await Promise.all(usersInVoiceSessions.map(session => endVoiceSession(session, db)));
+      await Promise.all(
+        usersInVoiceSessions.map((session) => endVoiceSession(session, db)),
+      );
 
-      await db.select().from(userTable).where(and(inArray(userTable.discordId, usersNeedingReset), eq(userTable.isMessageStreakUpdatedToday, false))).then(async rows => {
-        for (const row of rows) {
-          const members = client.guilds.cache.map(guild => guild.members.fetch(row.discordId).catch(() => null));
-          await Promise.all(members.map(async m => { await updateMessageStreakInNickname(await m, 0); }));
-        };
-      });
+      await db
+        .select()
+        .from(userTable)
+        .where(
+          and(
+            inArray(userTable.discordId, usersNeedingReset),
+            eq(userTable.isMessageStreakUpdatedToday, false),
+          ),
+        )
+        .then(async (rows) => {
+          for (const row of rows) {
+            const members = client.guilds.cache.map((guild) =>
+              guild.members.fetch(row.discordId).catch(() => null),
+            );
+            await Promise.all(
+              members.map(async (m) => {
+                await updateMessageStreakInNickname(await m, 0);
+              }),
+            );
+          }
+        });
 
-      const result = await db.update(userTable).set(
-        {
+      const result = await db
+        .update(userTable)
+        .set({
           dailyPoints: 0,
           dailyVoiceTime: 0,
           lastDailyReset: new Date(),
@@ -94,10 +120,12 @@ async function processDailyResets() {
           messageStreak: sql`CASE WHEN ${userTable.isMessageStreakUpdatedToday} = false THEN 0 ELSE ${userTable.messageStreak} END`,
           isMessageStreakUpdatedToday: false,
           dailyMessages: 0,
-        }
-      ).where(inArray(userTable.discordId, usersNeedingReset))
+        })
+        .where(inArray(userTable.discordId, usersNeedingReset));
 
-      await Promise.all(usersInVoiceSessions.map(session => startVoiceSession(session, db)));
+      await Promise.all(
+        usersInVoiceSessions.map((session) => startVoiceSession(session, db)),
+      );
 
       console.log("Daily reset edited this many users:", result.rowCount);
     });
@@ -108,16 +136,18 @@ async function processDailyResets() {
 
 async function processMonthlyResets() {
   const end = resetExecutionTimer.startTimer();
-  console.debug('+'.repeat(5) + " Processing monthly resets at " + dayjs().format("MMM DD HH:mm:ss"));
+  console.debug(
+    "+".repeat(5) +
+      " Processing monthly resets at " +
+      dayjs().format("MMM DD HH:mm:ss"),
+  );
   await wrapWithAlerting(async () => {
-    const result = await db.update(userTable).set(
-      {
-        monthlyPoints: 0,
-        monthlyVoiceTime: 0,
-      }
-    )
+    const result = await db.update(userTable).set({
+      monthlyPoints: 0,
+      monthlyVoiceTime: 0,
+    });
     console.log("Monthly reset edited this many users:", result.rowCount);
   }, "Monthly reset processing");
-  console.debug('-'.repeat(5));
+  console.debug("-".repeat(5));
   end({ action: "monthly" });
 }

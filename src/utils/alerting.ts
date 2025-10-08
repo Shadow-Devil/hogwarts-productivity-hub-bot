@@ -1,18 +1,23 @@
 import { client } from "../client.ts";
 
 export async function alertOwner(message: string): Promise<void> {
-    const user = await client.users.fetch(process.env.OWNER_ID)
-    await user.send(message);
-    console.log(`Alerted owner: ${message}`);
+  const user = await client.users.fetch(process.env.OWNER_ID);
+  await user.send(message);
+  console.log(`Alerted owner: ${message}`);
 }
 
-export async function wrapWithAlerting<T>(fn: () => Promise<T>, alertMessage: string): Promise<T> {
-    try {
-        return await fn();
-    } catch (error) {
-        await alertOwner(`An error occurred: ${error instanceof Error ? error : "Unknown Error"}\n\nDetails: ${alertMessage}`);
+export async function wrapWithAlerting<T>(
+  fn: () => Promise<T>,
+  alertMessage: string,
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    await alertOwner(
+      `An error occurred: ${error instanceof Error ? error : "Unknown Error"}\n\nDetails: ${alertMessage}`,
+    );
 
-        console.error("Error in wrapped function:", error);
-        throw error;
-    }
+    console.error("Error in wrapped function:", error);
+    throw error;
+  }
 }

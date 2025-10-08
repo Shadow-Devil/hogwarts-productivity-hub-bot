@@ -1,6 +1,7 @@
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
+import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 
 export default defineConfig([
   eslint.configs.recommended,
@@ -23,8 +24,9 @@ export default defineConfig([
           allowNullish: false,
           allowNumber: true,
           allowRegExp: false,
-        }
-      ]
-    }
-  }
+        },
+      ],
+    },
+  },
+  eslintPluginPrettierRecommended,
 ]);

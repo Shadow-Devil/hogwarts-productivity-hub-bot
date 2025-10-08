@@ -1,15 +1,17 @@
-import type { AutocompleteInteraction, ChatInputCommandInteraction, SharedSlashCommand } from "discord.js";
+import type {
+  AutocompleteInteraction,
+  ChatInputCommandInteraction,
+  SharedSlashCommand,
+} from "discord.js";
 
 export interface Command {
   data: SharedSlashCommand;
   execute: (
     interaction: ChatInputCommandInteraction,
-    options: { activeVoiceTimers: Map<string, VoiceTimer>; }
+    options: { activeVoiceTimers: Map<string, VoiceTimer> },
   ) => Promise<void>;
-  autocomplete?: (
-    interaction: AutocompleteInteraction
-  ) => Promise<void>;
-};
+  autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
+}
 
 export type House = "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin";
 
@@ -42,4 +44,4 @@ export interface CompletedTask {
   createdAt: Date;
 }
 
-export type Task = IncompleteTask | CompletedTask
+export type Task = IncompleteTask | CompletedTask;

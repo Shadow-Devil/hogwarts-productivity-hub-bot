@@ -1,6 +1,4 @@
-import {
-  Collection,
-} from "discord.js";
+import { Collection } from "discord.js";
 import tasks from "./commands/tasks.ts";
 
 import debug from "./commands/admin/debug.ts";

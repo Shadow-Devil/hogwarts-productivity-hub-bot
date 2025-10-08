@@ -1,7 +1,15 @@
 import { drizzle, type NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import * as schema from "./schema.ts";
 import type { GuildMember } from "discord.js";
-import { eq, and, type ExtractTablesWithRelations, isNull, inArray, DefaultLogger, type LogWriter } from "drizzle-orm";
+import {
+  eq,
+  and,
+  type ExtractTablesWithRelations,
+  isNull,
+  inArray,
+  DefaultLogger,
+  type LogWriter,
+} from "drizzle-orm";
 import { getHouseFromMember } from "../utils/utils.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 
@@ -19,47 +27,78 @@ export const db = drizzle({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     host: process.env.DB_HOST,
-    ssl: false
+    ssl: false,
   },
   schema,
-  casing: 'snake_case',
-  logger: new DefaultLogger({writer: new MyLogWriter()})
+  casing: "snake_case",
+  logger: new DefaultLogger({ writer: new MyLogWriter() }),
 });
 
-export async function ensureUserExists(member: GuildMember | null, discordId: string, username: string) {
+export async function ensureUserExists(
+  member: GuildMember | null,
+  discordId: string,
+  username: string,
+) {
   const house = getHouseFromMember(member);
 
-  await db.insert(schema.userTable).values({ discordId, username, house }).onConflictDoUpdate({
-    target: schema.userTable.discordId,
-    set: {
-      username,
-      house
-    }
-  });
+  await db
+    .insert(schema.userTable)
+    .values({ discordId, username, house })
+    .onConflictDoUpdate({
+      target: schema.userTable.discordId,
+      set: {
+        username,
+        house,
+      },
+    });
 }
 
 export async function fetchUserTimezone(discordId: string) {
-  return await db.select({ timezone: schema.userTable.timezone })
+  return await db
+    .select({ timezone: schema.userTable.timezone })
     .from(schema.userTable)
     .where(eq(schema.userTable.discordId, discordId))
-    .then(rows => rows[0]?.timezone ?? "UTC");
+    .then((rows) => rows[0]?.timezone ?? "UTC");
 }
 
 export async function fetchTasks(discordId: string) {
-  return await db.select({ title: schema.taskTable.title, id: schema.taskTable.id }).from(schema.taskTable).where(
-    and(
-      eq(schema.taskTable.discordId, discordId),
-      eq(schema.taskTable.isCompleted, false)
-    )
-  );
+  return await db
+    .select({ title: schema.taskTable.title, id: schema.taskTable.id })
+    .from(schema.taskTable)
+    .where(
+      and(
+        eq(schema.taskTable.discordId, discordId),
+        eq(schema.taskTable.isCompleted, false),
+      ),
+    );
 }
 
-export async function fetchOpenVoiceSessions(db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>, usersNeedingReset: string[] | null = null) {
-  return await db.select({ discordId: schema.voiceSessionTable.discordId, username: schema.userTable.username, channelId: schema.voiceSessionTable.channelId, channelName: schema.voiceSessionTable.channelName })
+export async function fetchOpenVoiceSessions(
+  db: PgTransaction<
+    NodePgQueryResultHKT,
+    Schema,
+    ExtractTablesWithRelations<Schema>
+  >,
+  usersNeedingReset: string[] | null = null,
+) {
+  return await db
+    .select({
+      discordId: schema.voiceSessionTable.discordId,
+      username: schema.userTable.username,
+      channelId: schema.voiceSessionTable.channelId,
+      channelName: schema.voiceSessionTable.channelName,
+    })
     .from(schema.voiceSessionTable)
-    .where(and(
-      usersNeedingReset !== null ? inArray(schema.voiceSessionTable.discordId, usersNeedingReset) : undefined,
-      isNull(schema.voiceSessionTable.leftAt)
-    ))
-    .innerJoin(schema.userTable, eq(schema.voiceSessionTable.discordId, schema.userTable.discordId));
+    .where(
+      and(
+        usersNeedingReset !== null
+          ? inArray(schema.voiceSessionTable.discordId, usersNeedingReset)
+          : undefined,
+        isNull(schema.voiceSessionTable.leftAt),
+      ),
+    )
+    .innerJoin(
+      schema.userTable,
+      eq(schema.voiceSessionTable.discordId, schema.userTable.discordId),
+    );
 }

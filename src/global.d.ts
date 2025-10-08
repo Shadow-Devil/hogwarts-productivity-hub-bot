@@ -11,7 +11,7 @@ export declare global {
       HUFFLEPUFF_ROLE_ID: string;
       RAVENCLAW_ROLE_ID: string;
       DISCORD_TOKEN: string;
-      NODE_ENV: 'development' | 'production' | 'test';
+      NODE_ENV: "development" | "production" | "test";
       EXCLUDE_VOICE_CHANNEL_IDS: string;
       CLIENT_ID: string;
     }

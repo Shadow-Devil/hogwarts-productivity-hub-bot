@@ -20,7 +20,6 @@ export const houseEmojis = {
   Slytherin: "🐍",
 };
 
-
 export const TASK_POINT_SCORE = 2;
 export const DAILY_TASK_LIMIT = 10;
 export const TASK_MIN_TIME = 20;

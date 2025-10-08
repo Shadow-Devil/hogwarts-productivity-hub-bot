@@ -8,8 +8,8 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "typecheck": "tsc",
     "validate": "npm run lint && npm run typecheck"
   },
@@ -42,6 +42,7 @@
     "@typescript-eslint/parser": "^8.46.0",
     "drizzle-kit": "^0.31.5",
     "eslint": "9.36.0",
+    "eslint-plugin-prettier": "^5.5.4",
     "jiti": "^2.6.1",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",

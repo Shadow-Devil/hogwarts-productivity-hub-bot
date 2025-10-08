@@ -15,16 +15,13 @@ export function formatDataTable(pairs: [string, string | number][]) {
 }
 
 // 📊 Create Stats Card with Enhanced Typography
-export function createStatsCard(
-  title: string,
-  stats: Record<string, string>,
-) {
+export function createStatsCard(title: string, stats: Record<string, string>) {
   let card = `### 📊 ${title}\n` + "```\n";
 
   for (const [key, value] of Object.entries(stats)) {
     const formattedKey = key.padEnd(15, ".");
     card += `${formattedKey} ${value}\n`;
-  };
+  }
 
   card += "```";
   return card;
@@ -50,10 +47,7 @@ export function createProgressBar(
 }
 
 // 📊 Create Progress Section with Visual Enhancement
-export function createProgressSection(
-  current: number,
-  max: number,
-) {
+export function createProgressSection(current: number, max: number) {
   const progress = createProgressBar(current, max, 10);
 
   return `\`\`\`\n${progress.bar}\n\`\`\`\n**Progress:** ${current}/${max} (${progress.percentage}%)`;

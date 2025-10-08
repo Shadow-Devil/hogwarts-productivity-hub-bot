@@ -5,7 +5,12 @@
  */
 
 import { client } from "../client.ts";
-import { BaseGuildVoiceChannel, ChannelType, Collection, type Guild } from "discord.js";
+import {
+  BaseGuildVoiceChannel,
+  ChannelType,
+  Collection,
+  type Guild,
+} from "discord.js";
 import { startVoiceSession } from "./voiceUtils.ts";
 import { db, ensureUserExists } from "../db/db.ts";
 import { voiceSessionTable } from "../db/schema.ts";
@@ -36,11 +41,13 @@ export async function scanAndStartTracking() {
     channels: [],
   };
 
-  const activeVoiceSessions = await db.select({
-    discordId: voiceSessionTable.discordId,
-  }).from(voiceSessionTable).where(
-    isNull(voiceSessionTable.leftAt),
-  ).then(s => s.map(r => r.discordId));
+  const activeVoiceSessions = await db
+    .select({
+      discordId: voiceSessionTable.discordId,
+    })
+    .from(voiceSessionTable)
+    .where(isNull(voiceSessionTable.leftAt))
+    .then((s) => s.map((r) => r.discordId));
 
   try {
     // Get all guilds (should be only one for this bot)
@@ -64,7 +71,9 @@ export async function scanAndStartTracking() {
     }
 
     if (scanResults.trackingStarted > 0) {
-      console.log(`   Successfully started automatic tracking for ${scanResults.trackingStarted} users`);
+      console.log(
+        `   Successfully started automatic tracking for ${scanResults.trackingStarted} users`,
+      );
     } else if (scanResults.totalUsersFound > 0) {
       console.log("   All found users were already being tracked");
     } else {
@@ -85,13 +94,16 @@ export async function scanAndStartTracking() {
  * Scan voice states for a specific guild
  * @param {Guild} guild - Discord guild
  */
-async function scanGuildVoiceStates(guild: Guild, activeVoiceSessions: string[]) {
+async function scanGuildVoiceStates(
+  guild: Guild,
+  activeVoiceSessions: string[],
+) {
   try {
     // Get all voice channels in the guild
     const voiceChannels = guild.channels.cache.filter(
       (channel) =>
         channel.type === ChannelType.GuildVoice && // Voice channel type
-        channel.members.size > 0 // Has members
+        channel.members.size > 0, // Has members
     ) as Collection<string, BaseGuildVoiceChannel>;
 
     for (const [, channel] of voiceChannels) {
@@ -107,7 +119,10 @@ async function scanGuildVoiceStates(guild: Guild, activeVoiceSessions: string[])
  * Scan a specific voice channel and start tracking for users
  * @param {BaseGuildVoiceChannel} channel - Discord voice channel
  */
-async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessions: string[]) {
+async function scanVoiceChannel(
+  channel: BaseGuildVoiceChannel,
+  activeVoiceSessions: string[],
+) {
   try {
     const members = channel.members;
 
@@ -137,18 +152,23 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
 
         await ensureUserExists(member, discordId, username);
         // Start voice session for this user
-        await startVoiceSession({
-          discordId,
-          username,
-          channelId: channel.id,
-          channelName: channel.name,
-        }, db);
+        await startVoiceSession(
+          {
+            discordId,
+            username,
+            channelId: channel.id,
+            channelName: channel.name,
+          },
+          db,
+        );
 
         scanResults.trackingStarted++;
         usersStarted.push(username);
-
       } catch (userError) {
-        console.error(`Error starting tracking for user ${username}:`, userError);
+        console.error(
+          `Error starting tracking for user ${username}:`,
+          userError,
+        );
         scanResults.errors++;
       }
     }
@@ -156,7 +176,7 @@ async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessi
     if (usersStarted.length > 0) {
       console.log(
         `🎯 Started tracking for ${usersStarted.length} users in ${channel.name}:`,
-        usersStarted.join(", ")
+        usersStarted.join(", "),
       );
     }
   } catch (error) {
