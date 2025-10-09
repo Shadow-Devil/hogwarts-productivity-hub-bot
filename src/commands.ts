@@ -10,6 +10,7 @@ import timer from "./commands/timer.ts";
 import timezoneCommand from "./commands/timezone.ts";
 import stats from "./commands/stats/stats.ts";
 import type { Command } from "./types.ts";
+import draw from "./commands/draw.ts";
 
 export const commands = new Collection<string, Command>();
 
@@ -25,3 +26,5 @@ commands.set(voicescan.data.name, voicescan);
 commands.set(housepoints.data.name, housepoints);
 commands.set(leaderboard.data.name, leaderboard);
 commands.set(stats.data.name, stats);
+
+commands.set(draw.data.name, draw);

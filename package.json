@@ -24,6 +24,7 @@
   "license": "ISC",
   "description": "Discord Productivity Bot with task management, Pomodoro timers, and gamified points system",
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.80",
     "dayjs": "^1.11.18",
     "discord.js": "^14.22.1",
     "dotenv": "^17.2.3",
