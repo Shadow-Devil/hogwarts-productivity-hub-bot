@@ -12,7 +12,7 @@ export default {
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const canvas = createCanvas(700, 250);
     const context = canvas.getContext("2d");
-    const background = await loadImage("./canvas.jpg");
+    const background = await loadImage(__dirname + "/canvas.jpg");
 
     // This uses the canvas dimensions to stretch the image onto the entire canvas
     context.drawImage(background, 0, 0, canvas.width, canvas.height);
