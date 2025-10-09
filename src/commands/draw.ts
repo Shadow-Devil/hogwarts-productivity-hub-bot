@@ -3,7 +3,6 @@ import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
-import type { Command } from "../types.ts";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 
 export default {
@@ -25,4 +24,4 @@ export default {
 
     await interaction.reply({ files: [attachment] });
   },
-} as Command;
+};

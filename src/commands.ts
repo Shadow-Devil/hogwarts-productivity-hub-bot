@@ -5,7 +5,6 @@ import debug from "./commands/admin/debug.ts";
 import voicescan from "./commands/admin/voicescan.ts";
 
 import housepoints from "./commands/stats/housepoints.ts";
-import leaderboard from "./commands/stats/leaderboard.ts";
 import timer from "./commands/timer.ts";
 import timezoneCommand from "./commands/timezone.ts";
 import stats from "./commands/stats/stats.ts";
@@ -24,7 +23,7 @@ commands.set(voicescan.data.name, voicescan);
 
 // Stats commands
 commands.set(housepoints.data.name, housepoints);
-commands.set(leaderboard.data.name, leaderboard);
+//commands.set(leaderboard.data.name, leaderboard);
 commands.set(stats.data.name, stats);
 
 commands.set(draw.data.name, draw);
