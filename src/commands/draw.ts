@@ -7,7 +7,9 @@ import type { Command } from "../types.ts";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 
 export default {
-  data: new SlashCommandBuilder().setName("draw"),
+  data: new SlashCommandBuilder()
+    .setName("draw")
+    .setDescription("Draws an image"),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const canvas = createCanvas(700, 250);
     const context = canvas.getContext("2d");
