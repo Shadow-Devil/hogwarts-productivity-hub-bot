@@ -1,8 +1,7 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
   ButtonStyle,
   ChatInputCommandInteraction,
+  ComponentType,
   SlashCommandBuilder,
 } from "discord.js";
 
@@ -32,23 +31,28 @@ export default {
     const points = interaction.options.getInteger("points", true);
     const screenshot = interaction.options.getAttachment("screenshot", true);
 
-    const confirm = new ButtonBuilder()
-      .setCustomId("approve")
-      .setLabel(`Approve ${points} points`)
-      .setStyle(ButtonStyle.Primary);
-
-    const cancel = new ButtonBuilder()
-      .setCustomId("reject")
-      .setLabel("Reject")
-      .setStyle(ButtonStyle.Secondary);
-    const row = new ActionRowBuilder<ButtonBuilder>({
-      components: [cancel, confirm],
-    });
     const response = await interaction.reply({
       content: "Please confirm your submission",
-      ephemeral: true,
       files: [screenshot],
-      components: [row],
+      components: [
+        {
+          type: ComponentType.ActionRow,
+          components: [
+            {
+              type: ComponentType.Button,
+              customId: "approve",
+              label: `Approve ${points} points`,
+              style: ButtonStyle.Success,
+            },
+            {
+              type: ComponentType.Button,
+              customId: "reject",
+              label: "Reject",
+              style: ButtonStyle.Secondary,
+            },
+          ],
+        },
+      ],
       withResponse: true,
     });
 
