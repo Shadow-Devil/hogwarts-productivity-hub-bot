@@ -63,7 +63,7 @@ describe("Calculate Points Tests", () => {
         );
       } else {
         expect(result, i.toString()).toBe(
-          FIRST_HOUR_POINTS + REST_HOURS_POINTS * 14,
+          FIRST_HOUR_POINTS + REST_HOURS_POINTS * (MAX_HOURS_PER_DAY - 1),
         );
       }
     }
