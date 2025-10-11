@@ -62,12 +62,12 @@ export default {
           filter: (i) => i.user.id === interaction.user.id,
         });
 
-      if (confirmation?.customId === "confirm") {
+      if (confirmation?.customId === "approve") {
         await confirmation.update({
           content: `${username} has been awarded ${points} points!`,
           components: [],
         });
-      } else if (confirmation?.customId === "cancel") {
+      } else if (confirmation?.customId === "reject") {
         await confirmation.update({
           content: "Action cancelled",
           components: [],
