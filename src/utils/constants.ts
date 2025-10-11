@@ -28,4 +28,4 @@ export const MIN_DAILY_MINUTES_FOR_STREAK = 15 * 60;
 export const MIN_DAILY_MESSAGES_FOR_STREAK = 3;
 export const FIRST_HOUR_POINTS = 5;
 export const REST_HOURS_POINTS = 2;
-export const MAX_HOURS_PER_DAY = 15;
+export const MAX_HOURS_PER_DAY = 12;
