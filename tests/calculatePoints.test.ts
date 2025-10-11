@@ -5,6 +5,7 @@ import {
 } from "../src/utils/voiceUtils.ts";
 import {
   FIRST_HOUR_POINTS,
+  MAX_HOURS_PER_DAY,
   REST_HOURS_POINTS,
 } from "../src/utils/constants.ts";
 
@@ -56,7 +57,7 @@ describe("Calculate Points Tests", () => {
         expect(result, i.toString()).toBe(0);
       } else if (i === 1) {
         expect(result, i.toString()).toBe(FIRST_HOUR_POINTS);
-      } else if (i > 1 && i <= 15) {
+      } else if (i > 1 && i <= MAX_HOURS_PER_DAY) {
         expect(result, i.toString()).toBe(
           FIRST_HOUR_POINTS + REST_HOURS_POINTS * (i - 1),
         );
