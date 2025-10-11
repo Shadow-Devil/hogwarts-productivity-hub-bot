@@ -57,6 +57,7 @@ export default {
     });
 
     try {
+      // TODO: Only allow prefects
       const confirmation =
         await response.resource?.message?.awaitMessageComponent({
           filter: (i) => i.user.id === interaction.user.id,
@@ -67,6 +68,7 @@ export default {
           content: `${username} has been awarded ${points} points!`,
           components: [],
         });
+        // TODO update database
       } else if (confirmation?.customId === "reject") {
         await confirmation.update({
           content: "Action cancelled",
