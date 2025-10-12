@@ -3,7 +3,7 @@ import timezoneCommand from "./commands/timezone.ts";
 import stats from "./commands/stats/stats.ts";
 import type { Command } from "./types.ts";
 import draw from "./commands/draw.ts";
-import score from "./commands/score.ts";
+import submit from "./commands/submit.ts";
 
 export const commands = new Collection<string, Command>();
 
@@ -21,4 +21,4 @@ commands.set(timezoneCommand.data.name, timezoneCommand);
 commands.set(stats.data.name, stats);
 
 commands.set(draw.data.name, draw);
-commands.set(score.data.name, score);
+commands.set(submit.data.name, submit);
