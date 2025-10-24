@@ -68,7 +68,13 @@ async function processDailyResets() {
         const userTime = dayjs().tz(user.timezone);
         const lastReset = dayjs(user.lastDailyReset).tz(user.timezone);
 
-        if (!userTime.isSame(lastReset, "day")) {
+        if (
+          !userTime.isSame(lastReset, "day") &&
+          (await client.guilds
+            .fetch(process.env.GUILD_ID)
+            .then((guild) => guild.members.fetch(user.discordId))
+            .then((member) => member.premiumSince === null))
+        ) {
           usersNeedingReset.push(user.discordId);
         }
       }

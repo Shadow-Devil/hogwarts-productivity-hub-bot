@@ -14,6 +14,7 @@ export declare global {
       NODE_ENV: "development" | "production" | "test";
       EXCLUDE_VOICE_CHANNEL_IDS: string;
       CLIENT_ID: string;
+      GUILD_ID: string;
     }
   }
 }
