@@ -107,6 +107,10 @@ export async function updateMessageStreakInNickname(member: GuildMember | null, 
   }
 }
 
+export function isPrefect(member: GuildMember): boolean {
+  return member.roles.cache.has(process.env.PREFECT_ROLE_ID);
+}
+
 export function isPrefectOrProfessor(member: GuildMember): boolean {
   return member.roles.cache.hasAny(process.env.PREFECT_ROLE_ID, process.env.PROFESSOR_ROLE_ID);
 }

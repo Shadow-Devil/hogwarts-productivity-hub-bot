@@ -11,7 +11,7 @@ import {
   userMention,
   type InteractionReplyOptions,
 } from "discord.js";
-import { awardPoints, getHouseFromMember, isPrefectOrProfessor } from "../utils/utils.ts";
+import { awardPoints, getHouseFromMember, isPrefect } from "../utils/utils.ts";
 import assert from "node:assert";
 import { db } from "../db/db.ts";
 import { HOUSE_COLORS } from "../utils/constants.ts";
@@ -61,7 +61,7 @@ export default {
     await interaction.deferUpdate();
 
     const member = interaction.member as GuildMember;
-    if (!isPrefectOrProfessor(member)) {
+    if (!isPrefect(member)) {
       await interaction.followUp({
         content: "You do not have permission to perform this action.",
         flags: MessageFlags.Ephemeral,
