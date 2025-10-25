@@ -1,7 +1,7 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, time } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, time, userMention } from "discord.js";
 import { replyError } from "../../utils/utils.ts";
 import { db } from "../../db/db.ts";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { userTable } from "../../db/schema.ts";
 import type { Command, House } from "../../types.ts";
 import { formatDataTable } from "../../utils/visualHelpers.ts";
@@ -32,7 +32,7 @@ export default {
     const houseLeaderboard = await db
       .select()
       .from(userTable)
-      .where(eq(userTable.house, house))
+      .where(and(eq(userTable.house, house), gt(userTable.monthlyPoints, 0)))
       .orderBy(desc(userTable.monthlyPoints));
 
     if (houseLeaderboard.length === 0) {
@@ -58,11 +58,10 @@ async function replyHousepoints(
   const houseData: [string, string][] = leaderboard.map((user, index) => {
     assert(user.house !== null);
     const position = index + 1;
-    const emoji = houseEmojis[user.house];
     const medals = ["🥇", "🥈", "🥉"];
     const medal = medals[position - 1] ?? `#${position}`;
 
-    return [`${medal} ${emoji} ${user.house}`, `${user.monthlyPoints} points`];
+    return [`${medal} ${userMention(user.discordId)}`, `${user.monthlyPoints} points`];
   });
 
   await interaction.editReply({
@@ -76,5 +75,6 @@ async function replyHousepoints(
         },
       },
     ],
+    allowedMentions: { users: [] },
   });
 }
