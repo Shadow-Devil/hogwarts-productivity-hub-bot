@@ -50,7 +50,6 @@ export default {
         discordId: member.id,
         points,
         screenshotUrl: screenshot.url,
-        submittedAt: new Date(),
         house: house,
       })
       .returning();
