@@ -5,7 +5,7 @@ import { and, desc, eq, gt } from "drizzle-orm";
 import { userTable } from "../../db/schema.ts";
 import type { Command, House } from "../../types.ts";
 import { formatDataTable } from "../../utils/visualHelpers.ts";
-import { BotColors, houseEmojis } from "../../utils/constants.ts";
+import { BotColors } from "../../utils/constants.ts";
 import assert from "node:assert";
 
 export default {
