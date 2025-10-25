@@ -58,7 +58,7 @@ export default {
   },
 
   async buttonHandler(interaction: ButtonInteraction, event: string, submissionId: string | undefined): Promise<void> {
-    await interaction.deferReply();
+    await interaction.deferUpdate();
 
     const member = interaction.member as GuildMember;
     if (!isPrefectOrProfessor(member)) {
