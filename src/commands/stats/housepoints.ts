@@ -1,11 +1,12 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, time } from "discord.js";
 import { replyError } from "../../utils/utils.ts";
 import { db } from "../../db/db.ts";
-import { desc, isNotNull, sql } from "drizzle-orm";
-import { housePointsTable, userTable } from "../../db/schema.ts";
+import { desc, eq } from "drizzle-orm";
+import { userTable } from "../../db/schema.ts";
 import type { Command, House } from "../../types.ts";
 import { formatDataTable } from "../../utils/visualHelpers.ts";
 import { BotColors, houseEmojis } from "../../utils/constants.ts";
+import assert from "node:assert";
 
 export default {
   data: new SlashCommandBuilder()
@@ -13,21 +14,26 @@ export default {
     .setDescription("View house point leaderboards and champions")
     .addStringOption((option) =>
       option
-        .setName("type")
-        .setDescription("Choose leaderboard type")
+        .setName("house")
+        .setDescription("Choose a house to view its points")
         .setRequired(true)
         .addChoices(
-          { name: "Daily House Ranking", value: "daily" },
-          { name: "Monthly House Ranking", value: "monthly" },
-          { name: "All Time House Ranking", value: "alltime" },
+          { name: "Slytherin", value: "Slytherin" },
+          { name: "Gryffindor", value: "Gryffindor" },
+          { name: "Hufflepuff", value: "Hufflepuff" },
+          { name: "Ravenclaw", value: "Ravenclaw" },
         ),
     ),
   async execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
-    const type = interaction.options.getString("type", true) as "daily" | "monthly" | "alltime";
+    const house = interaction.options.getString("house", true) as House;
 
-    const houseLeaderboard = await fetchHouseLeaderboard(type);
+    const houseLeaderboard = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.house, house))
+      .orderBy(desc(userTable.monthlyPoints));
 
     if (houseLeaderboard.length === 0) {
       await replyError(
@@ -39,58 +45,35 @@ export default {
       return;
     }
 
-    await replyHousepoints(interaction, houseLeaderboard, type);
+    await replyHousepoints(interaction, houseLeaderboard, house);
   },
 } as Command;
 
-async function fetchHouseLeaderboard(type: "daily" | "monthly" | "alltime") {
-  let pointsColumn;
-  switch (type) {
-    case "daily":
-      pointsColumn = userTable.dailyPoints;
-      break;
-    case "monthly":
-      pointsColumn = userTable.monthlyPoints;
-      break;
-    case "alltime":
-      return await db.select().from(housePointsTable).orderBy(desc(housePointsTable.points));
-  }
-  const houseLeaderboard = await db
-    .select({
-      house: sql<House>`${userTable.house}`,
-      points: sql<number>`cast(sum(${pointsColumn}) as int) as points`,
-    })
-    .from(userTable)
-    .where(isNotNull(userTable.house))
-    .groupBy(userTable.house)
-    .orderBy(desc(sql<number>`points`));
-  return houseLeaderboard;
-}
-
 async function replyHousepoints(
   interaction: ChatInputCommandInteraction,
-  houses: { house: House; points: number }[],
-  type: string,
+  leaderboard: (typeof userTable.$inferSelect)[],
+  house: string,
 ) {
-  const title =
-    type === "daily" ? "Daily House Points" : type === "monthly" ? "Monthly House Points" : "All-Time House Points";
-
   // Add house rankings
-  const houseData: [string, string][] = houses.map((house, index) => {
+  const houseData: [string, string][] = leaderboard.map((user, index) => {
+    assert(user.house !== null);
     const position = index + 1;
-    const emoji = houseEmojis[house.house];
+    const emoji = houseEmojis[user.house];
     const medals = ["🥇", "🥈", "🥉"];
     const medal = medals[position - 1] ?? `#${position}`;
 
-    return [`${medal} ${emoji} ${house.house}`, `${house.points} points`];
+    return [`${medal} ${emoji} ${user.house}`, `${user.monthlyPoints} points`];
   });
 
   await interaction.editReply({
     embeds: [
       {
         color: BotColors.PRIMARY,
-        title,
+        title: house.toUpperCase(),
         description: formatDataTable(houseData),
+        footer: {
+          text: "Last updated: " + time(new Date(), "R"),
+        },
       },
     ],
   });

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, text, varchar } from "drizzle-orm/pg-core";
 
 export const userTable = pgTable("user", {
   // Technical fields
@@ -101,4 +101,15 @@ export const submissionTable = pgTable("submission", {
   })
     .default("PENDING")
     .notNull(),
+});
+
+export const houseScoreboardTable = pgTable("house_scoreboard", {
+  id: serial().primaryKey(),
+  house: varchar({
+    length: 50,
+    enum: ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"],
+  }).notNull(),
+  channelId: text().notNull(),
+  messageId: text().notNull(),
+  updatedAt: timestamp().defaultNow().notNull(),
 });
