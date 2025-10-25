@@ -4,7 +4,6 @@ import { db } from "../../db/db.ts";
 import { and, desc, eq, gt } from "drizzle-orm";
 import { userTable } from "../../db/schema.ts";
 import type { Command, House } from "../../types.ts";
-import { formatDataTable } from "../../utils/visualHelpers.ts";
 import { BotColors } from "../../utils/constants.ts";
 import assert from "node:assert";
 
@@ -55,13 +54,13 @@ async function replyHousepoints(
   house: string,
 ) {
   // Add house rankings
-  const houseData: [string, string][] = leaderboard.map((user, index) => {
+  const houseData: [string, string, string][] = leaderboard.map((user, index) => {
     assert(user.house !== null);
     const position = index + 1;
     const medals = ["🥇", "🥈", "🥉"];
     const medal = medals[position - 1] ?? `#${position}`;
 
-    return [`${medal} ${userMention(user.discordId)}`, `${user.monthlyPoints} points`];
+    return [medal, userMention(user.discordId), user.monthlyPoints.toFixed()];
   });
 
   await interaction.editReply({
@@ -69,7 +68,23 @@ async function replyHousepoints(
       {
         color: BotColors.PRIMARY,
         title: house.toUpperCase(),
-        description: formatDataTable(houseData),
+        fields: [
+          {
+            name: "Place",
+            value: houseData.map((row) => row[0]).join("\n"),
+            inline: true,
+          },
+          {
+            name: "Name",
+            value: houseData.map((row) => row[1]).join("\n"),
+            inline: true,
+          },
+          {
+            name: "Points",
+            value: houseData.map((row) => row[2]).join("\n"),
+            inline: true,
+          },
+        ],
         footer: {
           text: "Last updated: " + time(new Date(), "R"),
         },
