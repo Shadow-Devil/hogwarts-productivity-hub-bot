@@ -62,6 +62,15 @@ async function processDailyResets() {
         })
         .from(userTable);
 
+      const boosters = await client.guilds
+        .fetch(process.env.GUILD_ID)
+        .then((guild) => guild.members.fetch())
+        .then((members) =>
+          members
+            .filter((member) => member.premiumSince !== null)
+            .map((member) => member.id),
+        );
+
       // Filter to only include users who are actually past their local midnight
       const usersNeedingReset = [];
       for (const user of usersNeedingPotentialReset) {
@@ -70,10 +79,7 @@ async function processDailyResets() {
 
         if (
           !userTime.isSame(lastReset, "day") &&
-          (await client.guilds
-            .fetch(process.env.GUILD_ID)
-            .then((guild) => guild.members.fetch(user.discordId))
-            .then((member) => member.premiumSince === null))
+          !boosters.includes(user.discordId)
         ) {
           usersNeedingReset.push(user.discordId);
         }
