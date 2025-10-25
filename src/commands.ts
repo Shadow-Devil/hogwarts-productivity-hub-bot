@@ -4,6 +4,7 @@ import stats from "./commands/stats/stats.ts";
 import type { Command } from "./types.ts";
 import draw from "./commands/draw.ts";
 import submit from "./commands/submit.ts";
+import admin from "./commands/admin.ts";
 
 export const commands = new Collection<string, Command>();
 
@@ -18,6 +19,7 @@ commands.set(timezoneCommand.data.name, timezoneCommand);
 // Stats commands
 //commands.set(housepoints.data.name, housepoints);
 //commands.set(leaderboard.data.name, leaderboard);
+commands.set(admin.data.name, admin);
 commands.set(stats.data.name, stats);
 
 commands.set(draw.data.name, draw);
