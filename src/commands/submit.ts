@@ -69,44 +69,25 @@ export default {
       return;
     }
     assert(submissionId, "No data provided in button interaction");
-    const [submission] = await db
-      .select()
-      .from(submissionTable)
-      .where(eq(submissionTable.id, parseInt(submissionId)));
-    assert(submission, `Submission with ID ${submissionId} not found`);
 
+    const [submission] = await db
+      .update(submissionTable)
+      .set({ status: event === "approve" ? "APPROVED" : "REJECTED", reviewedAt: new Date(), reviewedBy: member.id })
+      .where(eq(submissionTable.id, parseInt(submissionId)))
+      .returning();
+
+    assert(submission, `Failed to update submission with ID ${submissionId}`);
     if (event === "approve") {
       await awardPoints(db, submission.discordId, submission.points);
-      await db
-        .update(submissionTable)
-        .set({ status: "APPROVED", reviewedAt: new Date(), reviewedBy: member.id })
-        .where(eq(submissionTable.id, submission.id));
-
-      await interaction.message
-        .fetch()
-        .then((m) => m.edit(submissionMessage(submission, "approve", interaction.user.id)));
-    } else if (event === "reject") {
-      await db
-        .update(submissionTable)
-        .set({ status: "REJECTED", reviewedAt: new Date(), reviewedBy: member.id })
-        .where(eq(submissionTable.id, submission.id));
-
-      await interaction.message
-        .fetch()
-        .then((m) => m.edit(submissionMessage(submission, "reject", interaction.user.id)));
-    } else {
-      assert(false, `Unknown event type: ${event}`);
     }
+
+    await interaction.message.fetch().then((m) => m.edit(submissionMessage(submission)));
   },
 };
 
-function submissionMessage(
-  submissionData: typeof submissionTable.$inferSelect,
-  event?: "approve" | "reject",
-  buttonClickUserId?: string,
-) {
+function submissionMessage(submissionData: typeof submissionTable.$inferSelect) {
   let components: InteractionReplyOptions["components"] = [];
-  if (event === undefined) {
+  if (submissionData.status === "PENDING") {
     components = [
       {
         type: ComponentType.ActionRow,
@@ -133,6 +114,11 @@ function submissionMessage(
     color: HOUSE_COLORS[submissionData.house],
     fields: [
       {
+        name: "Submission ID",
+        value: submissionData.id.toFixed(),
+        inline: false,
+      },
+      {
         name: "Player",
         value: userMention(submissionData.discordId),
         inline: true,
@@ -153,16 +139,16 @@ function submissionMessage(
     },
   });
 
-  if (event === "approve") {
+  if (submissionData.status === "APPROVED") {
     embed.addFields({
       name: "✅ Approved by",
-      value: buttonClickUserId ? userMention(buttonClickUserId) : "Unknown",
+      value: `${userMention(submissionData.reviewedBy ?? "")} at ${time(submissionData.reviewedAt ?? new Date())}`,
       inline: false,
     });
-  } else if (event === "reject") {
+  } else if (submissionData.status === "REJECTED") {
     embed.addFields({
       name: "❌ Rejected by",
-      value: buttonClickUserId ? userMention(buttonClickUserId) : "Unknown",
+      value: `${userMention(submissionData.reviewedBy ?? "")} at ${time(submissionData.reviewedAt ?? new Date())}`,
       inline: false,
     });
   }
