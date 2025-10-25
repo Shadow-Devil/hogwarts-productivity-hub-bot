@@ -1,14 +1,8 @@
-import {
-  AttachmentBuilder,
-  ChatInputCommandInteraction,
-  SlashCommandBuilder,
-} from "discord.js";
+import { AttachmentBuilder, ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName("draw")
-    .setDescription("Draws an image"),
+  data: new SlashCommandBuilder().setName("draw").setDescription("Draws an image"),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const canvas = createCanvas(700, 250);
     const context = canvas.getContext("2d");

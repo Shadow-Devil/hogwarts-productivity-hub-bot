@@ -1,34 +1,24 @@
-import {
-  ButtonStyle,
-  ChatInputCommandInteraction,
-  ComponentType,
-  SlashCommandBuilder,
-} from "discord.js";
+import { ButtonStyle, ChatInputCommandInteraction, ComponentType, SlashCommandBuilder } from "discord.js";
 
 export default {
   data: new SlashCommandBuilder()
     .setName("testing")
     .setDescription("Testing command")
     .addSubcommandGroup((subcommand) =>
-      subcommand.setName("submit")
+      subcommand
+        .setName("submit")
         .setDescription("Submit a score")
         .addSubcommand((subcommand) =>
           subcommand
             .setName("score")
             .setDescription("Submit a score")
             .addIntegerOption((option) =>
-              option
-                .setName("points")
-                .setDescription("The number of points to submit")
-                .setRequired(true),
+              option.setName("points").setDescription("The number of points to submit").setRequired(true),
             )
             .addAttachmentOption((option) =>
-              option
-                .setName("screenshot")
-                .setDescription("A screenshot of your work")
-                .setRequired(true),
+              option.setName("screenshot").setDescription("A screenshot of your work").setRequired(true),
             ),
-        )
+        ),
     ),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const username = interaction.user.username;
@@ -62,10 +52,9 @@ export default {
 
     try {
       // TODO: Only allow prefects
-      const confirmation =
-        await response.resource?.message?.awaitMessageComponent({
-          filter: (i) => i.user.id === interaction.user.id,
-        });
+      const confirmation = await response.resource?.message?.awaitMessageComponent({
+        filter: (i) => i.user.id === interaction.user.id,
+      });
 
       if (confirmation?.customId === "approve") {
         await confirmation.update({

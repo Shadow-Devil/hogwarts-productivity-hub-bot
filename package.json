@@ -50,5 +50,13 @@
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.46.0",
     "vitest": "^3.2.4"
+  },
+  "prettier": {
+    "printWidth": 120,
+    "tabWidth": 2,
+    "useTabs": false,
+    "semi": true,
+    "singleQuote": false,
+    "trailingComma": "all"
   }
 }

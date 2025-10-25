@@ -8,17 +8,12 @@ import assert from "node:assert";
 import { timeToHours } from "../../utils/utils.ts";
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName("stats")
-    .setDescription("View your productivity statistics"),
+  data: new SlashCommandBuilder().setName("stats").setDescription("View your productivity statistics"),
   async execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
     const discordId = interaction.user.id;
-    const [userStats] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.discordId, discordId));
+    const [userStats] = await db.select().from(userTable).where(eq(userTable.discordId, discordId));
     assert(userStats !== undefined, "User stats not found in database");
 
     // Fetch user tasks with error handling
@@ -26,12 +21,7 @@ export default {
     const userTasks = await db
       .select()
       .from(taskTable)
-      .where(
-        and(
-          eq(taskTable.discordId, discordId),
-          gt(taskTable.createdAt, startOfDay),
-        ),
-      );
+      .where(and(eq(taskTable.discordId, discordId), gt(taskTable.createdAt, startOfDay)));
 
     // 5. Pending Tasks (show actual tasks, not just count)
     const pendingTasks = userTasks.filter((task) => !task.isCompleted);
@@ -46,8 +36,7 @@ export default {
       const taskList = pendingTasks
         .slice(0, 3)
         .map(
-          (task, index) =>
-            `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + "..." : task.title}`,
+          (task, index) => `${index + 1}. ${task.title.length > 35 ? task.title.substring(0, 32) + "..." : task.title}`,
         )
         .join("\n");
       pendingTasksValue = `**${pendingTasks.length}** tasks:\n${taskList}`;
@@ -67,10 +56,7 @@ export default {
     }
 
     const userLocalTime = dayjs().tz(userStats.timezone);
-    const nextMidnight = dayjs()
-      .tz(userStats.timezone)
-      .add(1, "day")
-      .startOf("day");
+    const nextMidnight = dayjs().tz(userStats.timezone).add(1, "day").startOf("day");
     const hoursUntilReset = nextMidnight.diff(userLocalTime, "hour");
 
     await interaction.editReply({

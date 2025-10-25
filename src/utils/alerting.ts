@@ -6,10 +6,7 @@ export async function alertOwner(message: string): Promise<void> {
   console.log(`Alerted owner: ${message}`);
 }
 
-export async function wrapWithAlerting<T>(
-  fn: () => Promise<T>,
-  alertMessage: string,
-): Promise<T> {
+export async function wrapWithAlerting<T>(fn: () => Promise<T>, alertMessage: string): Promise<T> {
   try {
     return await fn();
   } catch (error) {

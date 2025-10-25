@@ -6,23 +6,15 @@ import { MIN_DAILY_MESSAGES_FOR_STREAK } from "../utils/constants.ts";
 import assert from "assert";
 import { updateMessageStreakInNickname } from "../utils/utils.ts";
 
-export async function execute(
-  message: OmitPartialGroupDMChannel<Message>,
-): Promise<void> {
+export async function execute(message: OmitPartialGroupDMChannel<Message>): Promise<void> {
   // Ignore messages from bots, Ignore messages not in a guild and system messages
   if (message.author.bot || !message.inGuild() || message.system) return;
   // Ignore replies to system messages (Wave Hi)
-  if (
-    message.reference &&
-    (await message.fetchReference().then((msg) => msg.system))
-  )
-    return;
+  if (message.reference && (await message.fetchReference().then((msg) => msg.system))) return;
 
   const discordId = message.author.id;
 
-  console.log(
-    `Message received from ${message.author.tag} in guild ${message.guild.name}: ${message.content}`,
-  );
+  console.log(`Message received from ${message.author.tag} in guild ${message.guild.name}: ${message.content}`);
   await ensureUserExists(message.member, discordId, message.author.username);
 
   // Receive counter from the db
@@ -40,10 +32,7 @@ export async function execute(
 
     const newDailyMessages = user.dailyMessages + 1;
     let newStreak = user.messageStreak;
-    if (
-      newDailyMessages >= MIN_DAILY_MESSAGES_FOR_STREAK &&
-      !user.ismessageStreakUpdatedToday
-    ) {
+    if (newDailyMessages >= MIN_DAILY_MESSAGES_FOR_STREAK && !user.ismessageStreakUpdatedToday) {
       newStreak = await db
         .update(userTable)
         .set({
@@ -55,10 +44,7 @@ export async function execute(
         .returning({ messageStreak: userTable.messageStreak })
         .then(([row]) => row?.messageStreak ?? user.messageStreak + 1);
     } else {
-      await db
-        .update(userTable)
-        .set({ dailyMessages: newDailyMessages })
-        .where(eq(userTable.discordId, discordId));
+      await db.update(userTable).set({ dailyMessages: newDailyMessages }).where(eq(userTable.discordId, discordId));
     }
 
     if (newDailyMessages >= MIN_DAILY_MESSAGES_FOR_STREAK) {

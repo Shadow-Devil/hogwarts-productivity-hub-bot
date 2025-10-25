@@ -5,12 +5,10 @@ import { eq, sql, type ExtractTablesWithRelations } from "drizzle-orm";
 import { housePointsTable, userTable } from "../db/schema.ts";
 import type { Schema } from "../db/db.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
-import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
+import type { NodePgDatabase, NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import { BotColors } from "./constants.ts";
 
-export function getHouseFromMember(
-  member: GuildMember | null,
-): House | undefined {
+export function getHouseFromMember(member: GuildMember | null): House | undefined {
   let house: House | undefined = undefined;
   if (member === null) return house;
 
@@ -42,11 +40,7 @@ export function getHouseFromMember(
 }
 
 export async function awardPoints(
-  db: PgTransaction<
-    NodePgQueryResultHKT,
-    Schema,
-    ExtractTablesWithRelations<Schema>
-  >,
+  db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | NodePgDatabase,
   discordId: string,
   points: number,
 ) {
@@ -72,11 +66,7 @@ export async function awardPoints(
   }
 }
 
-export async function replyError(
-  interaction: ChatInputCommandInteraction,
-  title: string,
-  ...messages: string[]
-) {
+export async function replyError(interaction: ChatInputCommandInteraction, title: string, ...messages: string[]) {
   await interaction.editReply({
     embeds: [
       {
@@ -95,17 +85,11 @@ export function timeToHours(seconds: number | null): string {
   return `${hours}h ${minutes}m`;
 }
 
-export async function updateMessageStreakInNickname(
-  member: GuildMember | null,
-  newStreak: number,
-): Promise<void> {
+export async function updateMessageStreakInNickname(member: GuildMember | null, newStreak: number): Promise<void> {
   // Can't update nickname of guild owner
   if (!member || member.guild.ownerId === member.user.id) return;
 
-  let newNickname =
-    member.nickname?.replace(/⚡\d+$/, "").trim() ??
-    member.user.globalName ??
-    member.user.displayName;
+  let newNickname = member.nickname?.replace(/⚡\d+$/, "").trim() ?? member.user.globalName ?? member.user.displayName;
   if (newStreak == 0) {
     // If member has no nickname, no need to reset
     if (member.nickname === null) return;
@@ -113,16 +97,12 @@ export async function updateMessageStreakInNickname(
     newNickname += `⚡${newStreak}`;
   }
   if (newNickname.length > 32) {
-    console.warn(
-      `Nickname for ${member.user.tag} is too long (${newNickname}). Ignoring update.`,
-    );
+    console.warn(`Nickname for ${member.user.tag} is too long (${newNickname}). Ignoring update.`);
     return;
   }
 
   if (newNickname !== member.nickname) {
-    console.log(
-      `Updating nickname from ${member.nickname ?? "NO NICKNAME"} to ${newNickname}`,
-    );
+    console.log(`Updating nickname from ${member.nickname ?? "NO NICKNAME"} to ${newNickname}`);
     await member.setNickname(newNickname);
   }
 }

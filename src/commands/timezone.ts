@@ -1,8 +1,4 @@
-import {
-  SlashCommandBuilder,
-  ChatInputCommandInteraction,
-  AutocompleteInteraction,
-} from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, AutocompleteInteraction } from "discord.js";
 import { BotColors } from "../utils/constants.ts";
 import dayjs from "dayjs";
 import { db, fetchUserTimezone } from "../db/db.ts";
@@ -13,9 +9,7 @@ import { replyError } from "../utils/utils.ts";
 export default {
   data: new SlashCommandBuilder()
     .setName("timezone")
-    .setDescription(
-      "Manage your timezone settings for accurate daily/monthly resets",
-    )
+    .setDescription("Manage your timezone settings for accurate daily/monthly resets")
     .addStringOption((option) =>
       option
         .setName("timezone")
@@ -50,10 +44,7 @@ export default {
   },
 };
 
-async function viewTimezone(
-  interaction: ChatInputCommandInteraction,
-  discordId: string,
-) {
+async function viewTimezone(interaction: ChatInputCommandInteraction, discordId: string) {
   const userTimezone = await fetchUserTimezone(discordId);
   const userLocalTime = dayjs().tz(userTimezone).format("HH:mm");
 
@@ -67,11 +58,7 @@ async function viewTimezone(
   });
 }
 
-async function setTimezone(
-  interaction: ChatInputCommandInteraction,
-  discordId: string,
-  newTimezone: string,
-) {
+async function setTimezone(interaction: ChatInputCommandInteraction, discordId: string, newTimezone: string) {
   // Validate timezone
   try {
     dayjs().tz(newTimezone);
@@ -110,11 +97,7 @@ async function setTimezone(
     .where(eq(userTable.discordId, discordId));
 
   if (result.rowCount === 0) {
-    await replyError(
-      interaction,
-      `Timezone Update Failed`,
-      `Failed to update your timezone. Please try again later.`,
-    );
+    await replyError(interaction, `Timezone Update Failed`, `Failed to update your timezone. Please try again later.`);
     return;
   }
 
@@ -126,9 +109,7 @@ async function setTimezone(
         fields: [
           {
             name: "Your New Local Time",
-            value: dayjs()
-              .tz(newTimezone)
-              .format("dddd, MMMM D, YYYY [at] h:mm A"),
+            value: dayjs().tz(newTimezone).format("dddd, MMMM D, YYYY [at] h:mm A"),
             inline: true,
           },
         ],

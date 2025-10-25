@@ -15,31 +15,21 @@ import type { VoiceTimer } from "../types.ts";
 const activeVoiceTimers = new Map<string, VoiceTimer>();
 
 export async function execute(interaction: Interaction): Promise<void> {
-  if (!interaction.isChatInputCommand() && !interaction.isAutocomplete())
-    return;
+  if (!interaction.isChatInputCommand() && !interaction.isAutocomplete()) return;
   const end = interactionExecutionTimer.startTimer();
 
   const command = commands.get(interaction.commandName);
   if (!command) {
-    console.warn(
-      `⚠️ Unknown command attempted: /${interaction.commandName} by ${interaction.user.tag}`,
-    );
+    console.warn(`⚠️ Unknown command attempted: /${interaction.commandName} by ${interaction.user.tag}`);
     return;
   }
 
   logCommandExecution(interaction);
 
   try {
-    await ensureUserExists(
-      interaction.member as GuildMember,
-      interaction.user.id,
-      interaction.user.username,
-    );
+    await ensureUserExists(interaction.member as GuildMember, interaction.user.id, interaction.user.username);
     if (interaction.isAutocomplete()) {
-      assert(
-        command.autocomplete,
-        `Command /${interaction.commandName} does not support autocomplete`,
-      );
+      assert(command.autocomplete, `Command /${interaction.commandName} does not support autocomplete`);
       await command.autocomplete(interaction);
     } else {
       await command.execute(interaction, { activeVoiceTimers });
@@ -69,10 +59,7 @@ export async function execute(interaction: Interaction): Promise<void> {
       }
       // If interaction is already replied, we can't send another response
     } catch (replyError) {
-      console.error(
-        `💥 Failed to send error response for /${interaction.commandName}:`,
-        replyError,
-      );
+      console.error(`💥 Failed to send error response for /${interaction.commandName}:`, replyError);
     }
   }
   console.debug("-".repeat(5));
@@ -82,9 +69,7 @@ export async function execute(interaction: Interaction): Promise<void> {
     is_autocomplete: interaction.isAutocomplete() ? "autocomplete" : "",
   });
 }
-function logCommandExecution(
-  interaction: ChatInputCommandInteraction | AutocompleteInteraction,
-) {
+function logCommandExecution(interaction: ChatInputCommandInteraction | AutocompleteInteraction) {
   const channel = interaction.channel;
   let channelName;
   if (channel !== null && !channel.isDMBased()) {
@@ -95,14 +80,9 @@ function logCommandExecution(
 
   let commandString =
     interaction.commandName +
-    (interaction.options.getSubcommand(false)
-      ? ` ${interaction.options.getSubcommand()}`
-      : "");
+    (interaction.options.getSubcommand(false) ? ` ${interaction.options.getSubcommand()}` : "");
   if (interaction.isAutocomplete()) {
     commandString += ` ${interaction.options.getFocused()}`;
   }
-  console.debug(
-    "+".repeat(5) +
-      ` /${commandString} by ${interaction.user.tag} in ${channelName}`,
-  );
+  console.debug("+".repeat(5) + ` /${commandString} by ${interaction.user.tag} in ${channelName}`);
 }

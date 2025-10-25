@@ -46,20 +46,14 @@ async function resetNicknameStreaks(client: Client) {
       .then((members) =>
         members.filter(
           (member) =>
-            !discordIds.has(member.id) &&
-            member.guild.ownerId !== member.user.id &&
-            member.nickname?.match(/⚡\d+$/),
+            !discordIds.has(member.id) && member.guild.ownerId !== member.user.id && member.nickname?.match(/⚡\d+$/),
         ),
       );
     const membersToUpdate = guild.members.cache.filter(
       (member) =>
         discordIds.has(member.id) &&
-        (!member.nickname?.endsWith(
-          `⚡${String(discordIdsToStreak[member.id])}`,
-        ) ||
-          member.nickname.endsWith(
-            ` ⚡${String(discordIdsToStreak[member.id])}`,
-          )),
+        (!member.nickname?.endsWith(`⚡${String(discordIdsToStreak[member.id])}`) ||
+          member.nickname.endsWith(` ⚡${String(discordIdsToStreak[member.id])}`)),
     );
 
     console.log(
@@ -72,9 +66,7 @@ async function resetNicknameStreaks(client: Client) {
       ...membersToUpdate.values().map(async (m) => {
         const streak = discordIdsToStreak[m.id];
         if (typeof streak === "undefined") {
-          throw new Error(
-            `unreachable: Streak for member ${m.id} does not exist`,
-          );
+          throw new Error(`unreachable: Streak for member ${m.id} does not exist`);
         }
         await updateMessageStreakInNickname(m, streak);
       }),

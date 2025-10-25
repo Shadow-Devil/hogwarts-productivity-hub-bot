@@ -46,11 +46,7 @@ export async function start() {
 
 async function processDailyResets() {
   const end = resetExecutionTimer.startTimer();
-  console.debug(
-    "+".repeat(5) +
-      " Processing daily resets at " +
-      dayjs().format("MMM DD HH:mm:ss"),
-  );
+  console.debug("+".repeat(5) + " Processing daily resets at " + dayjs().format("MMM DD HH:mm:ss"));
 
   await wrapWithAlerting(async () => {
     await db.transaction(async (db) => {
@@ -65,11 +61,7 @@ async function processDailyResets() {
       const boosters = await client.guilds
         .fetch(process.env.GUILD_ID)
         .then((guild) => guild.members.fetch())
-        .then((members) =>
-          members
-            .filter((member) => member.premiumSince !== null)
-            .map((member) => member.id),
-        );
+        .then((members) => members.filter((member) => member.premiumSince !== null).map((member) => member.id));
 
       // Filter to only include users who are actually past their local midnight
       const usersNeedingReset = [];
@@ -77,10 +69,7 @@ async function processDailyResets() {
         const userTime = dayjs().tz(user.timezone);
         const lastReset = dayjs(user.lastDailyReset).tz(user.timezone);
 
-        if (
-          !userTime.isSame(lastReset, "day") &&
-          !boosters.includes(user.discordId)
-        ) {
+        if (!userTime.isSame(lastReset, "day") && !boosters.includes(user.discordId)) {
           usersNeedingReset.push(user.discordId);
         }
       }
@@ -90,29 +79,17 @@ async function processDailyResets() {
         return;
       }
 
-      const usersInVoiceSessions = await fetchOpenVoiceSessions(
-        db,
-        usersNeedingReset,
-      );
+      const usersInVoiceSessions = await fetchOpenVoiceSessions(db, usersNeedingReset);
 
-      await Promise.all(
-        usersInVoiceSessions.map((session) => endVoiceSession(session, db)),
-      );
+      await Promise.all(usersInVoiceSessions.map((session) => endVoiceSession(session, db)));
 
       await db
         .select()
         .from(userTable)
-        .where(
-          and(
-            inArray(userTable.discordId, usersNeedingReset),
-            eq(userTable.isMessageStreakUpdatedToday, false),
-          ),
-        )
+        .where(and(inArray(userTable.discordId, usersNeedingReset), eq(userTable.isMessageStreakUpdatedToday, false)))
         .then(async (rows) => {
           for (const row of rows) {
-            const members = client.guilds.cache.map((guild) =>
-              guild.members.fetch(row.discordId).catch(() => null),
-            );
+            const members = client.guilds.cache.map((guild) => guild.members.fetch(row.discordId).catch(() => null));
             await Promise.all(
               members.map(async (m) => {
                 await updateMessageStreakInNickname(await m, 0);
@@ -135,9 +112,7 @@ async function processDailyResets() {
         })
         .where(inArray(userTable.discordId, usersNeedingReset));
 
-      await Promise.all(
-        usersInVoiceSessions.map((session) => startVoiceSession(session, db)),
-      );
+      await Promise.all(usersInVoiceSessions.map((session) => startVoiceSession(session, db)));
 
       console.log("Daily reset edited this many users:", result.rowCount);
     });
@@ -148,11 +123,7 @@ async function processDailyResets() {
 
 async function processMonthlyResets() {
   const end = resetExecutionTimer.startTimer();
-  console.debug(
-    "+".repeat(5) +
-      " Processing monthly resets at " +
-      dayjs().format("MMM DD HH:mm:ss"),
-  );
+  console.debug("+".repeat(5) + " Processing monthly resets at " + dayjs().format("MMM DD HH:mm:ss"));
   await wrapWithAlerting(async () => {
     const result = await db.update(userTable).set({
       monthlyPoints: 0,

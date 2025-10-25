@@ -11,9 +11,7 @@ import { formatDataTable, createStatsCard } from "../../utils/visualHelpers.ts";
 export default {
   data: new SlashCommandBuilder()
     .setName("voicescan")
-    .setDescription(
-      "Scan voice channels and start tracking for users already in voice",
-    )
+    .setDescription("Scan voice channels and start tracking for users already in voice")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -25,14 +23,12 @@ export default {
         embeds: [
           {
             title: "🔄 Voice Scan Already Running",
-            description:
-              "A voice state scan is already in progress. Please wait for it to complete.",
+            description: "A voice state scan is already in progress. Please wait for it to complete.",
             color: 0xfee75c,
             fields: [
               {
                 name: "💡 Get Started",
-                value:
-                  "The scan will begin immediately and show results when complete.",
+                value: "The scan will begin immediately and show results when complete.",
                 inline: false,
               },
             ],
@@ -47,8 +43,7 @@ export default {
       embeds: [
         {
           title: "🔍 Starting Voice State Scan",
-          description:
-            "Scanning all voice channels for users to automatically start tracking...",
+          description: "Scanning all voice channels for users to automatically start tracking...",
           color: 0x3498db,
           fields: [
             {
@@ -101,9 +96,7 @@ export default {
       const channelData: [string, string][] = scanResults.channels.map(
         (channel) =>
           [
-            channel.name.length > 20
-              ? channel.name.substring(0, 17) + "..."
-              : channel.name,
+            channel.name.length > 20 ? channel.name.substring(0, 17) + "..." : channel.name,
             `${channel.userCount} users`,
           ] as const,
       );

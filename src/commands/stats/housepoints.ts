@@ -25,10 +25,7 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
-    const type = interaction.options.getString("type", true) as
-      | "daily"
-      | "monthly"
-      | "alltime";
+    const type = interaction.options.getString("type", true) as "daily" | "monthly" | "alltime";
 
     const houseLeaderboard = await fetchHouseLeaderboard(type);
 
@@ -56,10 +53,7 @@ async function fetchHouseLeaderboard(type: "daily" | "monthly" | "alltime") {
       pointsColumn = userTable.monthlyPoints;
       break;
     case "alltime":
-      return await db
-        .select()
-        .from(housePointsTable)
-        .orderBy(desc(housePointsTable.points));
+      return await db.select().from(housePointsTable).orderBy(desc(housePointsTable.points));
   }
   const houseLeaderboard = await db
     .select({
@@ -79,11 +73,7 @@ async function replyHousepoints(
   type: string,
 ) {
   const title =
-    type === "daily"
-      ? "Daily House Points"
-      : type === "monthly"
-        ? "Monthly House Points"
-        : "All-Time House Points";
+    type === "daily" ? "Daily House Points" : type === "monthly" ? "Monthly House Points" : "All-Time House Points";
 
   // Add house rankings
   const houseData: [string, string][] = houses.map((house, index) => {

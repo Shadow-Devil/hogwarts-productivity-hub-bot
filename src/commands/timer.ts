@@ -1,9 +1,4 @@
-import {
-  SlashCommandBuilder,
-  ChatInputCommandInteraction,
-  type VoiceBasedChannel,
-  EmbedBuilder,
-} from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, type VoiceBasedChannel, EmbedBuilder } from "discord.js";
 import { getUserVoiceChannel } from "../utils/voiceUtils.ts";
 import { replyError } from "../utils/utils.ts";
 import dayjs from "dayjs";
@@ -21,11 +16,7 @@ export default {
         .setName("start")
         .setDescription("Start a Pomodoro timer")
         .addIntegerOption((opt) =>
-          opt
-            .setName("work")
-            .setDescription("Work time in minutes (min 20)")
-            .setRequired(true)
-            .setMinValue(20),
+          opt.setName("work").setDescription("Work time in minutes (min 20)").setRequired(true).setMinValue(20),
         )
         .addIntegerOption((opt) =>
           opt
@@ -35,18 +26,9 @@ export default {
             .setMinValue(5),
         ),
     )
-    .addSubcommand((sub) =>
-      sub.setName("stop").setDescription("Stop the current Pomodoro timer"),
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName("status")
-        .setDescription("Check the status of the current Pomodoro timer"),
-    ),
-  async execute(
-    interaction: ChatInputCommandInteraction,
-    { activeVoiceTimers },
-  ): Promise<void> {
+    .addSubcommand((sub) => sub.setName("stop").setDescription("Stop the current Pomodoro timer"))
+    .addSubcommand((sub) => sub.setName("status").setDescription("Check the status of the current Pomodoro timer")),
+  async execute(interaction: ChatInputCommandInteraction, { activeVoiceTimers }): Promise<void> {
     await interaction.deferReply();
 
     const subcommand = interaction.options.getSubcommand(true);
@@ -82,9 +64,7 @@ async function startTimer(
 
   const voiceChannelId = voiceChannel.id;
 
-  if (
-    !(await cleanExistingTimer(interaction, voiceChannelId, activeVoiceTimers))
-  ) {
+  if (!(await cleanExistingTimer(interaction, voiceChannelId, activeVoiceTimers))) {
     return;
   }
 
@@ -94,8 +74,7 @@ async function startTimer(
   const now = dayjs();
   const startTime = now;
   const endTime = now.add(work, "minutes");
-  const breakEndTime =
-    breakTime > 0 ? now.add(work + breakTime, "minutes") : null;
+  const breakEndTime = breakTime > 0 ? now.add(work + breakTime, "minutes") : null;
 
   await interaction.editReply({
     embeds: [
@@ -187,15 +166,11 @@ async function cleanExistingTimer(
   // Enforce: only one timer per voice channel
   if (existingTimer === undefined) return true;
 
-  const timeRemaining = Math.ceil(
-    (existingTimer.endTime.getTime() - Date.now()) / 60000,
-  );
+  const timeRemaining = Math.ceil((existingTimer.endTime.getTime() - Date.now()) / 60000);
 
   // If timer has already expired, clean it up
   if (timeRemaining <= 0) {
-    console.log(
-      `Expired timer found for channel ${voiceChannelId}, cleaning up...`,
-    );
+    console.log(`Expired timer found for channel ${voiceChannelId}, cleaning up...`);
     if (existingTimer.workTimeout) clearTimeout(existingTimer.workTimeout);
     if (existingTimer.breakTimeout) clearTimeout(existingTimer.breakTimeout);
     activeVoiceTimers.delete(voiceChannelId);
@@ -214,10 +189,7 @@ async function cleanExistingTimer(
   return false;
 }
 
-async function stopTimer(
-  interaction: ChatInputCommandInteraction,
-  activeVoiceTimers: Map<string, VoiceTimer>,
-) {
+async function stopTimer(interaction: ChatInputCommandInteraction, activeVoiceTimers: Map<string, VoiceTimer>) {
   // Use the reliable voice channel detection utility
   const voiceChannel = getUserVoiceChannel(interaction);
 
@@ -262,10 +234,7 @@ async function stopTimer(
   });
 }
 
-async function checkTimerStatus(
-  interaction: ChatInputCommandInteraction,
-  activeVoiceTimers: Map<string, VoiceTimer>,
-) {
+async function checkTimerStatus(interaction: ChatInputCommandInteraction, activeVoiceTimers: Map<string, VoiceTimer>) {
   // Get user's voice channel
   const voiceChannel = getUserVoiceChannel(interaction);
 
@@ -298,10 +267,7 @@ async function checkTimerStatus(
   }
 
   const now = Date.now();
-  const timeRemaining = Math.max(
-    0,
-    Math.ceil((timer.endTime.getTime() - now) / 1000 / 60),
-  );
+  const timeRemaining = Math.max(0, Math.ceil((timer.endTime.getTime() - now) / 1000 / 60));
 
   await interaction.editReply({
     embeds: [
@@ -311,14 +277,8 @@ async function checkTimerStatus(
           voiceChannel: voiceChannel,
           phase: timer.phase,
           timeRemaining: timeRemaining,
-          workTime:
-            timer.phase === "work"
-              ? timeRemaining + Math.ceil((now - timer.startTime) / 1000 / 60)
-              : null,
-          breakTime:
-            timer.phase === "break"
-              ? timeRemaining + Math.ceil((now - timer.startTime) / 1000 / 60)
-              : null,
+          workTime: timer.phase === "work" ? timeRemaining + Math.ceil((now - timer.startTime) / 1000 / 60) : null,
+          breakTime: timer.phase === "break" ? timeRemaining + Math.ceil((now - timer.startTime) / 1000 / 60) : null,
         },
         { showProgress: true },
       ),
@@ -346,24 +306,18 @@ function createTimerTemplate(
   switch (action) {
     case "start": {
       assert(data.workTime, "Work time must be provided for starting a timer");
-      assert(
-        data.breakTime,
-        "Break time must be provided for starting a timer",
-      );
+      assert(data.breakTime, "Break time must be provided for starting a timer");
       // Add timer configuration
       const configFields = [
         `🕒 **Work Time:** ${data.workTime} minutes`,
-        data.breakTime > 0
-          ? `☕ **Break Time:** ${data.breakTime} minutes`
-          : null,
+        data.breakTime > 0 ? `☕ **Break Time:** ${data.breakTime} minutes` : null,
         `📍 **Location:** <#${data.voiceChannel.id}>`,
       ].filter(Boolean);
 
       embed = new EmbedBuilder({
         color: BotColors.PRIMARY,
         title: "⏱️ Pomodoro Timer Started",
-        description:
-          "Focus Session Active\n" + "Time to boost your productivity!",
+        description: "Focus Session Active\n" + "Time to boost your productivity!",
         fields: [
           {
             name: "📋 Session Configuration",
@@ -388,8 +342,7 @@ function createTimerTemplate(
         embed.addFields([
           {
             name: "💪 Stay Focused!",
-            value:
-              "Focus time! Good luck with your session!\nRemember: great achievements require focused effort.",
+            value: "Focus time! Good luck with your session!\nRemember: great achievements require focused effort.",
             inline: false,
           },
         ]);
@@ -406,8 +359,7 @@ function createTimerTemplate(
       embed = new EmbedBuilder({
         color: BotColors.SUCCESS,
         title: "🔔 Work Session Complete!",
-        description:
-          "Great Work!\nYou've successfully completed your focus session",
+        description: "Great Work!\nYou've successfully completed your focus session",
       });
 
       if (data.breakTime > 0) {
@@ -422,8 +374,7 @@ function createTimerTemplate(
         embed.addFields([
           {
             name: "🎯 Session Finished!",
-            value:
-              "Great job staying focused! You've completed your productivity session.",
+            value: "Great job staying focused! You've completed your productivity session.",
             inline: false,
           },
         ]);
@@ -438,8 +389,7 @@ function createTimerTemplate(
         fields: [
           {
             name: "🎯 Ready to Focus",
-            value:
-              "Break's over! Time to get back to work.\nYou've got this! Stay focused and productive!",
+            value: "Break's over! Time to get back to work.\nYou've got this! Stay focused and productive!",
             inline: false,
           },
         ],

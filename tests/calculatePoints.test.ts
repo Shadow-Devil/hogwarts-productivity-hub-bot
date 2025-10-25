@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  calculatePoints,
-  calculatePointsHelper,
-} from "../src/utils/voiceUtils.ts";
-import {
-  FIRST_HOUR_POINTS,
-  MAX_HOURS_PER_DAY,
-  REST_HOURS_POINTS,
-} from "../src/utils/constants.ts";
+import { calculatePoints, calculatePointsHelper } from "../src/utils/voiceUtils.ts";
+import { FIRST_HOUR_POINTS, MAX_HOURS_PER_DAY, REST_HOURS_POINTS } from "../src/utils/constants.ts";
 
 describe("Calculate Points Tests", () => {
   it("should calculate points correctly based on voice time", () => {
@@ -58,13 +51,9 @@ describe("Calculate Points Tests", () => {
       } else if (i === 1) {
         expect(result, i.toString()).toBe(FIRST_HOUR_POINTS);
       } else if (i > 1 && i <= MAX_HOURS_PER_DAY) {
-        expect(result, i.toString()).toBe(
-          FIRST_HOUR_POINTS + REST_HOURS_POINTS * (i - 1),
-        );
+        expect(result, i.toString()).toBe(FIRST_HOUR_POINTS + REST_HOURS_POINTS * (i - 1));
       } else {
-        expect(result, i.toString()).toBe(
-          FIRST_HOUR_POINTS + REST_HOURS_POINTS * (MAX_HOURS_PER_DAY - 1),
-        );
+        expect(result, i.toString()).toBe(FIRST_HOUR_POINTS + REST_HOURS_POINTS * (MAX_HOURS_PER_DAY - 1));
       }
     }
   });

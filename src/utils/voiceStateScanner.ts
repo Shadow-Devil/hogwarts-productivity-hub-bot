@@ -5,12 +5,7 @@
  */
 
 import { client } from "../client.ts";
-import {
-  BaseGuildVoiceChannel,
-  ChannelType,
-  Collection,
-  type Guild,
-} from "discord.js";
+import { BaseGuildVoiceChannel, ChannelType, Collection, type Guild } from "discord.js";
 import { startVoiceSession } from "./voiceUtils.ts";
 import { db, ensureUserExists } from "../db/db.ts";
 import { voiceSessionTable } from "../db/schema.ts";
@@ -71,9 +66,7 @@ export async function scanAndStartTracking() {
     }
 
     if (scanResults.trackingStarted > 0) {
-      console.log(
-        `   Successfully started automatic tracking for ${scanResults.trackingStarted} users`,
-      );
+      console.log(`   Successfully started automatic tracking for ${scanResults.trackingStarted} users`);
     } else if (scanResults.totalUsersFound > 0) {
       console.log("   All found users were already being tracked");
     } else {
@@ -94,10 +87,7 @@ export async function scanAndStartTracking() {
  * Scan voice states for a specific guild
  * @param {Guild} guild - Discord guild
  */
-async function scanGuildVoiceStates(
-  guild: Guild,
-  activeVoiceSessions: string[],
-) {
+async function scanGuildVoiceStates(guild: Guild, activeVoiceSessions: string[]) {
   try {
     // Get all voice channels in the guild
     const voiceChannels = guild.channels.cache.filter(
@@ -119,10 +109,7 @@ async function scanGuildVoiceStates(
  * Scan a specific voice channel and start tracking for users
  * @param {BaseGuildVoiceChannel} channel - Discord voice channel
  */
-async function scanVoiceChannel(
-  channel: BaseGuildVoiceChannel,
-  activeVoiceSessions: string[],
-) {
+async function scanVoiceChannel(channel: BaseGuildVoiceChannel, activeVoiceSessions: string[]) {
   try {
     const members = channel.members;
 
@@ -165,19 +152,13 @@ async function scanVoiceChannel(
         scanResults.trackingStarted++;
         usersStarted.push(username);
       } catch (userError) {
-        console.error(
-          `Error starting tracking for user ${username}:`,
-          userError,
-        );
+        console.error(`Error starting tracking for user ${username}:`, userError);
         scanResults.errors++;
       }
     }
 
     if (usersStarted.length > 0) {
-      console.log(
-        `🎯 Started tracking for ${usersStarted.length} users in ${channel.name}:`,
-        usersStarted.join(", "),
-      );
+      console.log(`🎯 Started tracking for ${usersStarted.length} users in ${channel.name}:`, usersStarted.join(", "));
     }
   } catch (error) {
     console.error(`Error scanning voice channel ${channel.name}:`, error);

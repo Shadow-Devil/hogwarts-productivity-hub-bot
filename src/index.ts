@@ -16,12 +16,7 @@ import relativeTime from "dayjs/plugin/relativeTime.js";
 import { db, fetchOpenVoiceSessions } from "./db/db.ts";
 import { endVoiceSession } from "./utils/voiceUtils.ts";
 import { alertOwner } from "./utils/alerting.ts";
-import {
-  interactionExecutionTimer,
-  resetExecutionTimer,
-  server,
-  voiceSessionExecutionTimer,
-} from "./monitoring.ts";
+import { interactionExecutionTimer, resetExecutionTimer, server, voiceSessionExecutionTimer } from "./monitoring.ts";
 import { commands } from "./commands.ts";
 import { housePointsTable, userTable } from "./db/schema.ts";
 import { eq } from "drizzle-orm";
@@ -49,21 +44,13 @@ try {
 function registerEvents(client: Client) {
   client.on(Events.ClientReady, (i) => void ClientReady.execute(i));
   client.on(Events.InteractionCreate, (i) => void InteractionCreate.execute(i));
-  client.on(
-    Events.VoiceStateUpdate,
-    (a, b) => void VoiceStateUpdate.execute(a, b),
-  );
+  client.on(Events.VoiceStateUpdate, (a, b) => void VoiceStateUpdate.execute(a, b));
   client.on(Events.MessageCreate, (m) => void MessageCreate.execute(m));
 }
 
 async function initializeHousePoints() {
   // Initialize house points if not already set
-  const houses = [
-    "Gryffindor",
-    "Hufflepuff",
-    "Ravenclaw",
-    "Slytherin",
-  ] as const;
+  const houses = ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"] as const;
   const existingHouses = await db.select().from(housePointsTable);
   for (const house of houses) {
     if (!existingHouses.some((h) => h.house === house)) {
@@ -84,9 +71,7 @@ function registerShutdownHandlers() {
     console.log("Closing any existing voice sessions");
     await db.transaction(async (db) => {
       const openVoiceSessions = await fetchOpenVoiceSessions(db);
-      await Promise.all(
-        openVoiceSessions.map((session) => endVoiceSession(session, db)),
-      );
+      await Promise.all(openVoiceSessions.map((session) => endVoiceSession(session, db)));
     });
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -105,17 +90,13 @@ function registerShutdownHandlers() {
     void alertOwner(`Uncaught Exception: ${error}`);
   });
   process.on("unhandledRejection", (reason) => {
-    void alertOwner(
-      `Unhandled Rejection, reason: ${reason instanceof Error ? reason : "Unknown Error"}`,
-    );
+    void alertOwner(`Unhandled Rejection, reason: ${reason instanceof Error ? reason : "Unknown Error"}`);
   });
 }
 
 function registerMonitoringEvents() {
   commands.forEach((command) => {
-    const subcommands = command.data.options.filter(
-      (option) => option instanceof SlashCommandSubcommandBuilder,
-    );
+    const subcommands = command.data.options.filter((option) => option instanceof SlashCommandSubcommandBuilder);
     if (subcommands.length > 0) {
       subcommands.forEach((subcommand) => {
         interactionExecutionTimer.zero({

@@ -29,8 +29,7 @@ export async function execute(oldState: VoiceState, newState: VoiceState) {
   };
 
   console.debug(
-    "+".repeat(5) +
-      ` Voice state update for ${username} (${oldChannel?.name ?? ""} -> ${newChannel?.name ?? ""})`,
+    "+".repeat(5) + ` Voice state update for ${username} (${oldChannel?.name ?? ""} -> ${newChannel?.name ?? ""})`,
   );
   await ensureUserExists(member, discordId, username);
   let event = "unknown";

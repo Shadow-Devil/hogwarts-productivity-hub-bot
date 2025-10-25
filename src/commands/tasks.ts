@@ -14,12 +14,7 @@ import dayjs from "dayjs";
 import { db, fetchTasks, fetchUserTimezone } from "../db/db.ts";
 import { taskTable } from "../db/schema.ts";
 import { and, desc, eq, gte } from "drizzle-orm";
-import {
-  BotColors,
-  DAILY_TASK_LIMIT,
-  TASK_MIN_TIME,
-  TASK_POINT_SCORE,
-} from "../utils/constants.ts";
+import { BotColors, DAILY_TASK_LIMIT, TASK_MIN_TIME, TASK_POINT_SCORE } from "../utils/constants.ts";
 import assert from "node:assert/strict";
 import { createProgressSection } from "../utils/visualHelpers.ts";
 import type { Task } from "../types.ts";
@@ -48,9 +43,7 @@ export default {
         .addMentionableOption((option) =>
           option
             .setName("user")
-            .setDescription(
-              "View tasks for a specific user (default: yourself)",
-            )
+            .setDescription("View tasks for a specific user (default: yourself)")
             .setRequired(false),
         ),
     )
@@ -73,9 +66,7 @@ export default {
         .addIntegerOption((option) =>
           option
             .setName("task")
-            .setDescription(
-              "The task number to complete (use `/tasks view` to see numbers)",
-            )
+            .setDescription("The task number to complete (use `/tasks view` to see numbers)")
             .setRequired(true)
             .setAutocomplete(true),
         ),
@@ -86,9 +77,7 @@ export default {
 
     const userTimezone = await fetchUserTimezone(discordId);
     const startOfDay = dayjs().tz(userTimezone).startOf("day").toDate();
-    console.debug(
-      `Task command with User timezone: ${userTimezone}, start of day: ${startOfDay.toString()}`,
-    );
+    console.debug(`Task command with User timezone: ${userTimezone}, start of day: ${startOfDay.toString()}`);
 
     switch (interaction.options.getSubcommand()) {
       case "add":
@@ -135,17 +124,10 @@ async function addTask(
   // Check daily task limit first
   const currentTaskCount = await db.$count(
     taskTable,
-    and(
-      eq(taskTable.discordId, discordId),
-      gte(taskTable.createdAt, startOfDay),
-    ),
+    and(eq(taskTable.discordId, discordId), gte(taskTable.createdAt, startOfDay)),
   );
   if (currentTaskCount >= DAILY_TASK_LIMIT) {
-    const resetTime = dayjs()
-      .tz(userTimezone)
-      .add(1, "day")
-      .startOf("day")
-      .toDate();
+    const resetTime = dayjs().tz(userTimezone).add(1, "day").startOf("day").toDate();
 
     await interaction.editReply({
       embeds: [
@@ -165,10 +147,7 @@ async function addTask(
     return;
   }
 
-  const [task] = await db
-    .insert(taskTable)
-    .values({ discordId, title })
-    .returning({ title: taskTable.title });
+  const [task] = await db.insert(taskTable).values({ discordId, title }).returning({ title: taskTable.title });
   assert(task !== undefined, "Task should be created successfully");
 
   await interaction.editReply({
@@ -187,10 +166,7 @@ async function addTask(
   });
 }
 
-async function viewTasks(
-  interaction: ChatInputCommandInteraction,
-  startOfDay: Date,
-): Promise<void> {
+async function viewTasks(interaction: ChatInputCommandInteraction, startOfDay: Date): Promise<void> {
   const userMention = interaction.options.getMentionable("user");
 
   let user;
@@ -217,12 +193,7 @@ async function viewTasks(
       createdAt: taskTable.createdAt,
     })
     .from(taskTable)
-    .where(
-      and(
-        eq(taskTable.discordId, user.id),
-        gte(taskTable.createdAt, startOfDay),
-      ),
-    )
+    .where(and(eq(taskTable.discordId, user.id), gte(taskTable.createdAt, startOfDay)))
     .orderBy(desc(taskTable.isCompleted), taskTable.createdAt)) as Task[];
 
   assert(
@@ -236,8 +207,7 @@ async function viewTasks(
         {
           color: BotColors.INFO,
           title: "📋 Your Task Dashboard",
-          description:
-            "Ready to get productive?\nUse `/tasks add` to create your first task!",
+          description: "Ready to get productive?\nUse `/tasks add` to create your first task!",
           footer: {
             text: `Tip: Completing tasks earns you ${TASK_POINT_SCORE} points each!`,
           },
@@ -264,9 +234,7 @@ async function viewTasks(
   if (incompleteTasks.length > 0) {
     fields.push({
       name: `📌 Pending Tasks • ${incompleteTasks.length} remaining`,
-      value: incompleteTasks
-        .map((task, index) => `${index + 1}. ${task.title}`)
-        .join("\n"),
+      value: incompleteTasks.map((task, index) => `${index + 1}. ${task.title}`).join("\n"),
       inline: false,
     });
   }
@@ -367,9 +335,7 @@ async function completeTask(
       {
         color: BotColors.SUCCESS,
         title: `🎉 Task Completed Successfully!`,
-        description: bold(
-          `Completed: "${taskToComplete.title}" (+${TASK_POINT_SCORE} points)`,
-        ),
+        description: bold(`Completed: "${taskToComplete.title}" (+${TASK_POINT_SCORE} points)`),
         footer: {
           text: "🚀 Great job on completing your task! Keep up the momentum and continue building your productivity streak.",
         },
@@ -398,11 +364,7 @@ async function removeTask(
     .returning({ id: taskTable.id, title: taskTable.title });
 
   if (task === undefined) {
-    await replyError(
-      interaction,
-      `Task Removal Failed`,
-      "Task not found. Use `/tasks view` to check your tasks.",
-    );
+    await replyError(interaction, `Task Removal Failed`, "Task not found. Use `/tasks view` to check your tasks.");
     return;
   }
 

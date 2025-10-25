@@ -1,8 +1,4 @@
-import {
-  ChatInputCommandInteraction,
-  SlashCommandBuilder,
-  userMention,
-} from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, userMention } from "discord.js";
 import { replyError } from "../../utils/utils.ts";
 import { db } from "../../db/db.ts";
 import { userTable } from "../../db/schema.ts";
@@ -89,11 +85,7 @@ async function replyLeaderboard(
   }[],
 ) {
   const title =
-    type === "daily"
-      ? "Daily Leaderboard"
-      : type === "monthly"
-        ? "Monthly Leaderboard"
-        : "All-Time Leaderboard";
+    type === "daily" ? "Daily Leaderboard" : type === "monthly" ? "Monthly Leaderboard" : "All-Time Leaderboard";
 
   const leaderboardData: string[] = [];
   for (const [index, entry] of data.entries()) {
@@ -109,10 +101,7 @@ async function replyLeaderboard(
       {
         color: BotColors.PREMIUM,
         title,
-        description:
-          leaderboardData.length === 0
-            ? "No rankings available"
-            : leaderboardData.join("\n"),
+        description: leaderboardData.length === 0 ? "No rankings available" : leaderboardData.join("\n"),
       },
     ],
   });

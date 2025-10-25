@@ -1,12 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  boolean,
-  integer,
-  pgTable,
-  serial,
-  timestamp,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const userTable = pgTable("user", {
   // Technical fields
@@ -59,9 +52,7 @@ export const voiceSessionTable = pgTable("voice_session", {
   isTracked: boolean().default(false).notNull(),
 
   // in seconds
-  duration: integer().generatedAlwaysAs(
-    sql`EXTRACT(EPOCH FROM (left_at - joined_at))`,
-  ),
+  duration: integer().generatedAlwaysAs(sql`EXTRACT(EPOCH FROM (left_at - joined_at))`),
 });
 
 export const taskTable = pgTable("task", {

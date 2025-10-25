@@ -1,8 +1,4 @@
-import {
-  SlashCommandBuilder,
-  ChatInputCommandInteraction,
-  type APIEmbedField,
-} from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, type APIEmbedField } from "discord.js";
 import { getUserVoiceChannel } from "../../utils/voiceUtils.ts";
 import { formatDataTable, createStatsCard } from "../../utils/visualHelpers.ts";
 import { voiceSessionTable } from "../../db/schema.ts";
@@ -13,13 +9,8 @@ import assert from "node:assert";
 import dayjs from "dayjs";
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName("debug")
-    .setDescription("Debug voice channel detection"),
-  async execute(
-    interaction: ChatInputCommandInteraction,
-    { activeVoiceTimers },
-  ) {
+  data: new SlashCommandBuilder().setName("debug").setDescription("Debug voice channel detection"),
+  async execute(interaction: ChatInputCommandInteraction, { activeVoiceTimers }) {
     await interaction.deferReply();
 
     console.log(`Debug command triggered by ${interaction.user.tag}`);
@@ -30,20 +21,13 @@ export default {
         joinTime: voiceSessionTable.joinedAt,
       })
       .from(voiceSessionTable)
-      .where(
-        and(
-          eq(voiceSessionTable.discordId, interaction.user.id),
-          isNull(voiceSessionTable.leftAt),
-        ),
-      );
+      .where(and(eq(voiceSessionTable.discordId, interaction.user.id), isNull(voiceSessionTable.leftAt)));
 
     // Test voice channel detection
     const voiceChannel = getUserVoiceChannel(interaction);
 
     if (voiceChannel) {
-      console.log(
-        `Voice channel found via cached member: ${voiceChannel.name} (${voiceChannel.id})`,
-      );
+      console.log(`Voice channel found via cached member: ${voiceChannel.name} (${voiceChannel.id})`);
 
       // Check if there's an active timer in this voice channel
       let timerStatus = "No active timer";
@@ -52,10 +36,7 @@ export default {
 
       if (activeVoiceTimers.has(voiceChannel.id)) {
         const timer = activeVoiceTimers.get(voiceChannel.id);
-        assert(
-          timer !== undefined,
-          "Active timer should exist for this channel",
-        );
+        assert(timer !== undefined, "Active timer should exist for this channel");
         timeRemaining = dayjs(timer.endTime).diff(dayjs(), "minutes");
         timerStatus = "Active timer detected";
         timerPhase = timer.phase.toUpperCase();
@@ -66,9 +47,7 @@ export default {
 
       if (voiceSession !== undefined) {
         sessionTracked = "✅ Tracked";
-        sessionAge = Math.floor(
-          (Date.now() - voiceSession.joinTime.getTime()) / (1000 * 60),
-        );
+        sessionAge = Math.floor((Date.now() - voiceSession.joinTime.getTime()) / (1000 * 60));
       }
 
       const debugStats = createStatsCard("Debug Status", {
@@ -89,10 +68,7 @@ export default {
             ["Channel Type", `${voiceChannel.type}`],
             ["Members Count", `${voiceChannel.members.size}`],
             ["Timer Status", timerStatus],
-            [
-              "Time Remaining",
-              timeRemaining > 0 ? `${timeRemaining} minutes` : "N/A",
-            ],
+            ["Time Remaining", timeRemaining > 0 ? `${timeRemaining} minutes` : "N/A"],
           ]),
           inline: false,
         },
@@ -126,10 +102,7 @@ export default {
       console.log(`User ${interaction.user.tag} is not in any voice channel`);
 
       // Get global session statistics with grace period info
-      const totalActiveSessions = await db.$count(
-        voiceSessionTable,
-        isNull(voiceSessionTable.leftAt),
-      );
+      const totalActiveSessions = await db.$count(voiceSessionTable, isNull(voiceSessionTable.leftAt));
       const debugStats = createStatsCard("Debug Status", {
         Detection: "❌ No Channel",
         "User Status": "Not in Voice",
