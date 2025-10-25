@@ -5,7 +5,7 @@ import { eq, sql, type ExtractTablesWithRelations } from "drizzle-orm";
 import { housePointsTable, userTable } from "../db/schema.ts";
 import type { Schema } from "../db/db.ts";
 import type { PgTransaction } from "drizzle-orm/pg-core";
-import type { NodePgDatabase, NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
+import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import { BotColors } from "./constants.ts";
 
 export function getHouseFromMember(member: GuildMember | null): House | undefined {
@@ -40,7 +40,7 @@ export function getHouseFromMember(member: GuildMember | null): House | undefine
 }
 
 export async function awardPoints(
-  db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | NodePgDatabase,
+  db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>> | typeof import("../db/db.ts").db,
   discordId: string,
   points: number,
 ) {
@@ -105,4 +105,8 @@ export async function updateMessageStreakInNickname(member: GuildMember | null, 
     console.log(`Updating nickname from ${member.nickname ?? "NO NICKNAME"} to ${newNickname}`);
     await member.setNickname(newNickname);
   }
+}
+
+export function isPrefectOrProfessor(member: GuildMember): boolean {
+  return member.roles.cache.hasAny(process.env.PREFECT_ROLE_ID, process.env.PROFESSOR_ROLE_ID);
 }
