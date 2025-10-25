@@ -4,6 +4,7 @@ import {
   ChatInputCommandInteraction,
   ComponentType,
   GuildMember,
+  MessageFlags,
   SlashCommandBuilder,
   userMention,
 } from "discord.js";
@@ -67,7 +68,7 @@ export default {
     if (!isPrefectOrProfessor(member)) {
       await interaction.followUp({
         content: "You do not have permission to perform this action.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
