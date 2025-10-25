@@ -77,3 +77,28 @@ export const housePointsTable = pgTable("house_points", {
   }).notNull(),
   points: integer().default(0).notNull(),
 });
+
+export const submissionTable = pgTable("submission", {
+  // Technical fields
+  id: serial().primaryKey(),
+  discordId: varchar({ length: 255 })
+    .notNull()
+    .references(() => userTable.discordId),
+  submittedAt: timestamp().notNull().defaultNow(),
+  reviewedAt: timestamp(),
+  reviewedBy: varchar({ length: 255 }),
+
+  // Submission fields
+  house: varchar({
+    length: 50,
+    enum: ["Gryffindor", "Hufflepuff", "Ravenclaw", "Slytherin"],
+  }).notNull(),
+  screenshotUrl: varchar({ length: 1000 }).notNull(),
+  points: integer().notNull(),
+  status: varchar({
+    length: 50,
+    enum: ["PENDING", "APPROVED", "REJECTED"],
+  })
+    .default("PENDING")
+    .notNull(),
+});
