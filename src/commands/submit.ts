@@ -15,7 +15,6 @@ import { awardPoints, getHouseFromMember, isPrefectOrProfessor } from "../utils/
 import assert from "node:assert";
 import { db } from "../db/db.ts";
 import { HOUSE_COLORS } from "../utils/constants.ts";
-import type { House } from "../types.ts";
 import { submissionTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
