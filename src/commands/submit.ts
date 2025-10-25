@@ -3,14 +3,19 @@ import {
   ButtonStyle,
   ChatInputCommandInteraction,
   ComponentType,
+  EmbedBuilder,
   GuildMember,
   MessageFlags,
   SlashCommandBuilder,
+  time,
   userMention,
+  type InteractionReplyOptions,
 } from "discord.js";
-import { awardPoints, isPrefectOrProfessor } from "../utils/utils.ts";
+import { awardPoints, getHouseFromMember, isPrefectOrProfessor } from "../utils/utils.ts";
 import assert from "node:assert";
 import { db } from "../db/db.ts";
+import { HOUSE_COLORS } from "../utils/constants.ts";
+import type { House } from "../types.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -33,35 +38,23 @@ export default {
         ),
     ),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    const member = interaction.member as GuildMember;
     const points = interaction.options.getInteger("points", true);
     const screenshot = interaction.options.getAttachment("screenshot", true);
+    const house = getHouseFromMember(member);
 
-    await interaction.reply({
-      content: "Please confirm your submission",
-      files: [screenshot],
-      components: [
-        {
-          type: ComponentType.ActionRow,
-          components: [
-            {
-              type: ComponentType.Button,
-              customId: "testing|approve|" + interaction.user.id + "|" + points.toFixed(),
-              label: `Approve ${points} points`,
-              style: ButtonStyle.Success,
-            },
-            {
-              type: ComponentType.Button,
-              customId: "testing|reject|" + interaction.user.id,
-              label: "Reject",
-              style: ButtonStyle.Secondary,
-            },
-          ],
-        },
-      ],
-    });
+    await interaction.reply(
+      submissionMessage({
+        userId: member.id,
+        house: house ?? "UNKNOWN",
+        points,
+        submissionDate: new Date().toISOString(),
+        screenshotUrl: screenshot.url,
+      }),
+    );
   },
 
-  async buttonHandler(interaction: ButtonInteraction, event: string, data: string[]): Promise<void> {
+  async buttonHandler(interaction: ButtonInteraction, event: string, data: string | undefined): Promise<void> {
     await interaction.deferReply();
 
     const member = interaction.member as GuildMember;
@@ -72,25 +65,96 @@ export default {
       });
       return;
     }
+    assert(data, "No data provided in button interaction");
+
+    const parsed = JSON.parse(data) as SubmissionData;
 
     if (event === "approve") {
-      const discordId = data[0];
-      assert(discordId, "Discord ID missing in button data");
-      assert(data[1], "Points missing in button data");
-      const points = parseInt(data[1], 10);
-      await awardPoints(db, discordId, points);
+      await awardPoints(db, parsed.userId, parsed.points);
 
-      await interaction.editReply({
-        content: `${userMention(discordId)} has been awarded ${points} points!`,
-        components: [],
-      });
+      await interaction.message.fetch().then((m) => m.edit(submissionMessage(parsed, "approve", interaction.user.id)));
     } else if (event === "reject") {
-      await interaction.editReply({
-        content: "Action cancelled",
-        components: [],
-      });
+      await interaction.message.fetch().then((m) => m.edit(submissionMessage(parsed, "approve", interaction.user.id)));
     } else {
       assert(false, `Unknown event type: ${event}`);
     }
   },
 };
+
+interface SubmissionData {
+  userId: string;
+  submissionDate: string;
+  house: House | "UNKNOWN";
+  screenshotUrl: string;
+  points: number;
+}
+
+function submissionMessage(submissionData: SubmissionData, event?: "approve" | "reject", buttonClickUserId?: string) {
+  let components: InteractionReplyOptions["components"] = [];
+  if (event === undefined) {
+    const data = JSON.stringify(submissionData);
+    components = [
+      {
+        type: ComponentType.ActionRow,
+        components: [
+          {
+            type: ComponentType.Button,
+            customId: "testing|approve|" + data,
+            label: `Approve ${submissionData.points} points`,
+            style: ButtonStyle.Success,
+          },
+          {
+            type: ComponentType.Button,
+            customId: "testing|reject|" + data,
+            label: "Reject",
+            style: ButtonStyle.Secondary,
+          },
+        ],
+      },
+    ];
+  }
+
+  const embed = new EmbedBuilder({
+    title: submissionData.house.toUpperCase(),
+    color: submissionData.house !== "UNKNOWN" ? HOUSE_COLORS[submissionData.house] : 0xffffff,
+    fields: [
+      {
+        name: "Player",
+        value: userMention(submissionData.userId),
+        inline: true,
+      },
+      {
+        name: "Score",
+        value: submissionData.points.toFixed(),
+        inline: true,
+      },
+      {
+        name: "Submitted by",
+        value: `${userMention(submissionData.userId)} at ${time(new Date(submissionData.submissionDate))}`,
+        inline: false,
+      },
+    ],
+    image: {
+      url: submissionData.screenshotUrl,
+    },
+  });
+
+  if (event === "approve") {
+    embed.addFields({
+      name: "✅ Approved by",
+      value: buttonClickUserId ? userMention(buttonClickUserId) : "Unknown",
+      inline: false,
+    });
+  } else if (event === "reject") {
+    embed.addFields({
+      name: "❌ Rejected by",
+      value: buttonClickUserId ? userMention(buttonClickUserId) : "Unknown",
+      inline: false,
+    });
+  }
+
+  return {
+    embeds: [embed],
+    components: components,
+  };
+}

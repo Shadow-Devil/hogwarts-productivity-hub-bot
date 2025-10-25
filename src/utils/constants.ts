@@ -7,18 +7,21 @@ export const BotColors = {
   SECONDARY: 0x757575,
   HEALTHY: 0x4caf50,
   PREMIUM: 0x9c27b0,
-  HOUSE_GRYFFINDOR: 0x7c0a02,
-  HOUSE_HUFFLEPUFF: 0xffd700,
-  HOUSE_RAVENCLAW: 0x0e1a40,
-  HOUSE_SLYTHERIN: 0x1a472a,
-};
+} as const;
+
+export const HOUSE_COLORS = {
+  Gryffindor: 0x7c0a02,
+  Hufflepuff: 0xffd700,
+  Ravenclaw: 0x0e1a40,
+  Slytherin: 0x1a472a,
+} as const;
 
 export const houseEmojis = {
   Gryffindor: "🦁",
   Hufflepuff: "🦡",
   Ravenclaw: "🦅",
   Slytherin: "🐍",
-};
+} as const;
 
 export const TASK_POINT_SCORE = 2;
 export const DAILY_TASK_LIMIT = 10;

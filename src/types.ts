@@ -12,7 +12,7 @@ export interface Command {
     options: { activeVoiceTimers: Map<string, VoiceTimer> },
   ) => Promise<void>;
   autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
-  buttonHandler?: (interaction: ButtonInteraction, event: string, data: string[]) => Promise<void>;
+  buttonHandler?: (interaction: ButtonInteraction, event: string, data: string | undefined) => Promise<void>;
 }
 
 export type House = "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin";
