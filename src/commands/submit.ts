@@ -1,4 +1,15 @@
-import { ButtonStyle, ChatInputCommandInteraction, ComponentType, SlashCommandBuilder } from "discord.js";
+import {
+  ButtonInteraction,
+  ButtonStyle,
+  ChatInputCommandInteraction,
+  ComponentType,
+  GuildMember,
+  SlashCommandBuilder,
+  userMention,
+} from "discord.js";
+import { awardPoints, isPrefectOrProfessor } from "../utils/utils.ts";
+import assert from "node:assert";
+import { db } from "../db/db.ts";
 
 export default {
   data: new SlashCommandBuilder()
@@ -21,11 +32,10 @@ export default {
         ),
     ),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    const username = interaction.user.username;
     const points = interaction.options.getInteger("points", true);
     const screenshot = interaction.options.getAttachment("screenshot", true);
 
-    const response = await interaction.reply({
+    await interaction.reply({
       content: "Please confirm your submission",
       files: [screenshot],
       components: [
@@ -34,43 +44,46 @@ export default {
           components: [
             {
               type: ComponentType.Button,
-              customId: "approve",
+              customId: "submit|approve|" + interaction.user.id + "|" + points.toFixed(),
               label: `Approve ${points} points`,
               style: ButtonStyle.Success,
             },
             {
               type: ComponentType.Button,
-              customId: "reject",
+              customId: "submit|reject|" + interaction.user.id,
               label: "Reject",
               style: ButtonStyle.Secondary,
             },
           ],
         },
       ],
-      withResponse: true,
     });
+  },
 
-    try {
-      // TODO: Only allow prefects
-      const confirmation = await response.resource?.message?.awaitMessageComponent({
-        filter: (i) => i.user.id === interaction.user.id,
+  async buttonHandler(interaction: ButtonInteraction, event: string, data: string[]): Promise<void> {
+    const member = interaction.member as GuildMember;
+    if (!isPrefectOrProfessor(member)) {
+      await interaction.followUp({
+        content: "You do not have permission to perform this action.",
+        ephemeral: true,
       });
+      return;
+    }
 
-      if (confirmation?.customId === "approve") {
-        await confirmation.update({
-          content: `${username} has been awarded ${points} points!`,
-          components: [],
-        });
-        // TODO update database
-      } else if (confirmation?.customId === "reject") {
-        await confirmation.update({
-          content: "Action cancelled",
-          components: [],
-        });
-      }
-    } catch (error) {
+    if (event === "approve") {
+      const discordId = data[0];
+      assert(discordId, "Discord ID missing in button data");
+      assert(data[1], "Points missing in button data");
+      const points = parseInt(data[1], 10);
+      await awardPoints(db, discordId, points);
+
       await interaction.editReply({
-        content: String(error),
+        content: `${userMention(discordId)} has been awarded ${points} points!`,
+        components: [],
+      });
+    } else if (event === "reject") {
+      await interaction.editReply({
+        content: "Action cancelled",
         components: [],
       });
     }

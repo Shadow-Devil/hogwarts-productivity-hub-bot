@@ -1,4 +1,9 @@
-import type { AutocompleteInteraction, ChatInputCommandInteraction, SharedSlashCommand } from "discord.js";
+import type {
+  AutocompleteInteraction,
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+  SharedSlashCommand,
+} from "discord.js";
 
 export interface Command {
   data: SharedSlashCommand;
@@ -7,6 +12,7 @@ export interface Command {
     options: { activeVoiceTimers: Map<string, VoiceTimer> },
   ) => Promise<void>;
   autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
+  buttonHandler?: (interaction: ButtonInteraction, event: string, data: string[]) => Promise<void>;
 }
 
 export type House = "Gryffindor" | "Hufflepuff" | "Ravenclaw" | "Slytherin";
