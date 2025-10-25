@@ -86,6 +86,8 @@ export default {
         content: "Action cancelled",
         components: [],
       });
+    } else {
+      assert(false, `Unknown event type: ${event}`);
     }
   },
 };
