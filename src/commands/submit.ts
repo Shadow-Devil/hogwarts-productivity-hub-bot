@@ -61,6 +61,8 @@ export default {
   },
 
   async buttonHandler(interaction: ButtonInteraction, event: string, data: string[]): Promise<void> {
+    await interaction.deferReply();
+
     const member = interaction.member as GuildMember;
     if (!isPrefectOrProfessor(member)) {
       await interaction.followUp({
