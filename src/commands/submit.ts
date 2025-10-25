@@ -44,13 +44,13 @@ export default {
           components: [
             {
               type: ComponentType.Button,
-              customId: "submit|approve|" + interaction.user.id + "|" + points.toFixed(),
+              customId: "testing|approve|" + interaction.user.id + "|" + points.toFixed(),
               label: `Approve ${points} points`,
               style: ButtonStyle.Success,
             },
             {
               type: ComponentType.Button,
-              customId: "submit|reject|" + interaction.user.id,
+              customId: "testing|reject|" + interaction.user.id,
               label: "Reject",
               style: ButtonStyle.Secondary,
             },
