@@ -1,13 +1,15 @@
 import cron from "node-cron";
 import dayjs from "dayjs";
-import { db, fetchOpenVoiceSessions } from "../db/db.ts";
+import { db, fetchOpenVoiceSessions, type Schema } from "../db/db.ts";
 import { userTable } from "../db/schema.ts";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql, type ExtractTablesWithRelations } from "drizzle-orm";
 import { endVoiceSession, startVoiceSession } from "../utils/voiceUtils.ts";
 import { wrapWithAlerting } from "../utils/alerting.ts";
 import { resetExecutionTimer } from "../monitoring.ts";
 import { client } from "../client.ts";
 import { updateMessageStreakInNickname } from "../utils/utils.ts";
+import type { PgTransaction } from "drizzle-orm/pg-core";
+import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
 
@@ -58,10 +60,7 @@ async function processDailyResets() {
         })
         .from(userTable);
 
-      const boosters = await client.guilds
-        .fetch(process.env.GUILD_ID)
-        .then((guild) => guild.members.fetch())
-        .then((members) => members.filter((member) => member.premiumSince !== null).map((member) => member.id));
+      await setBoosterPerk(db);
 
       // Filter to only include users who are actually past their local midnight
       const usersNeedingReset = [];
@@ -69,7 +68,7 @@ async function processDailyResets() {
         const userTime = dayjs().tz(user.timezone);
         const lastReset = dayjs(user.lastDailyReset).tz(user.timezone);
 
-        if (!userTime.isSame(lastReset, "day") && !boosters.includes(user.discordId)) {
+        if (!userTime.isSame(lastReset, "day")) {
           usersNeedingReset.push(user.discordId);
         }
       }
@@ -119,6 +118,20 @@ async function processDailyResets() {
   }, "Daily reset processing");
   console.debug("-".repeat(5));
   end({ action: "daily" });
+}
+
+async function setBoosterPerk(db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>) {
+  const boosters = await client.guilds
+    .fetch(process.env.GUILD_ID)
+    .then((guild) => guild.members.fetch())
+    .then((members) => members.filter((member) => member.premiumSince !== null).map((member) => member.id));
+
+  await db
+    .update(userTable)
+    .set({
+      isMessageStreakUpdatedToday: true,
+    })
+    .where(inArray(userTable.discordId, boosters));
 }
 
 async function processMonthlyResets() {
