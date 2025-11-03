@@ -71,6 +71,6 @@ async function viewClock(interaction: ChatInputCommandInteraction) {
     return;
   }
   await interaction.editReply(
-    `${user.username}'s current time is ${dayjs().tz(userData.timezone).format("YYYY-MM-DD HH:mm:ss")}`,
+    `${user.username}'s current time is ${dayjs().tz(userData.timezone).format("YYYY-MM-DD hh:mm:ss A")}`,
   );
 }
