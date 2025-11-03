@@ -6,6 +6,7 @@ import draw from "./commands/draw.ts";
 import submit from "./commands/submit.ts";
 import admin from "./commands/admin.ts";
 import housepoints from "./commands/stats/housepoints.ts";
+import user from "./commands/user.ts";
 
 export const commands = new Collection<string, Command>();
 
@@ -22,6 +23,7 @@ commands.set(housepoints.data.name, housepoints);
 //commands.set(leaderboard.data.name, leaderboard);
 commands.set(admin.data.name, admin);
 commands.set(stats.data.name, stats);
+commands.set(user.data.name, user);
 
 commands.set(draw.data.name, draw);
 commands.set(submit.data.name, submit);
