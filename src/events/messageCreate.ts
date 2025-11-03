@@ -10,7 +10,15 @@ export async function execute(message: OmitPartialGroupDMChannel<Message>): Prom
   // Ignore messages from bots, Ignore messages not in a guild and system messages
   if (message.author.bot || !message.inGuild() || message.system) return;
   // Ignore replies to system messages (Wave Hi)
-  if (message.reference && (await message.fetchReference().then((msg) => msg.system))) return;
+  if (
+    message.reference &&
+    (await message
+      .fetchReference()
+      .then((msg) => msg.system)
+      // Ignore errors because of forwards from other guilds
+      .catch(() => false))
+  )
+    return;
 
   const discordId = message.author.id;
 
