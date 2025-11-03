@@ -29,6 +29,11 @@ export default {
         ),
     ),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (["adjust-points"].includes(interaction.options.getSubcommand())) {
+      await interaction.deferReply();
+    } else {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    }
     const member = interaction.member as GuildMember;
 
     if (!isPrefectOrProfessor(member)) {
@@ -38,11 +43,9 @@ export default {
 
     switch (interaction.options.getSubcommand()) {
       case "adjust-points":
-        await interaction.deferReply();
         await adjustPoints(interaction);
         break;
       case "view-clock":
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         await viewClock(interaction);
         break;
       default:
