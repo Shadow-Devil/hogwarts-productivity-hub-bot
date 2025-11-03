@@ -60,8 +60,6 @@ async function processDailyResets() {
         })
         .from(userTable);
 
-      await setBoosterPerk(db);
-
       // Filter to only include users who are actually past their local midnight
       const usersNeedingReset = [];
       for (const user of usersNeedingPotentialReset) {
@@ -81,6 +79,8 @@ async function processDailyResets() {
       const usersInVoiceSessions = await fetchOpenVoiceSessions(db, usersNeedingReset);
 
       await Promise.all(usersInVoiceSessions.map((session) => endVoiceSession(session, db)));
+
+      await setBoosterPerk(db, usersNeedingReset);
 
       await db
         .select()
@@ -120,11 +120,18 @@ async function processDailyResets() {
   end({ action: "daily" });
 }
 
-async function setBoosterPerk(db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>) {
+async function setBoosterPerk(
+  db: PgTransaction<NodePgQueryResultHKT, Schema, ExtractTablesWithRelations<Schema>>,
+  usersNeedingReset: string[],
+) {
   const boosters = await client.guilds
     .fetch(process.env.GUILD_ID)
     .then((guild) => guild.members.fetch())
-    .then((members) => members.filter((member) => member.premiumSince !== null).map((member) => member.id));
+    .then((members) =>
+      members
+        .filter((member) => member.premiumSince !== null && usersNeedingReset.includes(member.id))
+        .map((member) => member.id),
+    );
 
   await db
     .update(userTable)
