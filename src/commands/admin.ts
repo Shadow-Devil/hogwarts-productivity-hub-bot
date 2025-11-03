@@ -29,11 +29,7 @@ export default {
         ),
     ),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    if (["adjust-points"].includes(interaction.options.getSubcommand())) {
-      await interaction.deferReply();
-    } else {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    }
+    await interaction.deferReply();
     const member = interaction.member as GuildMember;
 
     if (!isPrefectOrProfessor(member)) {
@@ -71,6 +67,6 @@ async function viewClock(interaction: ChatInputCommandInteraction) {
     return;
   }
   await interaction.editReply(
-    `${user.username}'s current time is ${dayjs().tz(userData.timezone).format("YYYY-MM-DD hh:mm:ss A")}`,
+    `${user.displayName}'s current time is ${dayjs().tz(userData.timezone).format("YYYY-MM-DD hh:mm:ss A")}`,
   );
 }
