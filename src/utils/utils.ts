@@ -89,13 +89,19 @@ export async function updateMessageStreakInNickname(member: GuildMember | null, 
   // Can't update nickname of guild owner
   if (!member || member.guild.ownerId === member.user.id || isProfessor(member)) return;
 
-  let newNickname = member.nickname?.replace(/⚡\d+$/, "").trim() ?? member.user.globalName ?? member.user.displayName;
-  if (newStreak == 0) {
-    // If member has no nickname, no need to reset
-    if (member.nickname === null) return;
-  } else {
-    newNickname += `⚡${newStreak}`;
+  // If member has no nickname, no need to reset
+  if (newStreak == 0 && member.nickname === null) return;
+
+  let newNickname =
+    member.nickname?.replace(/⚡\d+(?=[^⚡]*$)/, newStreak === 0 ? "" : `⚡${newStreak}`).trim() ??
+    member.user.globalName ??
+    member.user.displayName;
+
+  // If no existing streak found, append it
+  if (newStreak !== 0 && !newNickname.match(/⚡\d+/)) {
+    newNickname += ` ⚡${newStreak}`;
   }
+
   if (newNickname.length > 32) {
     console.warn(`Nickname for ${member.user.tag} is too long (${newNickname}). Ignoring update.`);
     return;

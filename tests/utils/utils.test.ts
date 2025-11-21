@@ -1,0 +1,125 @@
+/**
+ * Tests for utility functions
+ */
+
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { GuildMember } from "discord.js";
+
+import * as utils from "../../src/utils/utils.ts";
+
+describe("updateMessageStreakInNickname", () => {
+  let mockMember: GuildMember;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    mockMember = {
+      guild: { ownerId: "different-owner-id" },
+      user: {
+        id: "user-id",
+        tag: "TestUser#1234",
+        globalName: "TestUser",
+        displayName: "TestUser",
+      },
+      nickname: null,
+      roles: {
+        cache: new Map(),
+      },
+      setNickname: vi.fn().mockImplementation((nickname) => (mockMember.nickname = nickname)),
+    } as unknown as GuildMember;
+  });
+
+  it("should not update if member is null", async () => {
+    await utils.updateMessageStreakInNickname(null, 5);
+    expect(mockMember.setNickname).not.toHaveBeenCalled();
+  });
+
+  it("should not update if member is guild owner", async () => {
+    mockMember.guild.ownerId = "user-id";
+    await utils.updateMessageStreakInNickname(mockMember, 5);
+    expect(mockMember.setNickname).not.toHaveBeenCalled();
+  });
+
+  it("should not update if member is professor", async () => {
+    mockMember.roles.cache.set(process.env.PROFESSOR_ROLE_ID, {} as any);
+    await utils.updateMessageStreakInNickname(mockMember, 5);
+    expect(mockMember.setNickname).not.toHaveBeenCalled();
+  });
+
+  it("should not update if newStreak is 0 and member has no nickname", async () => {
+    mockMember.nickname = null;
+    await utils.updateMessageStreakInNickname(mockMember, 0);
+    expect(mockMember.setNickname).not.toHaveBeenCalled();
+  });
+
+  it("should warn and not update if nickname exceeds 32 chars", async () => {
+    mockMember.nickname = "VeryLongNicknameThatExceeds32Characters ⚡5";
+    await utils.updateMessageStreakInNickname(mockMember, 999);
+    expect(mockMember.setNickname).not.toHaveBeenCalled();
+    expect(consoleWarnSpy).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("Nickname for TestUser#1234 is too long"));
+  });
+
+  it.each([
+    {
+      description: "reset streak when newStreak is 0",
+      input: { nickname: "TestUser ⚡5", globalName: "GlobalName", displayName: "DisplayName" },
+      streak: 0,
+      expected: "TestUser",
+    },
+    {
+      description: "replace existing streak in nickname",
+      input: { nickname: "TestUser ⚡5", globalName: "TestUser", displayName: "TestUser" },
+      streak: 10,
+      expected: "TestUser ⚡10",
+    },
+    {
+      description: "use globalName when no nickname exists",
+      input: { nickname: null, globalName: "GlobalName", displayName: "DisplayName" },
+      streak: 3,
+      expected: "GlobalName ⚡3",
+    },
+    {
+      description: "use displayName when no nickname or globalName exists",
+      input: { nickname: null, globalName: null, displayName: "DisplayName" },
+      streak: 3,
+      expected: "DisplayName ⚡3",
+    },
+    {
+      description: "append streak to nickname without existing streak",
+      input: { nickname: "TestUser", globalName: "TestUser", displayName: "TestUser" },
+      streak: 5,
+      expected: "TestUser ⚡5",
+    },
+    {
+      description: "handle multiple streak emojis and only replace last one",
+      input: { nickname: "User⚡3 Name ⚡5", globalName: "User", displayName: "User" },
+      streak: 7,
+      expected: "User⚡3 Name ⚡7",
+    },
+    {
+      description: "handle multiple streak emojis and only replace last one",
+      input: { nickname: "User⚡3 Name ⚡5 123", globalName: "User", displayName: "User" },
+      streak: 7,
+      expected: "User⚡3 Name ⚡7 123",
+    },
+    {
+      description: "trim whitespace from new nickname",
+      input: { nickname: "TestUser ⚡5   ", globalName: "TestUser", displayName: "TestUser" },
+      streak: 10,
+      expected: "TestUser ⚡10",
+    },
+  ])("should $description", async ({ input, streak, expected }) => {
+    mockMember.nickname = input.nickname;
+    mockMember.user.globalName = input.globalName;
+    (mockMember.user as any).displayName = input.displayName;
+
+    await utils.updateMessageStreakInNickname(mockMember, streak);
+
+    expect(mockMember.setNickname).toHaveBeenCalledExactlyOnceWith(expected);
+    expect(mockMember.nickname).toBe(expected);
+  });
+});
