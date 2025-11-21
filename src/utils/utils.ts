@@ -98,7 +98,7 @@ export async function updateMessageStreakInNickname(member: GuildMember | null, 
     member.user.displayName;
 
   // If no existing streak found, append it
-  if (newStreak !== 0 && !newNickname.match(/⚡\d+/)) {
+  if (newStreak !== 0 && !/⚡\d+/.exec(newNickname)) {
     newNickname += ` ⚡${newStreak}`;
   }
 

@@ -43,6 +43,7 @@
     "@typescript-eslint/parser": "^8.47.0",
     "drizzle-kit": "^0.31.7",
     "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "jiti": "^2.6.1",
     "prettier": "^3.6.2",

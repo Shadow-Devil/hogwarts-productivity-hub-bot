@@ -1,3 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-empty-function */
 /**
  * Tests for utility functions
  */
@@ -9,12 +16,10 @@ import * as utils from "../../src/utils/utils.ts";
 
 describe("updateMessageStreakInNickname", () => {
   let mockMember: GuildMember;
-  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     mockMember = {
@@ -60,7 +65,9 @@ describe("updateMessageStreakInNickname", () => {
     mockMember.nickname = "VeryLongNicknameThatExceeds32Characters ⚡5";
     await utils.updateMessageStreakInNickname(mockMember, 999);
     expect(mockMember.setNickname).not.toHaveBeenCalled();
-    expect(consoleWarnSpy).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("Nickname for TestUser#1234 is too long"));
+    expect(consoleWarnSpy).toHaveBeenCalledExactlyOnceWith(
+      expect.stringContaining("Nickname for TestUser#1234 is too long"),
+    );
   });
 
   it.each([
